@@ -1,0 +1,11 @@
+#ignores the virtual environment
+bot-env/
+
+#ignores the important things from configue.json
+configue.json
+
+#ignores python cache files
+__pycache__/
+
+#ignores vscode stuff i guess
+.vscode/

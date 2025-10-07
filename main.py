@@ -1,0 +1,1 @@
+print("the bot is ready")
