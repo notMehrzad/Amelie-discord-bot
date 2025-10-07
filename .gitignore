@@ -1,11 +1,4 @@
-#ignores the virtual environment
 bot-env/
-
-#ignores the important things from configue.json
-configue.json
-
-#ignores python cache files
+config.json
 __pycache__/
-
-#ignores vscode stuff i guess
 .vscode/
