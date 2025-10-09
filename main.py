@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import json
 import time
+import datetime
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='.', intents=intents)
@@ -20,7 +21,7 @@ async def ping(ctx):
 
     msg = await ctx.reply("pinging...")
 
-    ws = bot.latency * 1000
+    ws = bot.latency * 1000 #getting websocket latency
 
     #starts pinging n times
     for i in range(pingNumbers):
@@ -31,15 +32,33 @@ async def ping(ctx):
         msg_latency = (end - start) * 1000
         pings.append(msg_latency) #stores the nth ping in a list
 
-    avg = sum(pings) / pingNumbers
-    min = min(pings)
-    max = max(pings)
-    await msg.edit(content = (
-        "Pong! 🏓\n"
-        f"📡WebSocket Latency: `{ws:.2f} ms`\n"
-        f"🌐REST Latency: `{avg:.2f} ms`\n"
-        f"Min: `{min:.2f} ms` | Max: `{max:.2f} ms`"
-    ))
+    avg = sum(pings) / pingNumbers #getting REST latency
+    minping = min(pings)
+    maxping = max(pings)
+
+    #defining color based on ws ping strength
+    if ws <= 100:
+        color = discord.Color.from_str("#00ff59") #green
+    elif ws <= 200:
+        color = discord.Color.from_str("#ffff00") #yellow
+    elif ws <= 400:
+        color = discord.Color.from_str("#ffab00") #orange
+    else:
+        color = discord.Color.from_str("#ff3800") #red
+
+    #defining the result embed
+    embed = discord.Embed(
+        color = color,
+        title = "Pong! 🏓",
+        description = (
+            f"📡WebSocket: `{ws:.2f} ms`\n"
+            f"🌐REST: `{avg:.2f} ms`\n\n"
+            f"Min: `{minping:.2f} ms` | Max: `{maxping:.2f} ms`"
+        ),
+        timestamp = datetime.datetime.now(datetime.UTC)
+    ).set_footer(text = f"requested by {ctx.author.name}")
+
+    await msg.edit(content = None, embed = embed)
 
 
 #embed message command
