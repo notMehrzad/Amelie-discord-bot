@@ -7,7 +7,7 @@ import os
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='.', intents=intents)
 
-#reading the stored token from config.json
+#reads the stored token from config.json
 with open("config.json") as file:
     config = json.load(file)
 

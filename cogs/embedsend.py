@@ -3,22 +3,28 @@ from discord.ext import commands
 import re
 
 def parse_args(args):
-    matches = re.findall(r'(\w+)\s*:\s*"(.*?)"', args)
+    matches = re.findall(r"(\w+)\s*:\s*'(.*?)'", args)
     return matches
 
-class SendEmbed(commands.Cog):
+class EmbedSend(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name = "sendembed")
-    async def sendembed(self, ctx, *, args):
+    @commands.command(name = "embedsend", aliases = ["sendembed", "embed"])
+    async def embedsend(self, ctx, *, args):
         try:
+            #initializing variables
             title = desc = url = color = imgurl = thumbnailurl = author = authorurl = authoriconurl = footer = footericonurl = timestamp = None
+
+            #parsing args
             argList = parse_args(args)
 
+            #loops through arglist and checks variables
             for arg, value in argList:
                 arg = arg.lower()
                 if arg == "title":
+                    if len(value) > 256:
+                        await ctx.reply(content = "title can only be up to **256** characters.", ephemeral = True)
                     title = value
                 elif arg in ["desc", "description"]:
                     desc = value
@@ -62,4 +68,4 @@ class SendEmbed(commands.Cog):
             await ctx.reply("something went wrong.")
 
 async def setup(bot):
-    await bot.add_cog(SendEmbed(bot))
+    await bot.add_cog(EmbedSend(bot))

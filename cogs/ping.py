@@ -10,10 +10,7 @@ class Ping(commands.Cog):
     
     @commands.command(name = "ping")
     async def ping(self, ctx):
-        try:
-            if ctx.author.bot:
-                return
-            
+        try: 
             pings = []
             pingNumbers = 4
 
@@ -59,8 +56,10 @@ class Ping(commands.Cog):
             await msg.edit(content = None, embed = embed)
 
         except Exception as e:
-            print(f"\nerror at ping command: {e}")
-            await ctx.reply("something went wrong.")
+            print(f"❌ something went wrong with ping command: {e}")
+            msg = await ctx.reply("❌ something went wrong with **ping**.")
+            await asyncio.sleep(3)
+            await msg.delete()
 
 async def setup(bot):
     await bot.add_cog(Ping(bot))
