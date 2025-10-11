@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import re
+import asyncio
 
 def parse_args(args):
     matches = re.findall(r"(\w+)\s*:\s*'(.*?)'", args)
@@ -64,8 +65,10 @@ class EmbedSend(commands.Cog):
             await ctx.send(embed = embed)
 
         except Exception as e:
-            print(f"\nerror at sendembed command: {e}")
-            await ctx.reply("something went wrong.")
+            print(f"❌ something went wrong with embedsend command: {e}")
+            msg = await ctx.reply(f"❌ something went wrong with **embedsend**.")
+            await asyncio.sleep(3)
+            await msg.delete()
 
 async def setup(bot):
     await bot.add_cog(EmbedSend(bot))

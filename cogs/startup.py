@@ -5,22 +5,9 @@ import asyncio
 with open("config.json") as file:
     config = json.load(file)
 
-
 class StartUp(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-    #print a message when bot is ready
-    @commands.Cog.listener()
-    async def on_ready(self):
-        try:
-            print(
-                "--------------"
-                f"\nWe have logged in as {self.bot.user} ✅"
-            )
-        except Exception as e:
-            print(f"\ncouldn't log in the bot: {e}")
-
 
     #command cog
     @commands.command(name = "cog")
@@ -66,6 +53,7 @@ class StartUp(commands.Cog):
 
                 await ctx.message.delete()
             
+            #if the subcommand is list
             elif cmd in ["list", "show"]:
                 extensionlist = list(self.bot.extensions)
                 print(f"\n--------------\n{extensionlist}")
@@ -74,12 +62,14 @@ class StartUp(commands.Cog):
                 await msg.delete()
                 await ctx.message.delete()
 
+            #if user entered no subcommand
             elif cmd is None:
                 msg = await ctx.reply("You must enter a subcommand for this command.")
                 await asyncio.sleep(3)
                 await msg.delete()
                 await ctx.message.delete()
 
+            #if user entered unvalid subcommand
             else:
                 msg = await ctx.reply("Enter a valid subcommand.")
                 await asyncio.sleep(3)
