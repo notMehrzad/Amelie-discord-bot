@@ -53,4 +53,4 @@ without explicit written permission from the author.
 
 ### 💬 Credits
 
-Created and maintained by [Mehrzad][https://github.com/notMehrzad]
+Created and maintained by [Mehrzad](https://github.com/notMehrzad)
