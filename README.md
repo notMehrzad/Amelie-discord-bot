@@ -40,7 +40,7 @@ If you’d like to suggest a new command or report a bug, please open an [issue]
 
 ---
 
-### 🪪 License
+### ©️ License
 
 Copyright © 2025 Mehrzad & AmirMakan
 All rights reserved.
