@@ -4,12 +4,12 @@ import time
 import asyncio
 
 class Ping(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     
     @commands.command(name = "ping")
-    async def ping(self, ctx):
+    async def ping(self, ctx: commands.Context):
         try: 
             pings = []
             pingNumbers = 4
@@ -57,9 +57,8 @@ class Ping(commands.Cog):
 
         except Exception as e:
             print(f"❌ something went wrong with ping command: {e}")
-            msg = await ctx.reply("❌ something went wrong with **ping**.")
-            await asyncio.sleep(3)
-            await msg.delete()
+            await ctx.reply("❌ something went wrong with **ping**.")
 
-async def setup(bot):
+
+async def setup(bot: commands.Bot):
     await bot.add_cog(Ping(bot))

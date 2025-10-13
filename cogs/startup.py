@@ -1,24 +1,21 @@
 from discord.ext import commands
 import json
-import asyncio
 
 with open("config.json") as file:
     config = json.load(file)
 
 class StartUp(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     #command cog
     @commands.command(name = "cog")
-    async def cog(self, ctx, cmd: str = None, extension: str = None):
+    async def cog(self, ctx: commands.Context, cmd: str = None, extension: str = None):
         try:
             #checks if the user is an admin to use the command
             if str(ctx.author.id) not in config["ADMINS"]:
-                msg = await ctx.reply("You can't use this command.")
-                await asyncio.sleep(3)
-                await msg.delete()
-                await ctx.message.delete()
+                await ctx.reply(content ="You can't use this command.", delete_after = 5)
+                await ctx.message.delete(delay = 5)
                 return
             
             cmd = cmd.lower() if cmd else None
@@ -35,9 +32,7 @@ class StartUp(commands.Cog):
                         await self.bot.reload_extension(ext)
                         print(f"🔄️ {ext.removeprefix("cogs.")} cog is reloaded.")
                     
-                    await msg.edit(content = "All cogs have been reloaded succesfully. ✅")
-                    await asyncio.sleep(3)
-                    await msg.delete()
+                    await msg.edit(content = "All cogs have been reloaded succesfully. ✅", delete_after = 5)
 
                 #reloads the given extension (if any)
                 else:
@@ -47,9 +42,7 @@ class StartUp(commands.Cog):
                     await self.bot.reload_extension(f"cogs.{extension}")
 
                     print(f"🔄️ {extension.removeprefix("cogs.")} cog is reloaded.")
-                    await msg.edit(content = f"`{extension}` cog has been reloaded succesfully. ✅")
-                    await asyncio.sleep(3)
-                    await msg.delete()
+                    await msg.edit(content = f"`{extension}` cog has been reloaded succesfully. ✅", delete_after = 5)
 
                 await ctx.message.delete()
             
@@ -57,31 +50,23 @@ class StartUp(commands.Cog):
             elif cmd in ["list", "show"]:
                 extensionlist = list(self.bot.extensions)
                 print(f"\n--------------\n{extensionlist}")
-                msg = await ctx.reply("Cogs list has been sent. ✅")
-                await asyncio.sleep(3)
-                await msg.delete()
-                await ctx.message.delete()
+                await ctx.reply(content = "Cogs list has been sent. ✅", delete_after = 5)
+                await ctx.message.delete(delay = 5)
 
             #if user entered no subcommand
             elif cmd is None:
-                msg = await ctx.reply("You must enter a subcommand for this command.")
-                await asyncio.sleep(3)
-                await msg.delete()
-                await ctx.message.delete()
+                await ctx.reply(content = "You must enter a subcommand for this command.", delete_after = 5)
+                await ctx.message.delete(delay = 5)
 
             #if user entered unvalid subcommand
             else:
-                msg = await ctx.reply("Enter a valid subcommand.")
-                await asyncio.sleep(3)
-                await msg.delete()
-                await ctx.message.delete()
+                await ctx.reply(content = "Enter a valid subcommand.", delete_after = 5)
+                await ctx.message.delete(delay = 5)
 
         except Exception as e:
             print(f"\n❌ something went wrong with cog command: {e}")
-            msg = await ctx.reply(f"❌ something went wrong with **cog**.")
-            await asyncio.sleep(3)
-            await msg.delete()
+            await ctx.reply(content = f"❌ something went wrong with **cog**.", delete_after = 5)
 
 
-async def setup(bot):
+async def setup(bot: commands.Bot):
     await bot.add_cog(StartUp(bot))

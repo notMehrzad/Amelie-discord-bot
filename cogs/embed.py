@@ -5,7 +5,7 @@ import asyncio
 from urllib.parse import urlparse
 
 def parse_args(args):
-    matches = re.findall(r'(\w+)\s*:\s*["\'](.*?)["\']', args)
+    matches = re.findall(r'(\w+)\s*:\s*\((.*?)\)', args)
     return matches
 
 def colorValidation(value: str):
@@ -25,7 +25,7 @@ def urlValidation(url):
     except:
         return False
 
-async def assignVars(ctx, arg_list):
+async def assignVars(ctx: commands.Context, arg_list):
     data = {
         "title": None,
         "desc": None,
@@ -38,7 +38,7 @@ async def assignVars(ctx, arg_list):
         "authoriconurl": None,
         "footer": None,
         "footericonurl": None,
-        "timestamp": None
+        "timestamp": None,
     }
     for arg, value in arg_list:
                     arg = arg.lower()
@@ -50,7 +50,7 @@ async def assignVars(ctx, arg_list):
 
                     elif arg in ["desc", "description"]:
                         if len(value) > 4096 :
-                            await ctx.reply("title can only be up to **4096** characters.")
+                            await ctx.reply("description can only be up to **4096** characters.")
                             return None
                         data["desc"] = value
 
@@ -128,6 +128,10 @@ async def assignVars(ctx, arg_list):
                             await ctx.reply("you must select **yes/no** for `timestamp`.")
                             return None
                         
+                    else:
+                        await ctx.reply("enter a valid attribute (like `title`, `description`, ..)")
+                        return None
+                        
     return data
 
 class Embed(commands.Cog):
@@ -135,7 +139,7 @@ class Embed(commands.Cog):
         self.bot = bot
 
     @commands.command(name = "embed")
-    async def embed(self, ctx, cmd: str = None, *, args: str = ""):
+    async def embed(self, ctx: commands.Context, cmd: str = None, *, args: str = ""):
         try:
             cmd = cmd.lower() if cmd else None
 
@@ -155,19 +159,19 @@ class Embed(commands.Cog):
                         url = data["url"],
                         color = data["color"],
                         timestamp = data["timestamp"]
-                    ).set_image(url = data["imgurl"]).set_thumbnail(url = data['thumbnailurl']).set_footer(text = data["footer"], icon_url = data["footericonurl"])
+                    ).set_footer(text = data["footer"], icon_url = data["footericonurl"])
                     if data["author"]:
                         embed = embed.set_author(name = data["author"], url = data["authorurl"], icon_url = data["authoriconurl"])
+                    if data["imgurl"]:
+                        embed = embed.set_image(url = data["imgurl"])
+                    if data["thumbnailurl"]:
+                        embed = embed.set_thumbnail(url = data['thumbnailurl'])
 
                     await ctx.send(embed = embed)
 
                 except Exception as e:
-                    print(f"\n❌ something went wrong with embed command: {e}")
+                    print(f"\n❌ something went wrong with embed-send command: {e}")
                     await ctx.reply(f"❌ something went wrong with **embed**.", delete_after = 5)
-
-            #if subcommand is edit
-            elif cmd == "edit":
-                pass #will create this later
 
             elif cmd is None:
                 await ctx.reply("You must enter a subcommand for this command.", delete_after = 5)
