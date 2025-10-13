@@ -10,12 +10,12 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='.', intents=intents)
 
 #defining bot status
-bot_status = cycle(["drowned in nothingness.", ["lanat be in zendegi", "Playing Fortnite"]])
+bot_status = cycle(["drowned in nothingness.", "lanat be in zendegi", "Fortnite"])
 @tasks.loop(minutes = 2)
 async def botStatusChange():
     await bot.change_presence(activity = discord.Game(next(bot_status)))
 
-@bot.event()
+@bot.event
 async def on_ready():
         #prints a message when bot is ready
         print(
