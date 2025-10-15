@@ -135,7 +135,7 @@ async def assignVars(ctx: commands.Context, arg_list):
     return data
 
 class Embed(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.command(name = "embed")
@@ -171,7 +171,7 @@ class Embed(commands.Cog):
 
                 except Exception as e:
                     print(f"\n❌ something went wrong with embed-send command: {e}")
-                    await ctx.reply(f"❌ something went wrong with **embed**.", delete_after = 5)
+                    await ctx.reply(f"something went wrong with **embed**.", delete_after = 5)
 
             elif cmd is None:
                 await ctx.reply("You must enter a subcommand for this command.", delete_after = 5)
@@ -185,7 +185,7 @@ class Embed(commands.Cog):
                 
         except Exception as e:
             print(f"❌ something went wrong with embed command: {e}")
-            await ctx.reply(f"❌ something went wrong with **embed**.", delete_after = 5)
+            await ctx.reply(f"something went wrong with **embed**.", delete_after = 5)
 
-async def setup(bot):
+async def setup(bot: commands.Bot):
     await bot.add_cog(Embed(bot))

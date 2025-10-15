@@ -57,7 +57,7 @@ class Ping(commands.Cog):
 
         except Exception as e:
             print(f"❌ something went wrong with ping command: {e}")
-            await ctx.reply("❌ something went wrong with **ping**.")
+            await ctx.reply("something went wrong with **ping**.")
 
 
 async def setup(bot: commands.Bot):
