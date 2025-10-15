@@ -10,7 +10,7 @@ class StartUp(commands.Cog):
 
     #command cog
     @commands.command(name = "cog")
-    async def cog(self, ctx: commands.Context, cmd: str = None, extension: str = None):
+    async def cog(self, ctx: commands.Context, cmd: str, extension: str = None):
         try:
             #checks if the user is an admin to use the command
             if str(ctx.author.id) not in config["ADMINS"]:
@@ -33,6 +33,11 @@ class StartUp(commands.Cog):
                         print(f"🔄️ {ext.removeprefix("cogs.")} cog is reloaded.")
                     
                     await msg.edit(content = "All cogs have been reloaded succesfully. ✅", delete_after = 5)
+                
+                elif "cogs." + extension not in self.bot.extensions:
+                    await ctx.reply(f"`{extension}` is not a loaded cog.", delete_after = 5)
+                    await ctx.message.delete(delay = 5)
+                    return
 
                 #reloads the given extension (if any)
                 else:
