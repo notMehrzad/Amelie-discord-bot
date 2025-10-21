@@ -47,6 +47,8 @@ class RpsView(discord.ui.View):
                 await interaction.response.send_message("You can't play in this match.", ephemeral = True)
                 return
             
+            await interaction.response.defer(thinking = False) #defers the interaction to avoid "This interaction failed" message
+            
             #plays with bot if no target is given
             if self.botPlay:
                 #user choice first since playing with bot
@@ -88,7 +90,7 @@ class RpsView(discord.ui.View):
                     color = discord.Color.random()
                 )
                     await self.msg.edit(embed = embed)
-                    await interaction.response.send_message(f"{self.ctx.author.mention}, It's your turn now !")
+                    await interaction.response.send_message(f"{self.ctx.author.mention}, It's your turn now !", delete_after = 180)
 
                 #checks if the target has chosen already
                 elif interaction.user.id == self.target.id:
@@ -133,7 +135,8 @@ class RpsView(discord.ui.View):
         for btn in self.children:
             btn.disabled = True
 
-        guilty = self.target.mention if self.userschoices["player2"] else self.ctx.author.mention
+        guilty = self.ctx.author.mention if self.userschoices["player2"] else self.target.mention
+
         embed = discord.Embed(
             title = "Rock, Paper, Scissors !",
             description = f"⏰ The game has timed out! {guilty} didn't make a move.\n*shame on you..*",
