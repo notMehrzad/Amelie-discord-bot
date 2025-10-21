@@ -206,5 +206,6 @@ class Rps(commands.Cog):
             print(f"❌ something went wrong with rps command: {error}")
             await ctx.reply("something went wrong with **rps**.")
 
+
 async def setup(bot: commands.Bot):
     await bot.add_cog(Rps(bot))

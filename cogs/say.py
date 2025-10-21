@@ -12,6 +12,11 @@ class Say(commands.Cog):
         
         await ctx.send(args)
 
+    @say.error
+    async def say_error(self, ctx: commands.Context, error):
+        print(f"❌ something went wrong with say command: {error}")
+        await ctx.reply("something went wrong with **say**.")
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Say(bot))

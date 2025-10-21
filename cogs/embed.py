@@ -140,52 +140,53 @@ class Embed(commands.Cog):
 
     @commands.command(name = "embed")
     async def embed(self, ctx: commands.Context, cmd: str = None, *, args: str = ""):
-        try:
-            cmd = cmd.lower() if cmd else None
+        cmd = cmd.lower() if cmd else None
 
-            #if subcommand is send
-            if cmd == "send":
-                try:
-                    argList = parse_args(args) #parsing args
-                    data = await assignVars(ctx, argList) #collecting the data from args
+        #if subcommand is send
+        if cmd == "send":
+            try:
+                argList = parse_args(args) #parsing args
+                data = await assignVars(ctx, argList) #collecting the data from args
 
-                    if not data:
-                        return
-                    
-                    #creates the embed with the fetched data
-                    embed = discord.Embed(
-                        title = data["title"],
-                        description = data["desc"],
-                        url = data["url"],
-                        color = data["color"],
-                        timestamp = data["timestamp"]
-                    ).set_footer(text = data["footer"], icon_url = data["footericonurl"])
-                    if data["author"]:
-                        embed = embed.set_author(name = data["author"], url = data["authorurl"], icon_url = data["authoriconurl"])
-                    if data["imgurl"]:
-                        embed = embed.set_image(url = data["imgurl"])
-                    if data["thumbnailurl"]:
-                        embed = embed.set_thumbnail(url = data['thumbnailurl'])
-
-                    await ctx.send(embed = embed)
-
-                except Exception as e:
-                    print(f"\n❌ something went wrong with embed-send command: {e}")
-                    await ctx.reply(f"something went wrong with **embed**.", delete_after = 5)
-
-            elif cmd is None:
-                await ctx.reply("You must enter a subcommand for this command.", delete_after = 5)
-                await asyncio.sleep(5)
-                await ctx.message.delete()
-
-            else:
-                await ctx.reply("Enter a valid subcommand.", delete_after = 5)
-                await asyncio.sleep(5)
-                await ctx.message.delete()
+                if not data:
+                    return
                 
-        except Exception as e:
-            print(f"❌ something went wrong with embed command: {e}")
-            await ctx.reply(f"something went wrong with **embed**.", delete_after = 5)
+                #creates the embed with the fetched data
+                embed = discord.Embed(
+                    title = data["title"],
+                    description = data["desc"],
+                    url = data["url"],
+                    color = data["color"],
+                    timestamp = data["timestamp"]
+                ).set_footer(text = data["footer"], icon_url = data["footericonurl"])
+                if data["author"]:
+                    embed = embed.set_author(name = data["author"], url = data["authorurl"], icon_url = data["authoriconurl"])
+                if data["imgurl"]:
+                    embed = embed.set_image(url = data["imgurl"])
+                if data["thumbnailurl"]:
+                    embed = embed.set_thumbnail(url = data['thumbnailurl'])
+
+                await ctx.send(embed = embed)
+
+            except Exception as e:
+                print(f"\n❌ something went wrong with embed-send command: {e}")
+                await ctx.reply(f"something went wrong with **embed**.", delete_after = 5)
+
+        elif cmd is None:
+            await ctx.reply("You must enter a subcommand for this command.", delete_after = 5)
+            await asyncio.sleep(5)
+            await ctx.message.delete()
+
+        else:
+            await ctx.reply("Enter a valid subcommand.", delete_after = 5)
+            await asyncio.sleep(5)
+            await ctx.message.delete()
+
+    @embed.error
+    async def embed_error(self, ctx: commands.Context, error):
+        print(f"❌ something went wrong with embed command: {error}")
+        await ctx.reply(f"something went wrong with **embed**.", delete_after = 5)
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Embed(bot))
