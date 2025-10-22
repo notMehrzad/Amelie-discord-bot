@@ -21,12 +21,12 @@ def rpsResult(c1, c2):
             return 2
         
 class RpsView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, target: discord.Member, botPlay: bool):
+    def __init__(self, ctx: commands.Context):
         super().__init__(timeout = 180)
         self.ctx = ctx
-        self.target = target
+        self.target: discord.Member = None
+        self.botPlay: bool = False
         self.msg: discord.Message = None
-        self.botPlay = botPlay
         self.userschoices = {
         "player1": None,
         "player1emoji": None,
@@ -46,8 +46,6 @@ class RpsView(discord.ui.View):
             if interaction.user.id not in [self.target.id, self.ctx.author.id]:
                 await interaction.response.send_message("You can't play in this match.", ephemeral = True)
                 return
-            
-            await interaction.response.defer(thinking = False) #defers the interaction to avoid "This interaction failed" message
             
             #plays with bot if no target is given
             if self.botPlay:
@@ -166,10 +164,9 @@ class Rps(commands.Cog):
             await ctx.reply("You can't play with bots. (except me !)")
             return
         
-        view = RpsView(ctx, target, botPlay = False)
+        view = RpsView(ctx)
         #plays with bot, no target's given
         if target in [None, ctx.guild.me]:
-            content = None
             target = ctx.guild.me
             view.target = ctx.guild.me
             view.botPlay = True
@@ -179,18 +176,17 @@ class Rps(commands.Cog):
             view.userschoices["player2"] = botChoice["name"]
             view.userschoices["player2emoji"] = botChoice["emoji"]
 
-            embed = discord.Embed(
-                title = "Rock, Paper, Scissors !",
-                description = "*You wanna play with ME??\nsounds fine by me-\nlets start the game then.*",
-                color = discord.Color.random()
-            )
+            content = None
+            desc = "*You wanna play with ME??\nsounds fine by me-\nlets start the game then.*"
         
         #plays with given target
         else:
             content = f"{target.mention}, You're challenged to a game of *Rock, Paper, Scissors !* by {ctx.author.mention}" #notifies the target
-            embed = discord.Embed(
+            desc = f"It's currently {target.mention}'s turn to play."
+
+        embed = discord.Embed(
                 title = "Rock, Paper, Scissors !",
-                description = f"It's currently {target.mention}'s turn to play.",
+                description = desc,
                 color = discord.Color.random()
             )
 

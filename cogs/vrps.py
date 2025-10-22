@@ -8,6 +8,7 @@ choices = [
     {"name": "Paper", "beats": "Rock", "emoji": "📃"},
     {"name": "Scissors", "beats": "Paper", "emoji": "✂️"}
 ]
+people = 40
 
 def rpsResult(c1, c2):
     #tie
@@ -23,7 +24,7 @@ def rpsResult(c1, c2):
         
 
 class VrpsView(discord.ui.View):
-    def __init__(self, ctx: commands.Context):
+    def __init__(self, ctx: commands.Context, userDeck: list = None, targetDeck: list = None):
         super().__init__(timeout = 180)
         self.ctx = ctx
         self.target: discord.Member = None
@@ -31,97 +32,134 @@ class VrpsView(discord.ui.View):
         self.msg: discord.Message = None
         self.userschoices = {
         "player1": None,
+        "player1index": None,
         "player1emoji": None,
         "player2": None,
+        "player2index": None,
         "player2emoji": None
     }
         #getting 40 random choices
         self.ballotbox = []
-        for i in range(40):
+        for i in range(people):
             self.ballotbox.append(random.choice(choices))
-        
-        #distributing cards
-        self.user1cards = []
-        self.user2cards = []
-        for i in range(3):
-            card1 = random.choice(self.ballotbox)
-            self.ballotbox.remove(card1)
-            self.user1cards.append(card1)
+        random.shuffle(self.ballotbox)
 
-            card2 = random.choice(self.ballotbox)
-            self.ballotbox.remove(card2)
-            self.user2cards.append(card2)
-        
+        #distributing cards
+        self.userDeck = [self.ballotbox.pop() for _ in range(3)] if not userDeck else userDeck
+        self.targetDeck = [self.ballotbox.pop() for _ in range(3)] if not targetDeck else targetDeck
+
         #defining deck buttons
-        for i in range(3):
+        for i in range(len(self.userDeck)):
             btn = discord.ui.Button(label = "🎴", style = discord.ButtonStyle.gray)
             btn.callback = self.make_callback(i)
             self.add_item(btn)
 
-    def make_callback(self, index: float):
+    def make_callback(self, deckIndex: int):
         async def callback(interaction: discord.Interaction):
             if interaction.user.id not in [self.ctx.author.id, self.target.id]:
-                await interaction.response.send_message("You can't play in this match.", ephemeral = True)
+                await interaction.response.send_message("You can't play in this game.", ephemeral = True)
                 return
             
+            #bot shows a random card if playing with bot
+            if self.botPlay and self.userschoices["player2"] is None:
+                botChoiceIndex = random.randrange(len(self.targetDeck))
+                self.userschoices["player2emoji"] = self.targetDeck[botChoiceIndex]["emoji"]
+                self.userschoices["player2"] = self.targetDeck.pop(botChoiceIndex)["name"]
+
+            #user shows a card
             if interaction.user.id == self.ctx.author.id:
                 if self.userschoices["player1"] is None:
-                    self.userschoices["player1"] = self.user1cards[index]
+                    self.userschoices["player1emoji"] = self.userDeck[deckIndex]["emoji"]
+                    self.userschoices["player1"] = self.userDeck.pop(deckIndex)["name"]
+                    await interaction.response.send_message(f"You have shown {self.userschoices["player1emoji"]}", ephemeral = True)
                 else:
-                    await interaction.response.send_message("You already have shown your card.", ephemeral = True)
+                    await interaction.response.send_message("You already have shown your card in this match.", ephemeral = True)
+                    return
             
+            #target shows a card if not playing wth bot
             elif interaction.user.id == self.target.id:
                 if self.userschoices["player2"] is None:
-                    self.userschoices["player2"] = self.user2cards[index]
+                    self.userschoices["player2emoji"] = self.targetDeck[deckIndex]["emoji"]
+                    self.userschoices["player2"] = self.targetDeck.pop(deckIndex)["name"]
+                    await interaction.response.send_message(f"You have shown {self.userschoices["player2emoji"]}", ephemeral = True)
                 else:
-                    await interaction.response.send_message("You already have shown your card.", ephemeral = True)
+                    await interaction.response.send_message("You already have shown your card in this match.", ephemeral = True)
+                    return
 
+            #if both players have shown their card
             if self.userschoices["player1"] and self.userschoices["player2"]:
-                result = rpsResult(self.userschoices["player1"]["name"], self.userschoices["player2"]["name"])
+                result = rpsResult(self.userschoices["player1"], self.userschoices["player2"])
 
                 #checks the result of rps
-                if result == 0:
-                    winneravatarurl = None
-                    desc = "**It was a Tie!**"
-                elif result == 1:
-                    winneravatarurl = self.ctx.author.display_avatar.url
-                    desc = f"**{self.ctx.author.mention} has Won!**"
-                elif result == 2:
-                    winneravatarurl = self.target.display_avatar.url
-                    desc = "**I have Won!**"
-
-                finalEmbed = discord.Embed(
-                    title = "Vote Rock, Paper, Scissors !",
+                if result != 0:
+                    if result == 1:
+                        winneravatarurl = self.ctx.author.display_avatar.url
+                        desc = f"**{self.ctx.author.mention} has Won!**"
+                    elif result == 2:
+                        winneravatarurl = self.target.display_avatar.url
+                        desc = f"**{self.target.mention} have Won!**"
+                    
+                    finalEmbed = discord.Embed(
+                    title = "Vote Rock-Paper-Scissors !",
                     description = desc,
                     color = discord.Color.random()
-                ).set_thumbnail(url = winneravatarurl)
+                    ).set_thumbnail(url = winneravatarurl)
 
-                await self.msg.edit(embed = finalEmbed, view = None)
-                self.stop()
+                    await self.msg.edit(embed = finalEmbed, view = None)
+                    self.stop()
 
-        return callable
+                #if tie
+                else:
+                    if not self.userDeck or not self.targetDeck:
+                        desc = "**All three matches ended with a tie. it's a draw game.**"
+
+                        finalEmbed = discord.Embed(
+                        title = "Vote Rock-Paper-Scissors !",
+                        description = desc,
+                        color = discord.Color.random()
+                        )
+
+                        await self.msg.edit(embed = finalEmbed, view = None)
+                        self.stop()
+
+                    else:
+                        #resets users choices
+                        self.userschoices = {k: None for k in self.userschoices}
+
+                        #defines a new vrps button deck
+                        view = VrpsView(self.ctx, self.userDeck, self.targetDeck)
+                        view.target = self.target
+                        view.botPlay = True if self.botPlay else False
+                        embed = discord.Embed(
+                            title = "Vote Rock-Paper-Scissors !",
+                            description = "It was a tie !\n\nplay with another card with your remaining cards.",
+                            color = discord.Color.random()
+                        )
+                        await self.msg.edit(embed = embed, view = view)
+                        view.msg = self.msg
+                        self.stop()
+
+        return callback
         
-    @discord.ui.button(label = "show my deck", emoji = "🃏", style = discord.ButtonStyle.grey)
-    async def deck(self, interaction: discord.Interaction):
+    @discord.ui.button(label = "show my deck", emoji = "ℹ️", style = discord.ButtonStyle.grey)
+    async def deck(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id not in [self.ctx.author.id, self.target.id]:
-            await interaction.response.send_message("You can't play in this match.", ephemeral = True)
-            return
+                await interaction.response.send_message("You can't play in this match.", ephemeral = True)
+                return
         
+        info = "your deck:\n"
         #shows users deck
         if interaction.user.id == self.ctx.author.id:
-            info = ""
-            for i in range(3):
-                info += f" {i + 1}: {self.user1cards[i]["name"]}{self.user1cards[i]["emoji"]} |"
+            for i, c in enumerate(self.userDeck):
+                info = " | ".join(f"{i + 1}.🎴 -> {c['emoji']}" for i, c in enumerate(self.userDeck))
             await interaction.response.send_message(info, ephemeral = True)
-
+            
         #shows targets deck
         elif interaction.user.id == self.target.id:
-            info = ""
-            for i in range(3):
-                info += f" {i + 1}: {self.user2cards[i]["name"]}{self.user2cards[i]["emoji"]} |"
-            await interaction.response.send_message(info, ephemeral = True)
+            info = " | ".join(f"{i + 1}.🎴 -> {c['emoji']}" for i, c in enumerate(self.targetDeck))
+            await interaction.response.send_message(info, ephemeral = True)     
 
-class ReadyVeiw(discord.ui.View):
+class ReadyView(discord.ui.View):
     def __init__(self, ctx: commands.Context):
         super().__init__(timeout = 180)
         self.ctx = ctx
@@ -132,21 +170,20 @@ class ReadyVeiw(discord.ui.View):
     @discord.ui.button(label = "Ready", emoji = "✅", style = discord.ButtonStyle.green)
     async def ready(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id not in [self.ctx.author.id, self.target.id]:
-            await interaction.response.send_message("You can't play in this match.", ephemeral = True)
+            await interaction.response.send_message("You can't play in this game.", ephemeral = True)
             return
         
-        #target must click ready
+        #target must click ready if not playing with bot
         if not self.botPlay:
             if interaction.user.id != self.target.id:
-                await interaction.response.send_message(f"{self.target.mention} must get ready first.")
-                return
-            
+                await interaction.response.send_message(f"{self.target.mention} must get ready to start the game.", ephemeral = True)
+                return 
+
         self.stop()
         
-        
         embed = discord.Embed(
-            title = "Vote Rock, Paper, Scissors !",
-            description = "`Voting Phase begins now !`\n*40* people are voting for cards ..."
+            title = "Vote Rock-Paper-Scissors !",
+            description = "Voting Phase begins now !\n**40** people are voting for cards ..."
 
         )
         
@@ -156,22 +193,23 @@ class ReadyVeiw(discord.ui.View):
         if self.botPlay:
             desc = (
                 "Everyone voted succesfully."
-                "\nAnd 3 cards are drawned for each one of us to play from the ballotbox."
-                "\n`And now.. It'sss SHOWTIME !! let's show the card we want to play against each other now.`"
+                "\nAnd **3** cards are drawned for each one of us to play from the ballotbox."
+                "\n*And now.. It's SHOWTIME !!* let's show the card we want to play against each other now."
             )
         else:
             desc = (
                 "Everyone voted succesfully."
-                "\nAnd 3 cards are drawned for each one of you to play from the ballotbox."
-                "\n`And now.. It'sss SHOWTIME !! let's show the card you want to play against each other now.`"
+                "\nAnd **3** cards are drawned for each one of you to play from the ballotbox."
+                "\n*And now.. It's SHOWTIME !!* let's show the card you want to play against each other now."
             )
 
         embed = discord.Embed(
-            title = "Vote Rock, Paper, Scissors !",
+            title = "Vote Rock-Paper-Scissors !",
             description = desc,
             color = discord.Color.random()
         )
         view = VrpsView(self.ctx)
+        view.target = self.target
         view.botPlay = True if self.botPlay else False
         await self.msg.edit(embed = embed, view = view)
         view.msg = self.msg
@@ -190,23 +228,26 @@ class Vrps(commands.Cog):
             await ctx.reply("You can't play with bots. (except me !)")
             return
         
-        view = ReadyVeiw(ctx)
+        view = ReadyView(ctx)
         #plays with bot
         if target in [None, ctx.guild.me]:
             target = ctx.guild.me
             view.target = target
             view.botPlay = True
             content = None
-            desc = "`You want to play this game with me??\nhuh. I dare you..`\nget ``ready`` to begin."
+            desc = (
+                '" *AHAH, oh sweetheart.. I LOVE this game.* "'
+                "\n\nClick `Ready` to start the game."
+            )
         
         #plays with the target
         else:
             view.target = target
-            content = f"{target.mention}, You're challenged to a game of *Vote Rock, Paper, Scissors !* by {ctx.author.mention}" #notifies the target
-            desc = f"{target.mention} must get ``ready`` for game to begin."
+            content = f"{target.mention}, You're challenged to a game of *Vote Rock-Paper-Scissors* by {ctx.author.mention}" #notifies the target
+            desc = f"{target.mention}, Click `Ready` to start the game."
 
         embed = discord.Embed(
-            title = "Vote Rock, Paper, Scissors !",
+            title = "Vote Rock-Paper-Scissors !",
             description = desc,
             color = discord.Color.random()
         )
