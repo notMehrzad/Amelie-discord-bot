@@ -162,7 +162,7 @@ class Rps(commands.Cog):
             await ctx.reply("You can't play with yourself.")
             return
         
-        if target is not None and target.bot and target != ctx.guild.me:
+        if target and target.bot and target != ctx.guild.me:
             await ctx.reply("You can't play with bots. (except me !)")
             return
         
