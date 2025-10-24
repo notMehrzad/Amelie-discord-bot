@@ -24,34 +24,71 @@ def rpsResult(c1, c2):
         
 #game main view class
 class VrpsView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, userDeck: list = None, targetDeck: list = None):
+    def __init__(self, ctx: commands.Context, target: discord.Member, userDeck: list = None, targetDeck: list = None):
         super().__init__(timeout = 180)
         self.ctx = ctx
-        self.target: discord.Member = None
+        self.target = target
         self.botPlay: bool = False
-        self.msg: discord.Message = None
         self.embedColor: discord.Color = None
-        self.userschoices = {
+        self.msg: discord.Message = None
+        self.playerschoice = {
         "player1": None,
         "player1emoji": None,
         "player2": None,
         "player2emoji": None
     }
-        #people will fill the ballotbox
-        self.ballotbox = []
-        for i in range(people):
-            self.ballotbox.append(random.choice(choices))
-        random.shuffle(self.ballotbox) #shuffles the ballotbox
+        #creating the ballotbox for the first time
+        if not userDeck or not targetDeck:
+            self.ballotbox = []
+            #people will fill the ballotbox
+            for i in range(people):
+                self.ballotbox.append(random.choice(choices))
+            random.shuffle(self.ballotbox) #shuffles the ballotbox
 
         #distributing cards
         self.userDeck = [self.ballotbox.pop() for _ in range(3)] if not userDeck else userDeck
         self.targetDeck = [self.ballotbox.pop() for _ in range(3)] if not targetDeck else targetDeck
+        self.userDeckStr = "  ".join("🎴" for c in self.userDeck)
+        self.targetDeckStr = "  ".join("🎴" for c in self.targetDeck)
+        self.playersDeckStr = f"{self.targetDeckStr} <- {self.target.display_name}\n{self.userDeckStr} <- {self.ctx.author.display_name}"
 
-        #defining deck buttons
+        #defining card buttons
         for i in range(len(self.userDeck)):
             btn = discord.ui.Button(label = "🎴", style = discord.ButtonStyle.gray)
             btn.callback = self.make_callback(i)
             self.add_item(btn)
+        
+    async def start(self):       
+        votingPhaseEmbed = discord.Embed(
+            title = "Vote Rock, Paper, Scissors !",
+            description = f"Voting Phase begins now!\n**{people}** people are voting for cards..",
+            color = self.embedColor
+
+        )
+        await self.msg.edit(content = None, embed = votingPhaseEmbed, view = None) #edits the embed once ready
+
+        await asyncio.sleep(5) #a 5 second delay for making it more realistic
+
+        if self.botPlay:
+            desc = (
+                "Everyone has voted successfully."
+                "\n**Three** cards have been drawn from the Ballot Box for each of us."
+                "\n\n*And now.. It's SHOWTIME!!* let's reveal our cards."
+            )
+        else:
+            desc = (
+                "Everyone has voted succesfully."
+                "\n**Three** cards have been drawn from the Ballot Box for each of you."
+                "\n*And now.. It's SHOWTIME!!* reveal your cards."
+            )
+
+        matchEmbed = discord.Embed(
+            title = "Vote Rock, Paper, Scissors !",
+            description = desc + f"\n\n{self.playersDeckStr}",
+            color = self.embedColor
+        )
+
+        await self.msg.edit(content = None, embed = matchEmbed, view = self) #edits the embed to start the match
 
     def make_callback(self, deckIndex: int):
         async def callback(interaction: discord.Interaction):
@@ -60,17 +97,17 @@ class VrpsView(discord.ui.View):
                 return
             
             #the bot makes a random card from its deck to show if playing with bot in the current match
-            if self.botPlay and self.userschoices["player2"] is None:
+            if self.botPlay and self.playerschoice["player2"] is None:
                 botChoiceIndex = random.randrange(len(self.targetDeck))
-                self.userschoices["player2emoji"] = self.targetDeck[botChoiceIndex]["emoji"]
-                self.userschoices["player2"] = self.targetDeck.pop(botChoiceIndex)["name"] #removes the chosen card from the bots deck
+                self.playerschoice["player2emoji"] = self.targetDeck[botChoiceIndex]["emoji"]
+                self.playerschoice["player2"] = self.targetDeck.pop(botChoiceIndex)["name"] #removes the chosen card from the bots deck
 
             #user chooses a card to show
             if interaction.user.id == self.ctx.author.id:
-                if self.userschoices["player1"] is None:
-                    self.userschoices["player1emoji"] = self.userDeck[deckIndex]["emoji"]
-                    self.userschoices["player1"] = self.userDeck.pop(deckIndex)["name"] #removes the chosen card from the users deck
-                    await interaction.response.send_message(f"You have shown {self.userschoices['player1emoji']}", ephemeral = True)
+                if self.playerschoice["player1"] is None:
+                    self.playerschoice["player1emoji"] = self.userDeck[deckIndex]["emoji"]
+                    self.playerschoice["player1"] = self.userDeck.pop(deckIndex)["name"] #removes the chosen card from the users deck
+                    await interaction.response.send_message(f"You have shown {self.playerschoice['player1emoji']}", ephemeral = True)
 
                 #if the user has already shown his card in the current match
                 else:
@@ -79,10 +116,10 @@ class VrpsView(discord.ui.View):
             
             #target shows a card if not playing wth bot
             elif interaction.user.id == self.target.id:
-                if self.userschoices["player2"] is None:
-                    self.userschoices["player2emoji"] = self.targetDeck[deckIndex]["emoji"]
-                    self.userschoices["player2"] = self.targetDeck.pop(deckIndex)["name"] #removes the chosen card from the targets deck
-                    await interaction.response.send_message(f"You have shown {self.userschoices['player2emoji']}", ephemeral = True)
+                if self.playerschoice["player2"] is None:
+                    self.playerschoice["player2emoji"] = self.targetDeck[deckIndex]["emoji"]
+                    self.playerschoice["player2"] = self.targetDeck.pop(deckIndex)["name"] #removes the chosen card from the targets deck
+                    await interaction.response.send_message(f"You have shown {self.playerschoice['player2emoji']}", ephemeral = True)
 
                 #if the target has already shown his card in the current match
                 else:
@@ -90,8 +127,8 @@ class VrpsView(discord.ui.View):
                     return
 
             #if both players have shown their card in the current match
-            if self.userschoices["player1"] and self.userschoices["player2"]:
-                result = rpsResult(self.userschoices["player1"], self.userschoices["player2"]) #getting the result of rps in the current match
+            if self.playerschoice["player1"] and self.playerschoice["player2"]:
+                result = rpsResult(self.playerschoice["player1"], self.playerschoice["player2"]) #getting the result of rps in the current match
 
                 #checks the result of rps in the current match
                 if result != 0:
@@ -104,7 +141,7 @@ class VrpsView(discord.ui.View):
                     
                     #creating the final embed for results
                     finalEmbed = discord.Embed(
-                    title = "Vote Rock-Paper-Scissors !",
+                    title = "Vote Rock, Paper, Scissors !",
                     description = desc,
                     color = self.embedColor
                     ).set_thumbnail(url = winneravatarurl)
@@ -117,7 +154,7 @@ class VrpsView(discord.ui.View):
                     #if no card is left in players' deck to play with (match 3)
                     if not self.userDeck or not self.targetDeck:
                         finalEmbed = discord.Embed(
-                        title = "vote Rock, Paper, Scissors !",
+                        title = "Vote Rock, Paper, Scissors !",
                         description = "All Three matches ended up with a tie. This game is a draw.\n\n*What are the odds??*",
                         color = discord.Color.default()
                         )
@@ -127,22 +164,23 @@ class VrpsView(discord.ui.View):
 
                     #players still have cards in their deck
                     else:
-                        #resets players' choice
-                        self.userschoices = {k: None for k in self.userschoices}
-
-                        #defines a new vrps button deck
-                        view = VrpsView(self.ctx, self.userDeck, self.targetDeck)
+                        #initializes a new vrps view for the next match
+                        view = VrpsView(self.ctx, self.target, self.userDeck, self.targetDeck)
                         view.target = self.target
                         view.botPlay = True if self.botPlay else False
                         view.embedColor = self.embedColor
+                        if self.botPlay:
+                            desc = "It was a tie ! The game will continue with the remaining cards in our deck.\n"
+                        else:
+                            desc = "It was a tie ! The game will continue with the remaining cards in your deck.\n"
                         embed = discord.Embed(
-                            title = "vote Rock, Paper, Scissors !",
-                            description = "It was a tie !\n\nThe game will continue with the remaining cards in your deck.",
+                            title = "Vote Rock, Paper, Scissors !",
+                            description = desc + self.playerDeckStr,
                             color = self.embedColor
                         )
                         await self.msg.edit(embed = embed, view = view) #edits the embed to start another match
-                        view.msg = self.msg #stores the message to edit later
-                        self.stop() #stops the current match interaction to start another
+                        view.msg = self.msg #stores the message in the new vrps view to edit later
+                        self.stop() #stops the current match interaction
 
         return callback
     
@@ -153,11 +191,9 @@ class VrpsView(discord.ui.View):
                 await interaction.response.send_message("You can't play in this game.", ephemeral = True)
                 return
         
-        info = "your deck:\n"
         #shows users deck info
         if interaction.user.id == self.ctx.author.id:
-            for i, c in enumerate(self.userDeck):
-                info = " | ".join(f"{i + 1}.🎴 -> {c['emoji']}" for i, c in enumerate(self.userDeck))
+            info = " | ".join(f"{i + 1}.🎴 -> {c['emoji']}" for i, c in enumerate(self.userDeck))
             await interaction.response.send_message(info, ephemeral = True)
             
         #shows targets deck info
@@ -170,7 +206,13 @@ class VrpsView(discord.ui.View):
         for btn in self.children:
             btn.disabled = True
         
-        guilty = self.target.mention if not self.userschoices["player2"] and not self.botPlay else self.ctx.author.mention
+        if not self.playerschoice["player1"] and self.botPlay:
+            guilty = self.ctx.author.mention
+        elif not self.playerschoice["player1"] and not self.playerschoice["player2"]:
+            guilty = f"{self.ctx.author.mention} and {self.target.mention}"
+        elif not self.playerschoice["player2"]:
+            guilty = self.target.mention
+
         embed = discord.Embed(
             title = "vote Rock, Paper, Scissors !",
             description = f"⏰ The game has timed out! {guilty} didn't make a move.\n*shame on you..*",
@@ -186,9 +228,13 @@ class VrpsView(discord.ui.View):
 
         self.stop() #stops the interaction upon timeout
 
-    async def on_error(self, interaction: discord.Interaction, error, item):
-        print(f"❌ something went wrong with vrps vrps interaction-> error: {error} | item: {item}")
-        await interaction.response.send_message("something went wrong with **vrps**.")
+    async def on_error(self, interaction: discord.Interaction, error, item: discord.ui.Button):
+        print(f"❌ something went wrong with vrps vrps interaction-> error: {error} | item: {item.label}")
+        try:
+            await interaction.response.send_message("something went wrong with **vrps**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **vrps**.", ephemeral = True)
+            
         self.stop() #stops further interaction
 
 class ReadyView(discord.ui.View):
@@ -197,8 +243,30 @@ class ReadyView(discord.ui.View):
         self.ctx = ctx
         self.target: discord.Member = None
         self.botPlay: bool = False
-        self.msg: discord.Message = None
         self.embedColor: discord.Color = None
+        self.msg: discord.Message = None
+
+    async def start(self):
+        #user must get ready if playing with bot
+        if self.botPlay:
+            content = None
+            desc = (
+                '" *AHAH, oh sweetheart.. I LOVE this game.* "'
+                "\n\nClick `Ready` to start the game."
+            )
+        
+        #target must get ready if not playing with bot
+        else:
+            content = f"{self.target.mention}, You're challenged to a game of *Vote Rock, Paper, Scissors !* by {self.ctx.author.mention}" #notifies the target
+            desc = f"{self.target.mention}, Click `Ready` to start the game."
+
+        self.embedColor = discord.Color.random()
+        readyEmbed = discord.Embed(
+            title = "Vote Rock, Paper, Scissors !",
+            description = desc,
+            color = self.embedColor
+        )
+        self.msg = await self.ctx.reply(content = content, embed = readyEmbed, view = self) #sends the initial ready message
 
     #defining ready button        
     @discord.ui.button(label = "Ready", emoji = "✅", style = discord.ButtonStyle.green)
@@ -207,49 +275,24 @@ class ReadyView(discord.ui.View):
             await interaction.response.send_message("You can't play in this game.", ephemeral = True)
             return
         
-        #target must click ready if not playing with bot
+        #target must get ready if not playing with bot
         if not self.botPlay:
             if interaction.user.id != self.target.id:
                 await interaction.response.send_message(f"{self.target.mention} must get ready to start the game.", ephemeral = True)
                 return 
-        
+            
+        #either target or user is ready at this point
         await interaction.response.defer(thinking = False) #defers the response to avoid "This interaction failed" message
-        embed = discord.Embed(
-            title = "vote Rock, Paper, Scissors !",
-            description = f"Voting Phase begins now!\n**{people}** people are voting for cards ..."
 
-        )
-        await self.msg.edit(content = None, embed = embed, view = None) #edits the embed once ready
-        await asyncio.sleep(5) #a 5 second delay for making it more realistic
-
-        if self.botPlay:
-            desc = (
-                "Everyone has voted successfully."
-                "\n**Three** cards have been drawn from the Ballot Box for each of us."
-                "\n\n*And now.. It's SHOWTIME!!* let's reveal our cards now."
-            )
-        else:
-            desc = (
-                "Everyone has voted succesfully."
-                "\n**Three** cards have been drawn from the Ballot Box for each of you."
-                "\n*And now.. It's SHOWTIME!!* reveal your cards now."
-            )
-
-        userDeckEmbed = "  ".join("🎴" for c in self.userDeck)
-        targetDeckEmbed = "  ".join("🎴" for c in self.targetDeck)
-
-        embed = discord.Embed(
-            title = "vote Rock, Paper, Scissors !",
-            description = desc,
-            color = self.embedColor
-        )
-        view = VrpsView(self.ctx)
+        view = VrpsView(self.ctx, self.target) #initializing the vrps view
         view.target = self.target
         view.botPlay = True if self.botPlay else False
-        await self.msg.edit(embed = embed, view = view) #edit the embed once everyone has voted
-        view.msg = self.msg #stores the message to edit later
+        view.embedColor = self.embedColor
+        view.msg = self.msg #stores the message in vrps view to edit later
 
-        self.stop() #stops the intraction with ready view once both players are ready
+        self.stop() #stops the intraction once both players are ready
+
+        await view.start() #starts the vrps view
 
     async def on_timeout(self):
         #disables all the buttons upon timeout
@@ -258,14 +301,14 @@ class ReadyView(discord.ui.View):
 
         guilty = self.target.mention if not self.botPlay else self.ctx.author.mention
 
-        embed = discord.Embed(
-            title = "vote Rock, Paper, Scissors !",
+        timeoutEmbed = discord.Embed(
+            title = "Vote Rock, Paper, Scissors !",
             description = f"⏰ The game has timed out! {guilty} didn't get ready.\n*shame on you..*",
             color = discord.Color.dark_gray()
         )
         
         try:
-            await self.msg.edit(content = None, embed = embed, view = self) #sends the timeout message
+            await self.msg.edit(content = None, embed = timeoutEmbed, view = self) #sends the timeout message
 
         #if message is already deleted
         except discord.NotFound:
@@ -273,9 +316,14 @@ class ReadyView(discord.ui.View):
 
         self.stop() #stops the interaction upon timeout
 
-    async def on_error(self, interaction: discord.Interaction, error, item):
-        print(f"❌ something went wrong with vrps ready interaction-> error: {error} | item: {item}")
-        await interaction.response.send_message("something went wrong with **vrps**.")
+    async def on_error(self, interaction: discord.Interaction, error, item: discord.ui.Button):
+        print(f"❌ something went wrong with vrps ready interaction-> error: {error} | item: {item.label}")
+        try:
+            await interaction.response.send_message("something went wrong with **vrps**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **vrps**.", ephemeral = True)
+            
+        
         self.stop() #stops further interaction
 
 class Vrps(commands.Cog):
@@ -289,38 +337,23 @@ class Vrps(commands.Cog):
             await ctx.reply("You can't play with yourself.")
             return
         
-        #if user wants to play with a bot
+        #if user wants to play with a bot except this bot
         if target and target.bot and target != ctx.guild.me:
             await ctx.reply("You can't play with bots. (except me!)")
             return
         
-        view = ReadyView(ctx)
-        #plays with bot
+        view = ReadyView(ctx) #initializing the ready view
+
+        #plays with bot if no target is mentioned or the target is the bot itself
         if target in [None, ctx.guild.me]:
-            target = ctx.guild.me
-            view.target = target
+            target = view.target = ctx.guild.me
             view.botPlay = True
-            content = None
-            desc = (
-                '" *AHAH, oh sweetheart.. I LOVE this game.* "'
-                "\n\nClick `Ready` to start the game."
-            )
         
         #plays with the target
         else:
             view.target = target
-            content = f"{target.mention}, You're challenged to a game of *vote Rock, Paper, Scissors !* by {ctx.author.mention}" #notifies the target
-            desc = f"{target.mention}, Click `Ready` to start the game."
-
-        embedColor = discord.Color.random()
-        view.embedColor = embedColor
-        embed = discord.Embed(
-            title = "vote Rock, Paper, Scissors !",
-            description = desc,
-            color = embedColor
-        )
-        msg = await ctx.reply(content = content, embed = embed, view = view) #sends the initial message
-        view.msg = msg #stores the sent message to edit later
+            
+        await view.start() #starts the ready view
 
     @vrps.error
     async def vrps_error(self, ctx: commands.Context, error):
