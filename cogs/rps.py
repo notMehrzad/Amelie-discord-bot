@@ -150,6 +150,11 @@ class RpsView(discord.ui.View):
 
         self.stop() #stops further interaction
 
+    async def on_error(self, interaction, error, item):
+        print(f"❌ something went wrong with rps interaction-> error: {error} | interaction: {interaction} | item: {item}")
+        await interaction.response.send_message("something went wrong with **rps**.")
+        self.stop() #stops further interaction
+
 class Rps(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
