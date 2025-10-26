@@ -11,66 +11,66 @@ class StartUp(commands.Cog):
     #command cog
     @commands.command(name = "cog")
     async def cog(self, ctx: commands.Context, cmd: str, extension: str = None):
-        try:
-            #checks if the user is an admin to use the command
-            if str(ctx.author.id) not in config["ADMINS"]:
-                await ctx.reply(content ="You can't use this command.", delete_after = 5)
+        #checks if the user is an admin to use the command
+        if str(ctx.author.id) not in config["ADMINS"]:
+            await ctx.reply(content ="You can't use this command.", delete_after = 5)
+            await ctx.message.delete(delay = 5)
+            return
+        
+        cmd = cmd.lower() if cmd else None
+        extension = extension.lower() if extension else None
+
+        #if the subcommand is reload
+        if cmd in ["reload", "r"]:
+            #reloads all cogs if no extension is given
+            if extension in [None, "all"]:
+                msg = await ctx.reply("Reloading all cogs..")
+
+                print("\n--------------")
+                for ext in list(self.bot.extensions):
+                    await self.bot.reload_extension(ext)
+                    print(f"🔄️ {ext.removeprefix("cogs.")} cog is reloaded.")
+                
+                await msg.edit(content = "All cogs have been reloaded succesfully. ✅", delete_after = 5)
+            
+            elif "cogs." + extension not in self.bot.extensions:
+                await ctx.reply(f"`{extension}` is not a loaded cog.", delete_after = 5)
                 await ctx.message.delete(delay = 5)
                 return
-            
-            cmd = cmd.lower() if cmd else None
-            extension = extension.lower() if extension else None
 
-            #if the subcommand is reload
-            if cmd == "reload":
-                #reloads all cogs if no extension is given
-                if extension in [None, "all"]:
-                    msg = await ctx.reply("Reloading all cogs..")
-
-                    print("\n--------------")
-                    for ext in list(self.bot.extensions):
-                        await self.bot.reload_extension(ext)
-                        print(f"🔄️ {ext.removeprefix("cogs.")} cog is reloaded.")
-                    
-                    await msg.edit(content = "All cogs have been reloaded succesfully. ✅", delete_after = 5)
-                
-                elif "cogs." + extension not in self.bot.extensions:
-                    await ctx.reply(f"`{extension}` is not a loaded cog.", delete_after = 5)
-                    await ctx.message.delete(delay = 5)
-                    return
-
-                #reloads the given extension (if any)
-                else:
-                    msg = await ctx.reply(f"Reloading `{extension}` cog..")
-
-                    print("\n--------------")
-                    await self.bot.reload_extension(f"cogs.{extension}")
-
-                    print(f"🔄️ {extension.removeprefix("cogs.")} cog is reloaded.")
-                    await msg.edit(content = f"`{extension}` cog has been reloaded succesfully. ✅", delete_after = 5)
-
-                await ctx.message.delete()
-            
-            #if the subcommand is list
-            elif cmd in ["list", "show"]:
-                extensionlist = list(self.bot.extensions)
-                print(f"\n--------------\n{extensionlist}")
-                await ctx.reply(content = "Cogs list has been sent. ✅", delete_after = 5)
-                await ctx.message.delete(delay = 5)
-
-            #if user entered no subcommand
-            elif cmd is None:
-                await ctx.reply(content = "You must enter a subcommand for this command.", delete_after = 5)
-                await ctx.message.delete(delay = 5)
-
-            #if user entered unvalid subcommand
+            #reloads the given extension (if any)
             else:
-                await ctx.reply(content = "Enter a valid subcommand.", delete_after = 5)
-                await ctx.message.delete(delay = 5)
+                msg = await ctx.reply(f"Reloading `{extension}` cog..")
 
-        except Exception as e:
-            print(f"\n❌ something went wrong with cog command: {e}")
-            await ctx.reply(content = f"❌ something went wrong with **cog**.", delete_after = 5)
+                print("\n--------------")
+                await self.bot.reload_extension(f"cogs.{extension}")
+
+                print(f"🔄️ {extension.removeprefix("cogs.")} cog is reloaded.")
+                await msg.edit(content = f"`{extension}` cog has been reloaded succesfully. ✅", delete_after = 5)
+
+            await ctx.message.delete()
+        
+        #if the subcommand is list
+        elif cmd in ["list", "show"]:
+            extensionlist = list(self.bot.extensions)
+            print(f"\n--------------\n{extensionlist}")
+            await ctx.reply(content = "Cogs list has been sent. ✅", delete_after = 5)
+            await ctx.message.delete(delay = 5)
+
+        #if user entered no subcommand
+        elif cmd is None:
+            await ctx.reply(content = "You must enter a subcommand for this command.", delete_after = 5)
+            await ctx.message.delete(delay = 5)
+
+        #if user entered unvalid subcommand
+        else:
+            await ctx.reply(content = "Enter a valid subcommand.", delete_after = 5)
+            await ctx.message.delete(delay = 5)
+
+    @cog.error
+    async def cog_error(self, ctx: commands.Context, error):
+        print(f"❌ something went wrong with cog command: {error}")
+        await ctx.reply("something went wrong with **cog**.", delete_after = 5)
 
 
 async def setup(bot: commands.Bot):

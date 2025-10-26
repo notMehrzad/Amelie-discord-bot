@@ -21,12 +21,12 @@ def rpsResult(c1, c2):
             return 2
         
 class RpsView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, target: discord.Member, botPlay: bool):
+    def __init__(self, ctx: commands.Context):
         super().__init__(timeout = 180)
         self.ctx = ctx
-        self.target = target
+        self.target: discord.Member = None
+        self.botPlay: bool = False
         self.msg: discord.Message = None
-        self.botPlay = botPlay
         self.userschoices = {
         "player1": None,
         "player1emoji": None,
@@ -88,7 +88,7 @@ class RpsView(discord.ui.View):
                     color = discord.Color.random()
                 )
                     await self.msg.edit(embed = embed)
-                    await interaction.response.send_message(f"{self.ctx.author.mention}, It's your turn now !")
+                    await interaction.response.send_message(f"{self.ctx.author.mention}, It's your turn now !", delete_after = 180)
 
                 #checks if the target has chosen already
                 elif interaction.user.id == self.target.id:
@@ -133,7 +133,8 @@ class RpsView(discord.ui.View):
         for btn in self.children:
             btn.disabled = True
 
-        guilty = self.target.mention if self.userschoices["player2"] else self.ctx.author.mention
+        guilty = self.ctx.author.mention if self.userschoices["player2"] else self.target.mention
+
         embed = discord.Embed(
             title = "Rock, Paper, Scissors !",
             description = f"⏰ The game has timed out! {guilty} didn't make a move.\n*shame on you..*",
@@ -149,6 +150,11 @@ class RpsView(discord.ui.View):
 
         self.stop() #stops further interaction
 
+    async def on_error(self, interaction, error, item):
+        print(f"❌ something went wrong with rps interaction-> error: {error} | interaction: {interaction} | item: {item}")
+        await interaction.response.send_message("something went wrong with **rps**.")
+        self.stop() #stops further interaction
+
 class Rps(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -159,14 +165,13 @@ class Rps(commands.Cog):
             await ctx.reply("You can't play with yourself.")
             return
         
-        if target is not None and target.bot and target != ctx.guild.me:
+        if target and target.bot and target != ctx.guild.me:
             await ctx.reply("You can't play with bots. (except me !)")
             return
         
-        view = RpsView(ctx, target, botPlay = False)
+        view = RpsView(ctx)
         #plays with bot, no target's given
         if target in [None, ctx.guild.me]:
-            content = None
             target = ctx.guild.me
             view.target = ctx.guild.me
             view.botPlay = True
@@ -176,18 +181,17 @@ class Rps(commands.Cog):
             view.userschoices["player2"] = botChoice["name"]
             view.userschoices["player2emoji"] = botChoice["emoji"]
 
-            embed = discord.Embed(
-                title = "Rock, Paper, Scissors !",
-                description = "*You wanna play with ME??\nsounds fine by me-\nlets start the game then.*",
-                color = discord.Color.random()
-            )
+            content = None
+            desc = "*You wanna play with ME??\nsounds fine by me-\nlets start the game then.*"
         
         #plays with given target
         else:
             content = f"{target.mention}, You're challenged to a game of *Rock, Paper, Scissors !* by {ctx.author.mention}" #notifies the target
-            embed = discord.Embed(
+            desc = f"It's currently {target.mention}'s turn to play."
+
+        embed = discord.Embed(
                 title = "Rock, Paper, Scissors !",
-                description = f"It's currently {target.mention}'s turn to play.",
+                description = desc,
                 color = discord.Color.random()
             )
 
@@ -202,6 +206,7 @@ class Rps(commands.Cog):
         else:
             print(f"❌ something went wrong with rps command: {error}")
             await ctx.reply("something went wrong with **rps**.")
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Rps(bot))
