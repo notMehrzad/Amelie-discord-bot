@@ -21,7 +21,7 @@ class StartUp(commands.Cog):
         extension = extension.lower() if extension else None
 
         #if the subcommand is reload
-        if cmd == "reload":
+        if cmd in ["reload", "r"]:
             #reloads all cogs if no extension is given
             if extension in [None, "all"]:
                 msg = await ctx.reply("Reloading all cogs..")
