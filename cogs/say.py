@@ -5,7 +5,7 @@ class Say(commands.Cog):
         self.bot = bot
 
     @commands.command(name = "say", aliases = ["echo"])
-    async def say(self, ctx: commands.Context, *, args: str | None):
+    async def say(self, ctx: commands.Context[commands.Bot], *, args: str | None):
         if args is None:
             await ctx.reply("you must write the things to be said.")
             return
@@ -13,7 +13,7 @@ class Say(commands.Cog):
         await ctx.send(args)
 
     @say.error
-    async def say_error(self, ctx: commands.Context, error):
+    async def say_error(self, ctx: commands.Context[commands.Bot], error: Exception):
         print(f"❌ something went wrong with say command: {error}")
         await ctx.reply("something went wrong with **say**.")
 

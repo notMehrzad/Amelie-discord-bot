@@ -245,20 +245,20 @@ class VrpsView(discord.ui.View):
             if isinstance(btn, discord.ui.Button):
                 btn.disabled = True
         
-        #both players don't respond and not playing with bot
-        if not self.playerschoice["player1"] and not(self.playerschoice["player2"] or self.botPlay):
-            guilty = f"{self.ctx.author.mention} and {self.target.mention}"
-
-        #target doesn't respond and not playing with bot
-        elif self.playerschoice["player1"] and not (self.playerschoice["player2"] or self.botPlay):
-            guilty = self.target.mention
-
-        #user dosen't respond
-        else:
+        #player 1 is guilty
+        if not self.playerschoice["player1"] and (self.botPlay or self.playerschoice["player2"]):
             guilty = self.ctx.author.mention
 
+        #player 2 is guilty
+        elif self.playerschoice["player1"]:
+            guilty = self.target.mention
+
+        #both players are guilty
+        else:
+            guilty = f"{self.ctx.author.mention} and {self.target.mention}"
+
         embed = discord.Embed(
-            title = "vote Rock, Paper, Scissors !",
+            title = "Vote Rock, Paper, Scissors !",
             description = f"⏰ The game has timed out! {guilty} didn't make a move.\n*shame on you..*",
             color = discord.Color.dark_gray()
         )
@@ -273,7 +273,7 @@ class VrpsView(discord.ui.View):
         self.stop() #stops the interaction upon timeout
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        print(f"❌ something went wrong with vrps vrps interaction-> error: {error} | item: {getattr(item, 'lable', 'unknown')}")
+        print(f"❌ something went wrong with vrps interaction -> error: {error} | item: {getattr(item, 'lable', 'unknown')}")
         try:
             await interaction.response.send_message("something went wrong with **vrps**.", ephemeral = True)
         except discord.InteractionResponded:
@@ -387,12 +387,12 @@ class Vrps(commands.Cog):
             return
         
         #if user wants to play with a bot except this bot
-        if target and target.bot and target != ctx.guild.me:
+        if target and target.bot and target.id != ctx.guild.me.id:
             await ctx.reply("You can't play with bots. (except me!)")
             return
 
         #plays with bot if no target is mentioned or the target is the bot itself
-        if target is None or target == ctx.guild.me:
+        if target is None or target.id == ctx.guild.me.id:
             view = ReadyView(ctx, ctx.guild.me, botPlay = True)
         
         #plays with the target
@@ -402,9 +402,9 @@ class Vrps(commands.Cog):
         await view.start() #starts the ready view
 
     @vrps.error
-    async def vrps_error(self, ctx: commands.Context[commands.Bot], error: Exception):
+    async def vrps_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
         #if user mentioned an invalid user
-        if isinstance(error, commands.MemberNotFound):
+        if isinstance(error, commands.BadArgument):
             await ctx.reply("Member not found. Please mention a valid user.")
         else:
             print(f"❌ something went wrong with vrps command: {error}")
