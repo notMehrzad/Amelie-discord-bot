@@ -9,22 +9,25 @@ class Mod(commands.Cog):
     async def mod(self, ctx: commands.Context[commands.Bot], cmd: str | None, target: discord.Member | None):
         print(cmd, target)
         #if user runs the command in dm
-        if not ctx.guild:
+        if ctx.guild is None:
             await ctx.reply("You can only do moderation commands in a server.")
             return
         
-        #if user didn't enter any subcommand
+        cmd = cmd.lower() if cmd else None
+        
+        #if user dosn't enter any subcommand
         if cmd is None:
             await ctx.reply("You must enter a subcommand for this command.")
             return
-        
-        if not isinstance(type(target), discord.Member):
-            await ctx.reply("You must enter a valid member as target.")
+            
+        #if user enters an invalid subcommand
+        elif cmd not in ["kick", "k", "ban", "b", "timeout", "t"]:
+            await ctx.reply("You must enter a valid subcommand for this command.")
             return
         
         #if user didn't enter any target member
         if target is None:
-            await ctx.reply("You must enter a target member for this command.")
+            await ctx.reply("You must enter a target user for this command.")
             return
         
         #if user wants to do moderation command on himself
@@ -37,13 +40,12 @@ class Mod(commands.Cog):
             await ctx.reply("You can't do my moderation commands on myself.\nnice try.")
             return
         
-        cmd = cmd.lower()
-
         #kick subcommand
         if cmd in ["kick", "k"]:
-            if not ctx.permissions.kick_members:
+            if not commands.has_guild_permissions(kick_members = True):
                 await ctx.reply("You have no permission to *kick* this member.")
                 return
+            
             if not ctx.bot_permissions.kick_members:
                 await ctx.reply("I have no permisson to *kick* this member.")
                 return
@@ -73,9 +75,9 @@ class Mod(commands.Cog):
             return
         
     @mod.error
-    async def mod_error(self, ctx: commands.Context[commands.Bot], error: Exception):
+    async def mod_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
         #if user mentioned an invalid user
-        if isinstance(error, commands.MemberNotFound):
+        if isinstance(error, commands.BadArgument):
             await ctx.reply("Member not found. Please mention a valid user.")
         else:
             print(f"❌ something went wrong with mod command: {error}")

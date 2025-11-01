@@ -5,10 +5,9 @@ class Say(commands.Cog):
         self.bot = bot
 
     @commands.command(name = "say", aliases = ["echo"])
-    async def say(self, ctx: commands.Context[commands.Bot], *, args: str | None):
-        if args is None:
-            await ctx.reply("you must write the things to be said.")
-            return
+    async def say(self, ctx: commands.Context[commands.Bot], *, args: str | None = None):
+        if not args:
+            return await ctx.reply("You must write the things to be said.")
         
         await ctx.send(args)
 

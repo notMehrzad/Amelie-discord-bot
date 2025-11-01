@@ -7,16 +7,14 @@ class Ping(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    
     @commands.command(name = "ping")
-    async def ping(self, ctx: commands.Context):
-        pings = []
+    async def ping(self, ctx: commands.Context[commands.Bot]):
+        pings: list[float] = [] #stores pings results
         pingNumbers = 4
 
-        msg = await ctx.reply("pinging...")
+        msg = await ctx.reply("pinging...") #initial message
 
         ws = self.bot.latency * 1000 #getting websocket latency
-
         #starts pinging n times
         for i in range(pingNumbers):
             start = time.perf_counter()
@@ -24,7 +22,6 @@ class Ping(commands.Cog):
             end = time.perf_counter()
             msg_latency = (end - start) * 1000
             pings.append(msg_latency) #stores the nth ping in a list
-
             await asyncio.sleep(0.1)
         avg = round(sum(pings) / pingNumbers, 2) #getting REST latency
         minping = round(min(pings), 2)
@@ -40,8 +37,7 @@ class Ping(commands.Cog):
         else:
             color = discord.Color.from_str("#ff3800") #red
 
-        #defining the result embed
-        embed = discord.Embed(
+        resultEmbed = discord.Embed(
             color = color,
             title = "Pong! 🏓",
             description = (
@@ -51,11 +47,10 @@ class Ping(commands.Cog):
             ),
             timestamp = discord.utils.utcnow()
         ).set_footer(text = f"requested by {ctx.author.name}")
-
-        await msg.edit(content = None, embed = embed)
+        await msg.edit(content = None, embed = resultEmbed) #sends the final results
 
     @ping.error
-    async def ping_error(self, ctx: commands.Context, error):
+    async def ping_error(self, ctx: commands.Context[commands.Bot], error: Exception):
         print(f"❌ something went wrong with ping command: {error}")
         await ctx.reply("something went wrong with **ping**.")
 

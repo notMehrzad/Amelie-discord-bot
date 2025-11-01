@@ -10,20 +10,26 @@ class StartUp(commands.Cog):
 
     #command cog
     @commands.command(name = "cog")
-    async def cog(self, ctx: commands.Context, cmd: str, extension: str = None):
+    async def cog(self, ctx: commands.Context[commands.Bot], cmd: str | None = None, extension: str | None = None):
         #checks if the user is an admin to use the command
         if str(ctx.author.id) not in config["ADMINS"]:
             await ctx.reply(content ="You can't use this command.", delete_after = 5)
             await ctx.message.delete(delay = 5)
             return
         
-        cmd = cmd.lower() if cmd else None
+        #if user entered no subcommand
+        if not cmd:
+            await ctx.reply(content ="You must enter a subcommand for this command.", delete_after = 5)
+            await ctx.message.delete(delay = 5)
+            return
+        
+        cmd = cmd.lower()
         extension = extension.lower() if extension else None
 
-        #if the subcommand is reload
+        #reload subcommand
         if cmd in ["reload", "r"]:
             #reloads all cogs if no extension is given
-            if extension in [None, "all"]:
+            if not extension or extension == "all":
                 msg = await ctx.reply("Reloading all cogs..")
 
                 print("\n--------------")
@@ -57,18 +63,13 @@ class StartUp(commands.Cog):
             await ctx.reply(content = "Cogs list has been sent. ✅", delete_after = 5)
             await ctx.message.delete(delay = 5)
 
-        #if user entered no subcommand
-        elif cmd is None:
-            await ctx.reply(content = "You must enter a subcommand for this command.", delete_after = 5)
-            await ctx.message.delete(delay = 5)
-
         #if user entered unvalid subcommand
         else:
             await ctx.reply(content = "Enter a valid subcommand.", delete_after = 5)
             await ctx.message.delete(delay = 5)
 
     @cog.error
-    async def cog_error(self, ctx: commands.Context, error):
+    async def cog_error(self, ctx: commands.Context[commands.Bot], error: Exception):
         print(f"❌ something went wrong with cog command: {error}")
         await ctx.reply("something went wrong with **cog**.", delete_after = 5)
 
