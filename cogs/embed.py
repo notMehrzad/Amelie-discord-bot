@@ -1,11 +1,11 @@
 import discord
 from discord.ext import commands
 import re
-import asyncio
 from urllib.parse import urlparse
+import datetime
 
-def parse_args(args):
-    matches = re.findall(r'(\w+)\s*:\s*\((.*?)\)', args)
+def parse_args(args: str):
+    matches: list[tuple[str, str]] = re.findall(r'(\w+)\s*:\s*\((.*?)\)', args)
     return matches
 
 def colorValidation(value: str):
@@ -18,15 +18,15 @@ def colorValidation(value: str):
     
     return bool(re.fullmatch(r"[0-9a-fA-F]{3}|[0-9a-fA-F]{6}", value))
 
-def urlValidation(url):
+def urlValidation(url: str):
     try:
         result = urlparse(url)
         return all([result.scheme in ("http", "https"), result.netloc])
     except:
         return False
 
-async def assignVars(ctx: commands.Context, arg_list):
-    data = {
+async def assignVars(ctx: commands.Context[commands.Bot], arg_list: list[tuple[str, str]]):
+    data: dict[str, None | str | discord.Color | datetime.datetime] = {
         "title": None,
         "desc": None,
         "url": None,
@@ -129,25 +129,39 @@ async def assignVars(ctx: commands.Context, arg_list):
                             return None
                         
                     else:
-                        await ctx.reply("enter a valid attribute (like `title`, `description`, ..)")
+                        await ctx.reply(f"{arg} is not a valid argument.")
                         return None
                         
-    return data
+    return data #returns the data dictionary if no problems else None is returned
 
 class Embed(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.command(name = "embed")
-    async def embed(self, ctx: commands.Context, cmd: str = None, *, args: str = ""):
-        cmd = cmd.lower() if cmd else None
-
-        #if subcommand is send
+    async def embed(self, ctx: commands.Context[commands.Bot], cmd: str | None = None, *, args: str | None = None):
+        #if user runs the command in dm
+        if not ctx.guild:
+            return await ctx.reply("You can't use this command in dm.")
+        
+        #if user doesn't enter a subcommand
+        if not cmd:
+            await ctx.reply("You must enter a subcommand for this command.", delete_after = 5)
+            await ctx.message.delete(delay = 5)
+            return
+        
+        cmd = cmd.lower()
+        #send subcommand
         if cmd == "send":
+            #if user doesn't enter the arguments
+            if not args:
+                return await ctx.reply("You must enter the arguments to create the Embed.")
+            
             try:
                 argList = parse_args(args) #parsing args
                 data = await assignVars(ctx, argList) #collecting the data from args
 
+                #returns if no data is available
                 if not data:
                     return
                 
@@ -156,8 +170,8 @@ class Embed(commands.Cog):
                     title = data["title"],
                     description = data["desc"],
                     url = data["url"],
-                    color = data["color"],
-                    timestamp = data["timestamp"]
+                    color = data["color"] if data["color"] is discord.Color else None,
+                    timestamp = data["timestamp"] if data["timestamp"] is datetime.datetime else None
                 ).set_footer(text = data["footer"], icon_url = data["footericonurl"])
                 if data["author"]:
                     embed = embed.set_author(name = data["author"], url = data["authorurl"], icon_url = data["authoriconurl"])
@@ -170,20 +184,14 @@ class Embed(commands.Cog):
 
             except Exception as e:
                 print(f"\n❌ something went wrong with embed-send command: {e}")
-                await ctx.reply(f"something went wrong with **embed**.", delete_after = 5)
-
-        elif cmd is None:
-            await ctx.reply("You must enter a subcommand for this command.", delete_after = 5)
-            await asyncio.sleep(5)
-            await ctx.message.delete()
+                await ctx.reply(f"something went wrong with **embed**.")
 
         else:
             await ctx.reply("Enter a valid subcommand.", delete_after = 5)
-            await asyncio.sleep(5)
-            await ctx.message.delete()
+            await ctx.message.delete(delay = 5)
 
     @embed.error
-    async def embed_error(self, ctx: commands.Context, error):
+    async def embed_error(self, ctx: commands.Context[commands.Bot], error: Exception):
         print(f"❌ something went wrong with embed command: {error}")
         await ctx.reply(f"something went wrong with **embed**.", delete_after = 5)
 
