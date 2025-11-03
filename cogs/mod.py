@@ -184,7 +184,7 @@ class Mod(commands.Cog):
                     return await ctx.reply("enter a valid datetime.")
                 
             if isinstance(until, timedelta) and not (timedelta(days = 28) >= until >= timedelta(minutes = 2)):
-                return await ctx.reply("timeout must be at least *2 minutes.*")
+                return await ctx.reply("timeout must be at least *2 minutes* and *28 days* at most.")
             
             if target.is_timed_out():
                 return await ctx.reply(f"{target.display_name} is timed out already.")
@@ -256,6 +256,71 @@ class Mod(commands.Cog):
         else:
             print(f"❌ something went wrong with mod-unban command: {error}")
             await ctx.reply("something went wrong with **unban**.")
+
+    @commands.Cog.listener()
+    async def on_message(self, msg: discord.Message):
+        if msg.author.bot:
+            return
+        
+        if not msg.guild or not isinstance(msg.author, discord.Member):
+            return
+        
+        if not msg.author.guild_permissions.moderate_members or not msg.guild.me.guild_permissions.moderate_members:
+            return
+        
+        if not msg.reference or not msg.reference.message_id:
+            return
+        
+        try:
+            refMsg = await msg.channel.fetch_message(msg.reference.message_id)
+        except discord.NotFound:
+            return
+        
+        if not isinstance(refMsg.author, discord.Member):
+            return
+        
+        if refMsg.author.id == msg.guild.owner_id:
+            return
+        
+        if refMsg.author.id == msg.author.id:
+            return
+        
+        if refMsg.author.bot:
+            return
+        
+        if refMsg.author.top_role >= msg.guild.me.top_role or refMsg.author.top_role >= msg.author.top_role:
+            return
+        
+        content = msg.content.strip().split()    
+        
+        if content[0] != "سکوت":
+            return
+        
+        if len(content) < 2:
+            return
+        
+        try:
+            duration = int(content[1])
+        except ValueError:
+            return
+        
+        if duration < 1 and duration != 0:
+            return
+        
+        if duration != 0 and refMsg.author.is_timed_out():
+            return
+        
+        try:
+            await refMsg.author.timeout(timedelta(minutes = duration) if duration != 0 else None)
+            if duration != 0:
+                await msg.reply(f"{refMsg.author.display_name} به مدت *{duration}* دقیقه ساکت شد.")
+            else:
+                await msg.reply(f"سکوت {refMsg.author.display_name} برداشته شد.")
+        except Exception:
+            return
+
+        await self.bot.process_commands(msg)
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Mod(bot))

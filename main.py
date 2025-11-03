@@ -5,16 +5,10 @@ import asyncio
 import os
 from itertools import cycle
 
-#defining bot object
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix='.', intents=intents)
+bot = commands.Bot(command_prefix = '.', intents = intents, case_insensitive = True, help_command = None) #defines bot object
 
-#defining bot status
-bot_status = cycle(["drowned in nothingness.", "lanat be in zendegi", "Fortnite"])
-@tasks.loop(minutes = 2)
-async def botStatusChange():
-    await bot.change_presence(activity = discord.Game(next(bot_status)))
-
+#bot_status = cycle(["drowned in nothingness.", "lanat be in zendegi", "Fortnite"])
 @bot.event
 async def on_ready():
         #prints a message when bot is ready
@@ -22,8 +16,21 @@ async def on_ready():
             "--------------"
             f"\nWe have logged in as {bot.user} ✅"
         )
-        #starts changing bot statuses
-        botStatusChange.start()
+        
+        botStatusChange.start() #starts changing bot statuses
+
+#different possible bot status
+bot_status = cycle([
+    discord.Activity(type = discord.ActivityType.playing, name = "Fortnite", platform = "PS4"),
+    discord.Activity(type = discord.ActivityType.playing, name = "with your server"),
+    discord.Activity(type = discord.ActivityType.listening, name = "to your complaints"),
+    discord.Activity(type = discord.ActivityType.watching, name = "reels"),
+    discord.Activity(type = discord.ActivityType.custom, name = "lanat be in zendegi")
+])
+#changes bot status message every 2 minutes
+@tasks.loop(minutes = 2)
+async def botStatusChange():
+    await bot.change_presence(activity = next(bot_status))
 
 async def cogsload():
     for filename in os.listdir("./cogs"):
@@ -45,7 +52,6 @@ async def main():
         await cogsload() #loads the cogs
         try:
             await bot.start(config["TOKEN"]) #starts the bot
-
         except Exception as e:
             print(f"❌ Failed to start the bot: {e}")
 
