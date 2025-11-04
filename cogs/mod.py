@@ -1,10 +1,15 @@
 import discord
 from discord.ext import commands
-from datetime import timedelta
+from datetime import timedelta, datetime
 import dateparser
 import re
 
 def timeDeltaParser(untilStr: str):
+    try:
+        return timedelta(minutes = float(untilStr))
+    except Exception:
+        pass
+
     pattern = r"(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?"
     match = re.fullmatch(pattern, untilStr)
 
@@ -20,10 +25,10 @@ class Mod(commands.Cog):
         
     #kick subcommand
     @commands.command(name = "kick", aliases = ["k"])
-    async def kick(self, ctx: commands.Context[commands.Bot], target: discord.Member | None = None, *, reason: str = "`no reason provided`"):
+    async def kick(self, ctx: commands.Context[commands.Bot], target: discord.Member | None = None, *, reason: str | None = None):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
-            return await ctx.reply("You can only do moderation commands in a server.")
+            return await ctx.reply("You can only run moderation commands in a server.")
         
         #if the user has no permission to kick
         if not ctx.author.guild_permissions.kick_members:
@@ -35,19 +40,19 @@ class Mod(commands.Cog):
         
         #if user didn't enter any target member
         if not target:
-            return await ctx.reply("You must enter a target user for this command.")
+            return await ctx.reply("You must mention a target Member for this command.")
         
         #if user wants to kick himself
         if target.id == ctx.author.id:
             return await ctx.reply("You can't kick yourself!")
         
-        #if user wants to do moderation command on the bot
+        #if user wants to run moderation command on the bot
         if target.id == ctx.me.id:
-            return await ctx.reply("You can't do my moderation commands on myself.\nnice try.")
+            return await ctx.reply("You can't run my moderation commands on myself darling.")
         
         #if user trys to kick the server owner
         if target.id == ctx.guild.owner_id:
-            return await ctx.reply("You can't kick the *Owner*.")
+            return await ctx.reply("You can't kick the server *Owner*.")
         
         #if user has lower or equal role position than target
         if target.top_role >= ctx.author.top_role and ctx.author.id != ctx.guild.owner_id:
@@ -59,26 +64,26 @@ class Mod(commands.Cog):
         
         #kicks the target
         try:
-            await target.kick(reason = reason)
-            await ctx.reply(f"{target.display_name} has been *kicked* via {ctx.author.display_name}.\nreason: {reason}")
-        except discord.Forbidden:
-            await ctx.reply("I haven't the proper permission to kick Members.")
+            await ctx.guild.kick(user = target, reason = reason)
+            await ctx.reply(f"{target.display_name} has been *kicked* via {ctx.author.display_name}." + (f"\nreason: {reason}" if reason else ""))
+        except Exception:
+            await ctx.reply("Failed to kick.")
 
     @kick.error
     async def kick_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
         #if user entered an invalid user
         if isinstance(error, commands.BadArgument):
-            await ctx.reply("Member not found. Please enter a valid user.")
+            await ctx.reply("Member not found. Please mention a valid user.")
         else:
             print(f"❌ something went wrong with mod-kick command: {error}")
             await ctx.reply("something went wrong with **kick**.")
 
     #ban subcommand
     @commands.command(name = "ban", aliases = ["b"])
-    async def ban(self, ctx: commands.Context[commands.Bot], target: discord.Member | None = None, *, reason: str | None = None):
+    async def ban(self, ctx: commands.Context[commands.Bot], target: discord.User | None = None, *, reason: str | None = None):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
-            return await ctx.reply("You can only do moderation commands in a server.")
+            return await ctx.reply("You can only run moderation commands in a server.")
         
         #if the user has no permission to ban
         if not ctx.author.guild_permissions.ban_members:
@@ -90,19 +95,29 @@ class Mod(commands.Cog):
         
         #if user didn't enter any target member
         if not target:
-            return await ctx.reply("You must enter a target user for this command.")
+            return await ctx.reply("You must mention a target Member for this command.")
+        
+        #checks if the entered target is a member of the server
+        if not isinstance(target, discord.Member):
+            #if the target is not a member and is in the ban list
+            try:
+                await ctx.guild.fetch_ban(discord.Object(id = target.id))
+                await ctx.reply(f"{target.display_name} is banned already.")
+                return
+            except discord.NotFound:
+                return await ctx.reply(f"{target.display_name} is not a member of this server.")
         
         #if user wants to ban himself
         if target.id == ctx.author.id:
-            return await ctx.reply("You can't ban yourself!")
+            return await ctx.reply("You can't ban yourself.")
         
-        #if user wants to do moderation command on the bot
+        #if user wants to run moderation command on the bot
         if target.id == ctx.me.id:
-            return await ctx.reply("You can't do my moderation commands on myself.\nnice try.")
+            return await ctx.reply("You can't run my moderation commands on myself.\nnice try.")
         
         #if user trys to ban the server owner
         if target.id == ctx.guild.owner_id:
-            return await ctx.reply("You can't ban the *Owner*.")
+            return await ctx.reply("You can't ban the server *Owner*.")
         
         #if user has lower or equal role position than target
         if target.top_role >= ctx.author.top_role and ctx.author.id != ctx.guild.owner_id:
@@ -112,36 +127,28 @@ class Mod(commands.Cog):
         if target.top_role >= ctx.guild.me.top_role:
             return await ctx.reply("I can't ban a Member with *higher or equal* role position as me.")
         
-        #checks if user is banned already
-        try:
-            await ctx.guild.fetch_ban(discord.Object(id = target.id))
-            await ctx.reply(f"{target.display_name} is banned already.")
-            return
-        except discord.NotFound:
-            pass
-        
         #bans the target
         try:
             await ctx.guild.ban(user = target, reason = reason)
-            await ctx.reply(f"{target.display_name} has been *banned* via {ctx.author.display_name}.\nreason: {reason}")
-        except discord.Forbidden:
-            await ctx.reply("I haven't the proper permission to ban Members.")
+            await ctx.reply(f"{target.display_name} has been *banned* via {ctx.author.display_name}." + (f"\nreason: {reason}" if reason else ""))
+        except Exception:
+            await ctx.reply("Failed to ban.")
 
     @ban.error
     async def ban_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
         #if user entered an invalid user
         if isinstance(error, commands.BadArgument):
-            await ctx.reply("Member not found. Please enter a valid user.")
+            await ctx.reply("Member not found. Please mention a valid user.")
         else:
             print(f"❌ something went wrong with mod-ban command: {error}")
             await ctx.reply("something went wrong with **ban**.")
 
     #timeout command
     @commands.command(name = "timeout", aliases = ["to"])
-    async def timeout(self, ctx: commands.Context[commands.Bot], target: discord.Member | None = None, untilStr: str | None = None, *, reason: str = "`no reason provided`"):
+    async def timeout(self, ctx: commands.Context[commands.Bot], target: discord.User | None = None, untilStr: str | None = None, *, reason: str | None = None):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
-            return await ctx.reply("You can only do moderation commands in a server.")
+            return await ctx.reply("You can only run moderation commands in a server.")
         
         #if the user has no permission to time out
         if not ctx.author.guild_permissions.moderate_members:
@@ -153,11 +160,27 @@ class Mod(commands.Cog):
         
         #if user didn't enter any target member
         if not target:
-            return await ctx.reply("You must enter a target user for this command.")
+            return await ctx.reply("You must mention a target Member for this command.")
+        
+        #if user trys to time out a user who isn't in the server
+        if not isinstance(target, discord.Member):
+            return await ctx.reply(f"{target.display_name} is not a Member of this server.")
+        
+        #if user trys to time out itself
+        if target.id == ctx.author.id:
+            return await ctx.reply("You can't time out yourself.")
         
         #if user trys to time out the server owner
         if target.id == ctx.guild.owner_id:
-            return await ctx.reply("You can't timeout the server *owner*.")
+            return await ctx.reply("You can't time out the server *owner*.")
+        
+        #if user trys to time out a bot except the bot
+        if target.bot and target.id != ctx.me.id:
+            return await ctx.reply("You can't time out poor bots.")
+        
+        #if user trys to time out the bot itself
+        if target.id == ctx.me.id:
+            return await ctx.reply("You can't time out me hon.")
         
         #if user has lower or equal role position than target
         if target.top_role >= ctx.author.top_role and ctx.author.id != ctx.guild.owner_id:
@@ -168,43 +191,52 @@ class Mod(commands.Cog):
             return await ctx.reply("I can't time out a Member with *higher or equal* role position as me.")
         
         if not untilStr:
-            return await ctx.reply("You must specify a time so this Member will be timed out until then. or false/0 to remove the timeout.")
+            return await ctx.reply("You must specify a time or date, so this Member will be timed out until then. or *false*/*0* to remove the timeout.")
         
-        #time outs the target
-        try:
+        if target.is_timed_out() and untilStr.lower() not in ["false", "0", "remove"]:
+            return await ctx.reply(f"{target.display_name} is timed out already.")
+        
+        #if entered time was 0, removes the timeout
+        if untilStr.lower() in ["false", "0", "remove"]:
+            if target.is_timed_out():
+                await target.timeout(None, reason = reason)
+                await ctx.reply(f"{target.display_name}'s timeout has been *removed* via {ctx.author.display_name}." + (f"\nreason: {reason}" if reason else ""))
+            else:
+                await ctx.reply(f"{target.display_name} has not been timed out at the first place.")
+            return
+        else:
             until = dateparser.parse(untilStr) or timeDeltaParser(untilStr)
 
-            #if entered until wasn't either a datetime or timedelta
-            if not until:
-                if untilStr.lower() in ["false", "0", "remove"]:
-                    await target.timeout(None, reason = reason)
-                    await ctx.reply(f"{target.display_name}'s time out has been *removed* via {ctx.author.display_name}.")
-                    return
-                else:
-                    return await ctx.reply("enter a valid datetime.")
-                
-            if isinstance(until, timedelta) and not (timedelta(days = 28) >= until >= timedelta(minutes = 2)):
-                return await ctx.reply("timeout must be at least *2 minutes* and *28 days* at most.")
+        #if entered time wasn't either a datetime or timedelta
+        if not until:
+            return await ctx.reply("Enter a valid time or date.")
+        
+        #if the user didn't enter a time between the supported times
+        now = discord.utils.utcnow()
+        if (
+            isinstance(until, datetime) and not (now + timedelta(days = 28) >= until >= now + timedelta(minutes = 2))
+        ) or (
+            isinstance(until, timedelta) and not (timedelta(days = 28) >= until >= timedelta(minutes = 2))
+        ):
+            return await ctx.reply("Timeout must be at least *2 minutes* or *28 days* at most.")
             
-            if target.is_timed_out():
-                return await ctx.reply(f"{target.display_name} is timed out already.")
-            
+        #time outs the target
+        try:
             await target.timeout(until, reason = reason)
 
             if isinstance(until, timedelta):
-                await ctx.reply(f"{target.display_name} has been timed out via {ctx.author.display_name} for `{until}` .\nreason: {reason}")
-
+                await ctx.reply(f"{target.display_name} has been *timed out* via {ctx.author.display_name} for `{until}`." + (f"\nreason: {reason}" if reason else ""))
             else:
-                await ctx.reply(f"{target.display_name} has been timed out via {ctx.author.display_name} until `{until}` .\nreason: {reason}")
+                await ctx.reply(f"{target.display_name} has been *timed out* via {ctx.author.display_name} until `{until}` ." + (f"\nreason: {reason}" if reason else ""))
 
-        except TypeError:
-            await ctx.reply("enter a valid datetime.")
+        except Exception:
+            await ctx.reply("Failed to time out.")
         
     @timeout.error
     async def timeout_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
         #if user entered an invalid user
         if isinstance(error, commands.BadArgument):
-            await ctx.reply("Member not found. Please enter a valid user.")
+            await ctx.reply("Member not found. Please mention a valid user.")
         else:
             print(f"❌ something went wrong with mod-timeout command: {error}")
             await ctx.reply("something went wrong with **timeout**.")
@@ -213,7 +245,7 @@ class Mod(commands.Cog):
     async def unban(self, ctx: commands.Context[commands.Bot], targetId: int | None = None, *, reason: str = "`no reason provided`"):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
-            return await ctx.reply("You can only do moderation commands in a server.")
+            return await ctx.reply("You can only run moderation commands in a server.")
         
         #if the user has no permission to unban
         if not ctx.author.guild_permissions.ban_members:
@@ -225,7 +257,7 @@ class Mod(commands.Cog):
         
         #if user didn't enter any target member
         if not targetId:
-            return await ctx.reply("You must enter a target user for this command.")
+            return await ctx.reply("You must enter a target user ID for this command.")
         
         #if user wants to unban himself
         if targetId == ctx.author.id:
@@ -239,12 +271,12 @@ class Mod(commands.Cog):
         if targetId == ctx.guild.owner_id:
             return await ctx.reply("The server *Owner* was never (and couldn't be) banned for you to undo it now.")
         
-        #unbans the target
         target = await self.bot.fetch_user(targetId) #fetches the user from id
+        #unbans the target
         try:
             entry = await ctx.guild.fetch_ban(discord.Object(id = targetId)) #checks if the target is banned
             await ctx.guild.unban(user = entry.user, reason = reason)
-            await ctx.reply(f"{target.display_name} has been unbanned via {ctx.author.display_name}.\nreason: {reason}")
+            await ctx.reply(f"{target.display_name} has been *unbanned* via {ctx.author.display_name}." + (f"\nreason: {reason}" if reason else ""))
         except discord.NotFound:
             return await ctx.reply(f"{target.display_name} was never banned for you to undo it now.")
     
@@ -252,74 +284,98 @@ class Mod(commands.Cog):
     async def unban_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
         #if user entered an invalid user
         if isinstance(error, commands.BadArgument):
-            await ctx.reply("Member not found. Please enter a valid user.")
+            await ctx.reply("Member not found. Please enter a valid user ID.")
         else:
             print(f"❌ something went wrong with mod-unban command: {error}")
             await ctx.reply("something went wrong with **unban**.")
 
+    #سکوت 60
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
+        await self.bot.process_commands(msg)
+        
         if msg.author.bot:
             return
         
-        if not msg.guild or not isinstance(msg.author, discord.Member):
+        content = msg.content.strip().split()
+        if content[0] != "سکوت":
             return
         
-        if not msg.author.guild_permissions.moderate_members or not msg.guild.me.guild_permissions.moderate_members:
-            return
+        if not msg.guild or not isinstance(msg.author, discord.Member):
+            return await msg.reply("You can only run moderation commands in a server.")
+        
+        if not msg.author.guild_permissions.moderate_members:
+            return await msg.reply("You have no permission to *time out* Members.")
+        
+        if not msg.guild.me.guild_permissions.moderate_members:
+            return await msg.reply("I have no permission to *time out* Members.")
         
         if not msg.reference or not msg.reference.message_id:
             return
         
         try:
             refMsg = await msg.channel.fetch_message(msg.reference.message_id)
-        except discord.NotFound:
+        except Exception:
             return
         
         if not isinstance(refMsg.author, discord.Member):
-            return
+            return await msg.reply(f"{refMsg.author.display_name} is not a Member of this server.")
         
         if refMsg.author.id == msg.guild.owner_id:
-            return
+            return await msg.reply("You can't time out the server *owner*.")
         
         if refMsg.author.id == msg.author.id:
-            return
+            return await msg.reply("You can't time out yourself.")
         
-        if refMsg.author.bot:
-            return
+        if refMsg.author.bot and refMsg.author.id != msg.guild.me.id:
+            return await msg.reply("You can't time out poor bots.")
         
-        if refMsg.author.top_role >= msg.guild.me.top_role or refMsg.author.top_role >= msg.author.top_role:
-            return
+        if refMsg.author.id == msg.guild.me.id:
+            return await msg.reply("You can't time out me hon.")
         
-        content = msg.content.strip().split()    
+        if refMsg.author.top_role >= msg.author.top_role:
+            return await msg.reply("You can't time out a Member with *higher or equal* role position as you.")
         
-        if content[0] != "سکوت":
-            return
+        if refMsg.author.top_role >= msg.guild.me.top_role:
+            return await msg.reply("I can't time out a Member with *higher or equal* role position as me.")
         
         if len(content) < 2:
-            return
+            return await msg.reply("You must specify a time or date, so this Member will be timed out until then. or *false*/*0* to remove the timeout.")
         
-        try:
-            duration = int(content[1])
-        except ValueError:
-            return
+        if refMsg.author.is_timed_out() and content[1].lower() not in ["false", "0", "remove"]:
+            return await msg.reply(f"{refMsg.author.display_name} is timed out already.")
         
-        if duration < 1 and duration != 0:
-            return
-        
-        if duration != 0 and refMsg.author.is_timed_out():
-            return
-        
-        try:
-            await refMsg.author.timeout(timedelta(minutes = duration) if duration != 0 else None)
-            if duration != 0:
-                await msg.reply(f"{refMsg.author.display_name} به مدت *{duration}* دقیقه ساکت شد.")
-            else:
+        if content[1].lower() in ["false", "0", "remove"]:
+            if refMsg.author.is_timed_out():
+                await refMsg.author.timeout(None, reason = content[2])
                 await msg.reply(f"سکوت {refMsg.author.display_name} برداشته شد.")
-        except Exception:
+            else:
+                await msg.reply(f"{refMsg.author.display_name} از اولش هم ساکت نبوده.")
             return
-
-        await self.bot.process_commands(msg)
+        else:
+            until = dateparser.parse(content[1]) or timeDeltaParser(content[1])
+        
+        if not until:
+            return await msg.reply("Enter a valid time or date.")
+        
+        #if the user didn't enter a time between the supported times
+        now = discord.utils.utcnow()
+        if (
+            isinstance(until, datetime) and not (now + timedelta(days = 28) >= until >= now + timedelta(minutes = 2))
+        ) or (
+            isinstance(until, timedelta) and not (timedelta(days = 28) >= until >= timedelta(minutes = 2))
+        ):
+            return await msg.reply("Timeout must be at least *2 minutes* or *28 days* at most.")
+        
+        reason = " ".join(content[2:]) if len(content) > 2 else None
+        try:
+            await refMsg.author.timeout(until, reason = reason)
+            if isinstance(until, timedelta):
+                await msg.reply(f"{refMsg.author.display_name} به مدت *{until.total_seconds() / 60}* دقیقه ساکت شد." + (f"\nدلیل: {reason}" if reason else ""))
+            else:
+                await msg.reply(f"{refMsg.author.display_name} تا *{until}* ساکت شد." + (f"\nدلیل: {reason}" if reason else ""))
+        except Exception:
+            await msg.reply("Failed to time out.")
 
 
 async def setup(bot: commands.Bot):
