@@ -24,7 +24,7 @@ class Calc(commands.Cog):
                 "sqrt": sp.sqrt # type: ignore
             })
 
-            # Convert symbolic to numeric if needed
+            #Converts symbolic to numeric if needed
             numeric_result = result.evalf() if result.is_real or result.is_complex else result # type: ignore
 
             await ctx.reply(f"= `{numeric_result}`")

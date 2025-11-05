@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from datetime import timedelta, datetime
+from datetime import timedelta, timezone
 import dateparser
 import re
 
@@ -158,54 +158,55 @@ class Mod(commands.Cog):
         if not ctx.guild.me.guild_permissions.moderate_members:
             return await ctx.reply("I have no permisson to *time out* Members.")
         
-        #if user didn't enter any target member
+        #if user didn't mention any target user
         if not target:
             return await ctx.reply("You must mention a target Member for this command.")
         
-        #if user trys to time out a user who isn't in the server
-        if not isinstance(target, discord.Member):
+        targetMember = ctx.guild.get_member(target.id) #fetchs the target user from server
+        #if the mentioned user is not a member of the server
+        if not targetMember:
             return await ctx.reply(f"{target.display_name} is not a Member of this server.")
         
         #if user trys to time out itself
-        if target.id == ctx.author.id:
+        if targetMember.id == ctx.author.id:
             return await ctx.reply("You can't time out yourself.")
         
         #if user trys to time out the server owner
-        if target.id == ctx.guild.owner_id:
-            return await ctx.reply("You can't time out the server *owner*.")
+        if targetMember.id == ctx.guild.owner_id:
+            return await ctx.reply("You can't time out the server *Owner*.")
         
         #if user trys to time out a bot except the bot
-        if target.bot and target.id != ctx.me.id:
+        if targetMember.bot and targetMember.id != ctx.me.id:
             return await ctx.reply("You can't time out poor bots.")
         
         #if user trys to time out the bot itself
-        if target.id == ctx.me.id:
+        if targetMember.id == ctx.me.id:
             return await ctx.reply("You can't time out me hon.")
         
         #if user has lower or equal role position than target
-        if target.top_role >= ctx.author.top_role and ctx.author.id != ctx.guild.owner_id:
+        if targetMember.top_role >= ctx.author.top_role and ctx.author.id != ctx.guild.owner_id:
             return await ctx.reply("You can't time out a Member with *higher or equal* role position as you.")
         
         #if the bot has lower or equal role position than target
-        if target.top_role >= ctx.guild.me.top_role:
+        if targetMember.top_role >= ctx.guild.me.top_role:
             return await ctx.reply("I can't time out a Member with *higher or equal* role position as me.")
         
         if not untilStr:
             return await ctx.reply("You must specify a time or date, so this Member will be timed out until then. or *false*/*0* to remove the timeout.")
         
-        if target.is_timed_out() and untilStr.lower() not in ["false", "0", "remove"]:
-            return await ctx.reply(f"{target.display_name} is timed out already.")
+        if targetMember.is_timed_out() and untilStr.lower() not in ["false", "0", "remove"]:
+            return await ctx.reply(f"{targetMember.display_name} is timed out already.")
         
         #if entered time was 0, removes the timeout
         if untilStr.lower() in ["false", "0", "remove"]:
-            if target.is_timed_out():
-                await target.timeout(None, reason = reason)
-                await ctx.reply(f"{target.display_name}'s timeout has been *removed* via {ctx.author.display_name}." + (f"\nreason: {reason}" if reason else ""))
+            if targetMember.is_timed_out():
+                await targetMember.timeout(None, reason = reason)
+                await ctx.reply(f"{targetMember.display_name}'s timeout has been *removed* via {ctx.author.display_name}." + (f"\nreason: {reason}" if reason else ""))
             else:
-                await ctx.reply(f"{target.display_name} has not been timed out at the first place.")
+                await ctx.reply(f"{targetMember.display_name} has not been timed out at the first place.")
             return
         else:
-            until = dateparser.parse(untilStr) or timeDeltaParser(untilStr)
+            until = timeDeltaParser(untilStr) or dateparser.parse(untilStr)
 
         #if entered time wasn't either a datetime or timedelta
         if not until:
@@ -213,21 +214,19 @@ class Mod(commands.Cog):
         
         #if the user didn't enter a time between the supported times
         now = discord.utils.utcnow()
-        if (
-            isinstance(until, datetime) and not (now + timedelta(days = 28) >= until >= now + timedelta(minutes = 2))
-        ) or (
-            isinstance(until, timedelta) and not (timedelta(days = 28) >= until >= timedelta(minutes = 2))
-        ):
-            return await ctx.reply("Timeout must be at least *2 minutes* or *28 days* at most.")
+        untilDt = now + until if isinstance(until, timedelta) else until
+        untilDt = untilDt.replace(tzinfo = timezone.utc)
+        if not (now + timedelta(days = 28)) >= untilDt >= now + timedelta(minutes = 1):
+            return await ctx.reply("Timeout must be at least *60 seconds* or *28 days* at most.")
             
         #time outs the target
         try:
-            await target.timeout(until, reason = reason)
+            await targetMember.timeout(untilDt, reason = reason)
 
             if isinstance(until, timedelta):
-                await ctx.reply(f"{target.display_name} has been *timed out* via {ctx.author.display_name} for `{until}`." + (f"\nreason: {reason}" if reason else ""))
+                await ctx.reply(f"{targetMember.display_name} has been *timed out* via {ctx.author.display_name} for `{until}`." + (f"\nreason: {reason}" if reason else ""))
             else:
-                await ctx.reply(f"{target.display_name} has been *timed out* via {ctx.author.display_name} until `{until}` ." + (f"\nreason: {reason}" if reason else ""))
+                await ctx.reply(f"{targetMember.display_name} has been *timed out* via {ctx.author.display_name} until `{until}` ." + (f"\nreason: {reason}" if reason else ""))
 
         except Exception:
             await ctx.reply("Failed to time out.")
@@ -292,8 +291,6 @@ class Mod(commands.Cog):
     #سکوت 60
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
-        await self.bot.process_commands(msg)
-        
         if msg.author.bot:
             return
         
@@ -315,67 +312,69 @@ class Mod(commands.Cog):
         
         try:
             refMsg = await msg.channel.fetch_message(msg.reference.message_id)
-        except Exception:
+            target = msg.guild.get_member(refMsg.author.id)
+        except discord.NotFound:
             return
         
-        if not isinstance(refMsg.author, discord.Member):
+        if not target:
             return await msg.reply(f"{refMsg.author.display_name} is not a Member of this server.")
         
-        if refMsg.author.id == msg.guild.owner_id:
-            return await msg.reply("You can't time out the server *owner*.")
-        
-        if refMsg.author.id == msg.author.id:
+        if target.id == msg.author.id:
             return await msg.reply("You can't time out yourself.")
         
-        if refMsg.author.bot and refMsg.author.id != msg.guild.me.id:
+        if target.id == msg.guild.owner_id:
+            return await msg.reply("You can't time out the server *owner*.")
+        
+        if target.bot and target.id != msg.guild.me.id:
             return await msg.reply("You can't time out poor bots.")
         
-        if refMsg.author.id == msg.guild.me.id:
+        if target.id == msg.guild.me.id:
             return await msg.reply("You can't time out me hon.")
         
-        if refMsg.author.top_role >= msg.author.top_role:
+        if target.top_role >= msg.author.top_role:
             return await msg.reply("You can't time out a Member with *higher or equal* role position as you.")
         
-        if refMsg.author.top_role >= msg.guild.me.top_role:
+        if target.top_role >= msg.guild.me.top_role:
             return await msg.reply("I can't time out a Member with *higher or equal* role position as me.")
         
         if len(content) < 2:
             return await msg.reply("You must specify a time or date, so this Member will be timed out until then. or *false*/*0* to remove the timeout.")
         
-        if refMsg.author.is_timed_out() and content[1].lower() not in ["false", "0", "remove"]:
-            return await msg.reply(f"{refMsg.author.display_name} is timed out already.")
+        if target.is_timed_out() and content[1].lower() != "0":
+            return await msg.reply(f"{target.display_name} is timed out already.")
         
-        if content[1].lower() in ["false", "0", "remove"]:
-            if refMsg.author.is_timed_out():
-                await refMsg.author.timeout(None, reason = content[2])
-                await msg.reply(f"سکوت {refMsg.author.display_name} برداشته شد.")
+        reason = " ".join(content[2:]) if len(content) > 2 else None
+        
+        if content[1] == "0":
+            if target.is_timed_out():
+                await target.timeout(None, reason = reason)
+                await msg.reply(f"سکوت {target.display_name} برداشته شد." + (f"\nدلیل: {reason}" if reason else ""))
             else:
-                await msg.reply(f"{refMsg.author.display_name} از اولش هم ساکت نبوده.")
+                await msg.reply(f"{target.display_name} از اولش هم ساکت نبوده.")
             return
         else:
-            until = dateparser.parse(content[1]) or timeDeltaParser(content[1])
+            until = timeDeltaParser(content[1]) or dateparser.parse(content[1])
         
         if not until:
             return await msg.reply("Enter a valid time or date.")
         
         #if the user didn't enter a time between the supported times
         now = discord.utils.utcnow()
-        if (
-            isinstance(until, datetime) and not (now + timedelta(days = 28) >= until >= now + timedelta(minutes = 2))
-        ) or (
-            isinstance(until, timedelta) and not (timedelta(days = 28) >= until >= timedelta(minutes = 2))
-        ):
-            return await msg.reply("Timeout must be at least *2 minutes* or *28 days* at most.")
+        untilDt = now + until if isinstance(until, timedelta) else until
+        untilDt = untilDt.replace(tzinfo = timezone.utc)
+        if not (now + timedelta(days = 28) >= untilDt >= now + timedelta(minutes = 1)):
+            return await msg.reply("Timeout must be at least *60 seconds* or *28 days* at most.")
         
-        reason = " ".join(content[2:]) if len(content) > 2 else None
         try:
-            await refMsg.author.timeout(until, reason = reason)
+            await target.timeout(untilDt, reason = reason)
             if isinstance(until, timedelta):
-                await msg.reply(f"{refMsg.author.display_name} به مدت *{until.total_seconds() / 60}* دقیقه ساکت شد." + (f"\nدلیل: {reason}" if reason else ""))
+                await msg.reply(f"{target.display_name} به مدت *{until.total_seconds() / 60}* دقیقه ساکت شد." + (f"\nدلیل: {reason}" if reason else ""))
             else:
-                await msg.reply(f"{refMsg.author.display_name} تا *{until}* ساکت شد." + (f"\nدلیل: {reason}" if reason else ""))
+                await msg.reply(f"{target.display_name} تا *{until}* ساکت شد." + (f"\nدلیل: {reason}" if reason else ""))
         except Exception:
             await msg.reply("Failed to time out.")
+
+        await self.bot.process_commands(msg)
 
 
 async def setup(bot: commands.Bot):
