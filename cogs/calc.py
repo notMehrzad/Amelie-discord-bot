@@ -27,7 +27,7 @@ class Calc(commands.Cog):
             #Converts symbolic to numeric if needed
             numeric_result = result.evalf() if result.is_real or result.is_complex else result # type: ignore
 
-            await ctx.reply(f"= `{numeric_result}`")
+            await ctx.reply(f"= `{numeric_result:.2f}`")
         except Exception:
             await ctx.reply("Enter a valid math expression.")
 

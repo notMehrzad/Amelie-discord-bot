@@ -6,9 +6,8 @@ import os
 from itertools import cycle
 
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix = '.', intents = intents) #defines bot object
+bot = commands.Bot(command_prefix = '.', intents = intents, case_insensitive = True) #defines bot object
 
-#bot_status = cycle(["drowned in nothingness.", "lanat be in zendegi", "Fortnite"])
 @bot.event
 async def on_ready():
         #prints a message when bot is ready
@@ -22,10 +21,10 @@ async def on_ready():
 #different possible bot status
 bot_status = cycle([
     discord.Activity(type = discord.ActivityType.playing, name = "Fortnite", platform = "PS4"),
-    discord.Activity(type = discord.ActivityType.playing, name = "with your server"),
-    discord.Activity(type = discord.ActivityType.listening, name = "to your complaints"),
-    discord.Activity(type = discord.ActivityType.watching, name = "reels"),
-    discord.Activity(type = discord.ActivityType.custom, name = "lanat be in zendegi")
+    discord.Activity(type = discord.ActivityType.playing, name = "playing with your server"),
+    discord.Activity(type = discord.ActivityType.listening, name = "listening to your complaints"),
+    discord.Activity(type = discord.ActivityType.watching, name = "watching reels"),
+    discord.Activity(type = discord.ActivityType.playing, name = "lanat be in zendegi")
 ])
 #changes bot status message every 2 minutes
 @tasks.loop(minutes = 2)

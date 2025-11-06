@@ -348,9 +348,9 @@ class Mod(commands.Cog):
         if content[1] == "0":
             if target.is_timed_out():
                 await target.timeout(None, reason = reason)
-                await msg.reply(f"سکوت {target.display_name} برداشته شد." + (f"\nدلیل: {reason}" if reason else ""))
+                await msg.reply(f"\u202bسکوت {target.display_name} برداشته شد.\u202c" + (f"\n\u202bcدلیل: {reason}\u202c" if reason else ""))
             else:
-                await msg.reply(f"{target.display_name} از اولش هم ساکت نبوده.")
+                await msg.reply(f"\u202b{target.display_name} از اولش هم ساکت نبوده.\u202c")
             return
         else:
             until = timeDeltaParser(content[1]) or dateparser.parse(content[1])
@@ -368,9 +368,9 @@ class Mod(commands.Cog):
         try:
             await target.timeout(untilDt, reason = reason)
             if isinstance(until, timedelta):
-                await msg.reply(f"{target.display_name} به مدت *{until.total_seconds() / 60}* دقیقه ساکت شد." + (f"\nدلیل: {reason}" if reason else ""))
+                await msg.reply(f"\u202b{target.display_name} به مدت *{until.total_seconds() / 60}* دقیقه ساکت شد.\u202c" + (f"\n\u202bدلیل: {reason}\u202c" if reason else ""))
             else:
-                await msg.reply(f"{target.display_name} تا *{until}* ساکت شد." + (f"\nدلیل: {reason}" if reason else ""))
+                await msg.reply(f"\u202b{target.display_name} تا *{until}* ساکت شد.\u202c" + (f"\n\u202bدلیل: {reason}\u202c" if reason else ""))
         except Exception:
             await msg.reply("Failed to time out.")
 

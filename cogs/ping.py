@@ -9,7 +9,7 @@ class Ping(commands.Cog):
 
     @commands.command(name = "ping")
     async def ping(self, ctx: commands.Context[commands.Bot]):
-        pings: list[float] = [] #stores pings results
+        pings: list[float] | None = [] #stores pings results
         pingNumbers = 4
 
         msg = await ctx.reply("pinging...") #initial message
@@ -17,15 +17,25 @@ class Ping(commands.Cog):
         ws = self.bot.latency * 1000 #getting websocket latency
         #starts pinging n times
         for i in range(pingNumbers):
-            start = time.perf_counter()
-            await msg.edit(content = f"ping {i + 1}..")
-            end = time.perf_counter()
+            
+            try:
+                start = time.perf_counter()
+                await msg.edit(content = f"ping {i + 1}..")
+                end = time.perf_counter()
+            #if user deletes the pings message
+            except discord.NotFound:
+                pings = None
+                break
+            
             msg_latency = (end - start) * 1000
             pings.append(msg_latency) #stores the nth ping in a list
             await asyncio.sleep(0.1)
-        avg = round(sum(pings) / pingNumbers, 2) #getting REST latency
-        minping = round(min(pings), 2)
-        maxping = round(max(pings), 2)
+        if pings:
+            avg = round(sum(pings) / pingNumbers, 2) #getting REST latency
+            minping = round(min(pings), 2)
+            maxping = round(max(pings), 2)
+        else:
+            avg = minping = maxping = None
 
         #defining color based on ws ping strength
         if ws <= 100:
@@ -42,12 +52,21 @@ class Ping(commands.Cog):
             title = "Pong! 🏓",
             description = (
                 f"📡 WebSocket: `{ws:.2f} ms`\n"
-                f"🌐 REST: `{avg:.2f} ms`\n\n"
-                f"Min: `{minping:.2f} ms` | Max: `{maxping:.2f} ms`"
+                + (f"🌐 REST: `{avg:.2f} ms`\n\n" if avg else f"🌐 REST: Failed")
+                + (f"Min: `{minping:.2f} ms` | Max: `{maxping:.2f} ms`" if pings else "")
             ),
             timestamp = discord.utils.utcnow()
         ).set_footer(text = f"requested by {ctx.author.name}")
-        await msg.edit(content = None, embed = resultEmbed) #sends the final results
+        try:
+            await msg.edit(content = None, embed = resultEmbed) #sends the final results
+        #if user deletes the pings message
+        except discord.NotFound:
+            try:
+                await ctx.reply(content = None, embed = resultEmbed)
+            except discord.NotFound:
+                await ctx.send(content = None, embed = resultEmbed)
+            
+        
 
     @ping.error
     async def ping_error(self, ctx: commands.Context[commands.Bot], error: Exception):

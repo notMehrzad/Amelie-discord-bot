@@ -142,23 +142,21 @@ class RpsView(discord.ui.View):
         else:
             guilty = f"{self.ctx.author.mention} and {self.target.mention}"
 
-        embed = discord.Embed(
+        toEmbed = discord.Embed(
             title = "Rock, Paper, Scissors !",
             description = f"⏰ The game has timed out! {guilty} didn't make a move.\n*shame on you..*",
             color = discord.Color.dark_gray()
         )
-        
         try:
-            await self.msg.edit(content = None, embed = embed, view = self) #sends the timeout message
-
-        #if message is already deleted
+            await self.msg.edit(content = None, embed = toEmbed, view = self) #sends the timeout message
+        #if context message is deleted
         except discord.NotFound:
             pass
 
         self.stop() #stops the interaction upon timeout
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        print(f"❌ something went wrong with rps interaction -> error: {error} | item: {getattr(item, 'lable', 'unknown')}")
+        print(f"❌ something went wrong with rps interaction -> error: {error}\nbtn_name: {getattr(item, 'lable', 'unknown')}")
         try:
             await interaction.response.send_message("something went wrong with **rps**.", ephemeral = True)
         except discord.InteractionResponded:
