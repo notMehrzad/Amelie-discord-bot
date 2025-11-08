@@ -5,7 +5,17 @@ class Calc(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name = "calc", aliases = ["calculator"])
+    @commands.command(
+            name = "calc",
+            aliases = ["calculator", "calculate"],
+            usage = "<math_expression>",
+            brief = "Calculates the given math expression.",
+            help = (
+                "Calculates the given math expression."
+                "\nsupports trigonometric, logarithms and etc."
+            ),
+            extras = {"Category": "Utility"}
+    )
     async def calc(self, ctx: commands.Context[commands.Bot], *, expression: str | None = None):
         if not expression:
             return await ctx.reply("You must enter a math expression to be calculated.")

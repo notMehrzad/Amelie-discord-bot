@@ -24,7 +24,16 @@ class Mod(commands.Cog):
         self.bot = bot
         
     #kick subcommand
-    @commands.command(name = "kick", aliases = ["k"])
+    @commands.command(
+            name = "kick",
+            aliases = ["k"],
+            usage = "<target> <reason[*optional*]>",
+            brief = "Kicks a member from the server.",
+            help = (
+                ""
+            ),
+            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`"}
+    )
     async def kick(self, ctx: commands.Context[commands.Bot], target: discord.Member | None = None, *, reason: str | None = None):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
@@ -79,7 +88,16 @@ class Mod(commands.Cog):
             await ctx.reply("something went wrong with **kick**.")
 
     #ban subcommand
-    @commands.command(name = "ban", aliases = ["b"])
+    @commands.command(
+            name = "ban",
+            aliases = ["b"],
+            usage = "<target> <reason[*optional*]>",
+            brief = "Bans a member from the server.",
+            help = (
+                ""
+            ),
+            extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`"}
+    )
     async def ban(self, ctx: commands.Context[commands.Bot], target: discord.User | None = None, *, reason: str | None = None):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
@@ -144,7 +162,16 @@ class Mod(commands.Cog):
             await ctx.reply("something went wrong with **ban**.")
 
     #timeout command
-    @commands.command(name = "timeout", aliases = ["to"])
+    @commands.command(
+            name = "timeout",
+            aliases = ["to"],
+            usage = "<target> <date> <reason[*optional*]>",
+            brief = "Time outs a member from the server.",
+            help = (
+                ""
+            ),
+            extras = {"Category": "Moderation", "Permissions needed": "`Timeout Members`"}
+    )
     async def timeout(self, ctx: commands.Context[commands.Bot], target: discord.User | None = None, untilStr: str | None = None, *, reason: str | None = None):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
@@ -240,7 +267,16 @@ class Mod(commands.Cog):
             print(f"❌ something went wrong with mod-timeout command: {error}")
             await ctx.reply("something went wrong with **timeout**.")
 
-    @commands.command(name = "unban", aliases = ["ub"])
+    @commands.command(
+            name = "unban",
+            aliases = ["ub"],
+            usage = "<targetID> <reason[*optional*]>",
+            brief = "Unbans a user from the server.",
+            help = (
+                ""
+            ),
+            extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`"}
+    )
     async def unban(self, ctx: commands.Context[commands.Bot], targetId: int | None = None, *, reason: str = "`no reason provided`"):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):

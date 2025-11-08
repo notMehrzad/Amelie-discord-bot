@@ -98,11 +98,13 @@ class WhisperView(discord.ui.View):
         self.stop()
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        print(f"❌ something went wrong with whisper interaction -> error: {error}\nbtn_name: {getattr(item, 'lable', 'unknown')}")
+        print(f"❌ something went wrong with whisper interaction -> error: {error}\nbtn_name: {getattr(item, 'label', 'unknown')}")
         try:
             await interaction.response.send_message("something went wrong with **whisper**.", ephemeral = True)
         except discord.InteractionResponded:
             await interaction.followup.send("something went wrong with **whisper**.", ephemeral = True)
+        except Exception:
+            pass
             
         self.stop() #stops further interaction
 

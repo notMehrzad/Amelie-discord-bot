@@ -147,11 +147,13 @@ class ReadyView(discord.ui.View):
         self.stop() #stops the interaction upon timeout
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        print(f"❌ something went wrong with vrps ready interaction-> error: {error} | item: {getattr(item, "lable", "unknown")}")
+        print(f"❌ something went wrong with vrps ready interaction-> error: {error} | item: {getattr(item, "label", "unknown")}")
         try:
             await interaction.response.send_message("something went wrong with **vrps**.", ephemeral = True)
         except discord.InteractionResponded:
             await interaction.followup.send("something went wrong with **vrps**.", ephemeral = True)
+        except Exception:
+            pass
 
         self.stop() #stops further interaction
     
@@ -393,11 +395,13 @@ class VrpsView(discord.ui.View):
         self.stop() #stops the interaction upon timeout
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        print(f"❌ something went wrong with vrps interaction -> error: {error} | item: {getattr(item, 'lable', 'unknown')}")
+        print(f"❌ something went wrong with vrps interaction -> error: {error} | item: {getattr(item, 'label', 'unknown')}")
         try:
             await interaction.response.send_message("something went wrong with **vrps**.", ephemeral = True)
         except discord.InteractionResponded:
             await interaction.followup.send("something went wrong with **vrps**.", ephemeral = True)
+        except Exception:
+            pass
             
         self.stop() #stops further interaction
 

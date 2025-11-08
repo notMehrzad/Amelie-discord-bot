@@ -156,11 +156,13 @@ class RpsView(discord.ui.View):
         self.stop() #stops the interaction upon timeout
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        print(f"❌ something went wrong with rps interaction -> error: {error}\nbtn_name: {getattr(item, 'lable', 'unknown')}")
+        print(f"❌ something went wrong with rps interaction -> error: {error}\nbtn_name: {getattr(item, 'label', 'unknown')}")
         try:
             await interaction.response.send_message("something went wrong with **rps**.", ephemeral = True)
         except discord.InteractionResponded:
             await interaction.followup.send("something went wrong with **rps**.", ephemeral = True)
+        except Exception:
+            pass
             
         self.stop() #stops further interaction
 

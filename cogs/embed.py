@@ -138,7 +138,16 @@ class Embed(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name = "embed")
+    @commands.command(
+            name = "embed",
+            usage = "embed <subcommand> <embed_arguments>",
+            help = (
+                "This command can sends or edits an embed in the channel."
+                "\nYou can specify Embed attributes like `key: (value)` (title: (hi) for instance). Supports all kind of Embed attributes."
+            ),
+            brief = "Sends or Edits an embed in the channel.",
+            extras = {"Category": "Utility", "Subcommands": "send | edit(soon.)"}
+    )
     async def embed(self, ctx: commands.Context[commands.Bot], cmd: str | None = None, *, args: str | None = None):
         #if user runs the command in dm
         if not ctx.guild:
