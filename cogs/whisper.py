@@ -5,7 +5,16 @@ class Whisper(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name = "whisper")
+    @commands.command(
+            name = "whisper",
+            aliases = ["wh"],
+            extras = {"Category": "Utility"},
+            usage = "<target> <message>",
+            brief = "Whispers something to a member.",
+            help = (
+                "Whispers a message to a member. use this command to talk with a member privately inside a server."
+            )
+    )
     async def whisper(self, ctx: commands.Context[commands.Bot], user: discord.User | None = None, *, msg: str | None = None):
         #if user runs the command in dm
         if not ctx.guild:
@@ -57,11 +66,8 @@ class WhisperView(discord.ui.View):
         self.msg = msg
 
     async def start(self):
-        whisperEmbed = discord.Embed(
-            title = "whisper",
-            description = f"{self.target.mention}, You have a whisper from {self.ctx.author.mention}."
-        )
-        self.ctxMsg = await self.ctx.send(embed = whisperEmbed, view = self)
+        desc = f"{self.target.mention}, You have a whisper from {self.ctx.author.mention}."
+        self.ctxMsg = await self.ctx.send(content = desc, view = self)
 
     #defines read button
     @discord.ui.button(label = "read" , style = discord.ButtonStyle.grey)
@@ -79,7 +85,7 @@ class WhisperView(discord.ui.View):
             title = "whisper",
             description = f"{self.target.display_name} has read the whisper from {self.ctx.author.display_name}."
         )
-        await self.ctxMsg.edit(embed = finalEmbed, view = None) #edits the sent message to show the reading status
+        await self.ctxMsg.edit(content = None, embed = finalEmbed, view = None) #edits the sent message to show the reading status
 
         self.stop() #stops the view after target has read the whisper
 

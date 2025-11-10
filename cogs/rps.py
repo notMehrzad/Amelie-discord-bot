@@ -170,7 +170,12 @@ class Rps(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name = "rps")
+    @commands.command(
+            name = "rps",
+            extras = {"Category": "Games"},
+            usage = "<target[*optional*]>",
+            brief = "Traditional *Rock, Paper, Scissors* game."
+    )
     async def rps(self, ctx: commands.Context[commands.Bot], target: discord.Member | None = None):
         #if the user runs this command in dm to play with another user
         if ctx.guild is None and target and target.id != ctx.me.id:

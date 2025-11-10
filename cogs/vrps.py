@@ -36,7 +36,12 @@ class Vrps(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name = "vrps")
+    @commands.command(
+            name = "vrps",
+            aliases = ["voterps"],
+            usage = "<target[*optional*]>",
+            extras = {"Category": "Games"}
+    )
     async def vrps(self, ctx: commands.Context[commands.Bot], target: discord.Member | None = None):
         #if user runs the command in dm
         if not ctx.guild:

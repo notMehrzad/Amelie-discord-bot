@@ -4,7 +4,16 @@ class Say(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name = "say", aliases = ["echo"])
+    @commands.command(
+            name = "say",
+            extras = {"Category": "Utility"},
+            aliases = ["echo"],
+            usage = "<message>",
+            brief = "Says something in the channel.",
+            help = (
+                "Says a custom message inside the channel."
+            )
+    )
     async def say(self, ctx: commands.Context[commands.Bot], *, args: str | None = None):
         if not args:
             return await ctx.reply("You must write the things to be said.")

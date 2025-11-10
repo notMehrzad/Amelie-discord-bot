@@ -14,8 +14,8 @@ class Help(commands.Cog):
                 "\nEnter a Command name for its full detail such as its application, usage, necessery permissions (if any) and etc. or don't, to get the help menu."
             ),
             brief = "Shows the help menu.",
-            usage = "help <command_name*[optional]*>",
-            extras = {"Category": "General"}
+            usage = "<command_name*[optional]*>",
+            extras = {"Category": "Utility"}
     )
     async def help(self, ctx: commands.Context[commands.Bot], cmdStr: str | None = None):
         #help for specific command
@@ -27,16 +27,16 @@ class Help(commands.Cog):
                 return await ctx.reply(f"*{cmdStr}* doesn't exist. enter a valid command.")
             
             cmdEmbed = discord.Embed(
-                title = f"Help: {cmd.name}",
+                title = "." + cmd.name,
                 description = cmd.help or cmd.brief or "*no description*",
                 color = discord.Color.blurple()
-            )
+            ).set_author(name = "Help")
             #if command has aliases
             if cmd.aliases:
                 cmdEmbed.add_field(name = "Aliases", value = ", ".join(cmd.aliases))
             
             if cmd.usage:
-                cmdEmbed.add_field(name = "Usage", value = cmd.name + " " + cmd.usage)
+                cmdEmbed.add_field(name = "Usage", value = f".{cmd.name} {cmd.usage}")
 
             #if command has extra information
             for key, value in cmd.extras.items():
@@ -62,18 +62,25 @@ class Help(commands.Cog):
 
                 category = cmd.extras.get("Category", "etc.") #fetches each commands category
                 categorized.setdefault(category, []).append(cmd) #adds the command and its category to categorized
+            
+            #sorts command list for every category in categorized dictionary
+            for category in categorized:
+                categorized[category].sort(key = lambda cmd: cmd.name)
+
+            categorized = dict(sorted(categorized.items(), key=lambda item: item[0].lower())) #rebuilds the dictionary but sorted keys this time
 
             categoryEmbeds: list[discord.Embed] = [] #a list to store embeds for each category
 
             #fetches categorized data
             for category, cmdList in categorized.items():
-                body = "\n".join(f"{cmd.name} -> {cmd.brief or "*no description*"}" for cmd in cmdList) #creates embed description based on fetched commands
                 embed = discord.Embed(
                     title = f"{category}",
-                    description = body,
                     color = discord.Color.blurple()
-                )
-                categoryEmbeds.append(embed)
+                ).set_author(name = "Help Menu")
+                for cmd in cmdList:
+                    embed.add_field(name = "." + cmd.name, value = cmd.brief or "*no description*", inline = False) #create fields based on fetched commands
+
+                categoryEmbeds.append(embed) #appends the created embed
             
             #if there is only one category, no buttons needed
             if len(categoryEmbeds) == 1:
