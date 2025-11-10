@@ -6,7 +6,7 @@ import os
 from itertools import cycle
 
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix = '.', intents = intents, case_insensitive = True) #defines bot object
+bot = commands.Bot(command_prefix = '.', intents = intents, case_insensitive = True, help_command = None) #defines bot object
 
 @bot.event
 async def on_ready():

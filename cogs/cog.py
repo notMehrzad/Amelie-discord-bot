@@ -9,7 +9,18 @@ class StartUp(commands.Cog):
         self.bot = bot
 
     #command cog
-    @commands.command(name = "cog")
+    @commands.command(
+            name = "cog",
+            hidden = True,
+            usage = "<subcommand> <cog_name[*optional*]>",
+            brief = "A cog moderation command made for developers of the bot.",
+            help = (
+                "A cog handling command made for developers of the bot."
+                "\nif \"reload\" subcommand is used, it takes an optional parameter <cog_name> for reloading that specific cog. if not specified, all cogs will be reloaded instead."
+                "\nif \"list\" subcommand is used, it prints the cog list into the bots console."
+            ),
+            extras = {"Category": "Dev", "Subcommands": "\"reload\"[aliases: \"r\"] | \"list\"[aliases: \"show\"]"}
+    )
     async def cog(self, ctx: commands.Context[commands.Bot], cmd: str | None = None, extension: str | None = None):
         #checks if the user is an admin to use the command
         if str(ctx.author.id) not in config["ADMINS"]:

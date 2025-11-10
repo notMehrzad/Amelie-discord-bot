@@ -156,11 +156,13 @@ class RpsView(discord.ui.View):
         self.stop() #stops the interaction upon timeout
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        print(f"❌ something went wrong with rps interaction -> error: {error}\nbtn_name: {getattr(item, 'lable', 'unknown')}")
+        print(f"❌ something went wrong with rps interaction -> error: {error}\nbtn_name: {getattr(item, 'label', 'unknown')}")
         try:
             await interaction.response.send_message("something went wrong with **rps**.", ephemeral = True)
         except discord.InteractionResponded:
             await interaction.followup.send("something went wrong with **rps**.", ephemeral = True)
+        except Exception:
+            pass
             
         self.stop() #stops further interaction
 
@@ -168,7 +170,12 @@ class Rps(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name = "rps")
+    @commands.command(
+            name = "rps",
+            extras = {"Category": "Games"},
+            usage = "<target[*optional*]>",
+            brief = "Traditional *Rock, Paper, Scissors* game."
+    )
     async def rps(self, ctx: commands.Context[commands.Bot], target: discord.Member | None = None):
         #if the user runs this command in dm to play with another user
         if ctx.guild is None and target and target.id != ctx.me.id:

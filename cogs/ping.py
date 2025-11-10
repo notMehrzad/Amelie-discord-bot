@@ -7,7 +7,15 @@ class Ping(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name = "ping")
+    @commands.command(
+            name = "ping",
+            brief = "Pings Amélie.",
+            help = (
+                "Checks Amelies conenction speed by measuring WebSocket Latency (which is the delay between bots server and Discord Gateway) and Bot Latency"
+                " (which is the time it takes Amelie to send a message and recieve a response)."
+            ),
+            extras = {"Category": "Utility"}
+    )
     async def ping(self, ctx: commands.Context[commands.Bot]):
         pings: list[float] | None = [] #stores pings results
         pingNumbers = 4
