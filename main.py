@@ -38,7 +38,6 @@ async def cogsload():
             try:
                 await bot.load_extension(f"cogs.{filename[:-3]}")
                 success.append(filename[:-3])
-                #print(f"{filename[:-3]} cog loaded ☑️")
 
             except Exception as e:
                 print(f"❌ Failed to load {filename[:-3]} cog: {e}")

@@ -25,7 +25,7 @@ class Whisper(commands.Cog):
             return await ctx.reply("You must mention a Member to whisper.")
         
         #if user mentions an invalid user
-        if not isinstance(user, discord.User):
+        if not isinstance(user, discord.abc.User):
             raise commands.BadArgument
         
         target = ctx.guild.get_member(user.id) #fetches the target user from the server, None if not found

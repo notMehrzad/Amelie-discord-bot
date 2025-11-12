@@ -25,11 +25,16 @@ class Rps(commands.Cog):
             name = "rps",
             extras = {"Category": "Games"},
             usage = "<target[*optional*]>",
-            brief = "Traditional *Rock, Paper, Scissors* game."
+            brief = "Traditional *Rock, Paper, Scissors* game.",
+            help = (
+                "A game between two people. Both players display one of three symbols: Rock, Paper or Scissors."
+                "\n A Rock beats Scissors, a Paper beats Rock, a Scissors beats Paper."
+                "\nYou can only play with Amélie herself if you run this game in her dm."
+            )
     )
     async def rps(self, ctx: commands.Context[commands.Bot], user: discord.User | str | None = None):
         #if user mentions an invalid user
-        if user and not isinstance(user, discord.User):
+        if user and not isinstance(user, discord.abc.User):
             raise commands.BadArgument
         
         #if the user runs this command in dm to play with another user
@@ -150,7 +155,7 @@ class RpsView(discord.ui.View):
                 #checks the result of rps
                 if result == 0:
                     winneravatarurl = None
-                    desc = "**It was a Tie !**"
+                    desc = "**It was a Draw !**"
                     cori = f"{self.ctx.author} escaped this time." if self.botPlay else None
                 elif result == 1:
                     winneravatarurl = self.ctx.author.display_avatar.url

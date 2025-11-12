@@ -43,16 +43,18 @@ class Vrps(commands.Cog):
             extras = {"Category": "Games"},
             brief = "It's like rock-paper-scissors, but played with predetermined drawings on cards instead of using the hands.",
             help = (
-                "The game is played between two people."
-                "\nThe idea is that it's like rock-paper-scissors, but played with predetermined drawings on cards instead of using the hands. Despite the fact that only two are actually playing, the game requires a full class of people to work."
-                "\nThe cards are determined by a voting phase, where each of the class members participating (except the players themselves) draw a rock, paper, or scissors symbol on a card, which are all added to a ballot box. The players then draw three cards at random, and select one from their hand to use in a showdown."
-                "\nUnlike the traditional game, the player does not usually have all three options; it is more common that they get two of the same move and one different; having all three in one hand is extremely rare. If there is a tie, they play their cards until someone wins the hand."
+                "A game between two people. yet needed a whole class-"
+                "\nFirst, everyone in the class draws either a Rock, Paper or Scissors on a card. Then they drop those cards into the ballot box so players can't see them."
+                "\nPlayers both draw *three* cards from the box, choose just one, and play *Rock, Paper, Scissors !*."
+                "\nIf it's a stalemate, both players draw from the remaining two cards and play again. If it's a stalemate all three times, it's a draw."
+                "\nThat makes up one game."
+                "\nUnlike normal Rock-Paper-Scissors, players don't always show their entire hand. Trying to read each other under such unfair circumstances is the appeal."
                 "\nYou can only play with Amélie herself if you run this game in her dm."
             )
     )
     async def vrps(self, ctx: commands.Context[commands.Bot], user: discord.User | str | None = None):
         #if user mentions an invalid user
-        if user and not isinstance(user, discord.User):
+        if user and not isinstance(user, discord.abc.User):
             raise commands.BadArgument
         
         #if user runs the command in dm
@@ -130,7 +132,7 @@ class ReadyView(discord.ui.View):
         if self.botPlay:
             content = None
             desc = (
-                '" *AHAH, oh sweetheart.. I LOVE this game.* "'
+                "\" *AHAH, oh sweetheart.. I LOVE this game.* \""
                 "\n\nClick `Ready` to start the game."
             )
         
@@ -262,15 +264,15 @@ class VrpsView(discord.ui.View):
 
         if self.botPlay:
             desc = (
-                "Everyone has voted successfully."
-                "\n**Three** cards have been drawn from the Ballot Box for each of us."
-                "\n\n*And now.. It's SHOWTIME!!* let's reveal our cards."
+                "Everyone has dropped their votes in the ballot box."
+                "\n**Three** cards have been drawn from the Box for each of us."
+                "\n\n*And now.. It's SHOWTIME!!* let's do it- *Rock, Paper, Scissors !*"
             )
         else:
             desc = (
-                "Everyone has voted succesfully."
-                "\n**Three** cards have been drawn from the Ballot Box for each of you."
-                "\n*And now.. It's SHOWTIME!!* reveal your cards."
+                "Everyone has dropped their votes in the ballot box."
+                "\n**Three** cards have been drawn from the Box for each of you."
+                "\n*And now.. It's SHOWTIME!!* choose one card and play *Rock, Paper, Scissors !*"
             )
 
         matchEmbed = discord.Embed(
@@ -306,13 +308,13 @@ class VrpsView(discord.ui.View):
 
                 #if the user has already shown his card in the current match
                 else:
-                    return await interaction.response.send_message("You have already shown your card in this match.", ephemeral = True)
+                    return await interaction.response.send_message("You have already chosen your card in this match.", ephemeral = True)
             
             #target shows a card if not playing wth bot
             elif interaction.user.id == self.target.id:
                 if self.playerschoice["player2"] is None:
                     if self.targetDeck[deckIndex]["shown"]:
-                        return await interaction.response.send_message("You have already shown this card before. Choose another card.", ephemeral = True)
+                        return await interaction.response.send_message("You have already chosen this card before. Choose another card.", ephemeral = True)
                     
                     self.playerschoice["player2"] = self.targetDeck[deckIndex]["card"]["name"]
                     self.targetDeck[deckIndex]["match"] = 4 - sum(1 for c in self.targetDeck if not c["shown"]) #stores the nth pick
@@ -321,7 +323,7 @@ class VrpsView(discord.ui.View):
 
                 #if the target has already shown his card in the current match
                 else:
-                    return await interaction.response.send_message("You have already shown your card in this match.", ephemeral = True)
+                    return await interaction.response.send_message("You have already chosen your card in this match.", ephemeral = True)
 
             #if both players have shown their card in the current match
             if self.playerschoice["player1"] and self.playerschoice["player2"]:
@@ -353,7 +355,7 @@ class VrpsView(discord.ui.View):
                     if all(c["shown"] for c in self.userDeck):
                         finalEmbed = discord.Embed(
                         title = "Vote Rock, Paper, Scissors !",
-                        description = "All Three matches ended up with a tie. This game is a draw.\n\n*What are the odds??*" + f"\n\n{self.playersDeckStr}",
+                        description = "All Three matches ended in a Draw. This game is a Draw.\n\n*What are the odds??*" + f"\n\n{self.playersDeckStr}",
                         color = discord.Color.default()
                         )
 
@@ -371,9 +373,9 @@ class VrpsView(discord.ui.View):
                                         userDeck = self.userDeck,
                                         targetDeck = self.targetDeck)
                         if self.botPlay:
-                            desc = "It was a tie ! The game will continue with the remaining cards in our deck.\n"
+                            desc = "It was a Draw ! The game will continue with the remaining cards in our deck.\n"
                         else:
-                            desc = "It was a tie ! The game will continue with the remaining cards in your deck.\n"
+                            desc = "It was a Draw ! The game will continue with the remaining cards in your deck.\n"
                         nextMatchEmbed = discord.Embed(
                             title = "Vote Rock, Paper, Scissors !",
                             description = desc + view.playersDeckStr,
