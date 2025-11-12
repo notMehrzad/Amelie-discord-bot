@@ -32,14 +32,18 @@ async def botStatusChange():
     await bot.change_presence(activity = next(bot_status))
 
 async def cogsload():
+    success: list[str] = []
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py"):
             try:
                 await bot.load_extension(f"cogs.{filename[:-3]}")
-                print(f"{filename[:-3]} cog loaded ☑️")
+                success.append(filename[:-3])
+                #print(f"{filename[:-3]} cog loaded ☑️")
 
             except Exception as e:
                 print(f"❌ Failed to load {filename[:-3]} cog: {e}")
+
+    print(f"{success} cogs loaded ☑️")
 
 
 #reads the stored token from config.json

@@ -8,14 +8,14 @@ class Whisper(commands.Cog):
     @commands.command(
             name = "whisper",
             aliases = ["wh"],
-            extras = {"Category": "Utility"},
+            extras = {"Category": "Utility", "in-Server": "Yes"},
             usage = "<target> <message>",
             brief = "Whispers something to a member.",
             help = (
                 "Whispers a message to a member. use this command to talk with a member privately inside a server."
             )
     )
-    async def whisper(self, ctx: commands.Context[commands.Bot], user: discord.User | None = None, *, msg: str | None = None):
+    async def whisper(self, ctx: commands.Context[commands.Bot], user: discord.User | str | None = None, *, msg: str | None = None):
         #if user runs the command in dm
         if not ctx.guild:
             return await ctx.reply("You can only whisper someone in a server.")
@@ -24,8 +24,11 @@ class Whisper(commands.Cog):
         if not user:
             return await ctx.reply("You must mention a Member to whisper.")
         
-        target = ctx.guild.get_member(user.id)
-
+        #if user mentions an invalid user
+        if not isinstance(user, discord.User):
+            raise commands.BadArgument
+        
+        target = ctx.guild.get_member(user.id) #fetches the target user from the server, None if not found
         if not target:
             return await ctx.reply(f"{user.display_name} is not a member of this server.")
         

@@ -16,6 +16,58 @@ def rpsResult(c1: str, c2: str):
         if choice["name"] == c1:
             return 1 if choice["beats"] == c2 else 2
     return -1
+
+class Rps(commands.Cog):
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+
+    @commands.command(
+            name = "rps",
+            extras = {"Category": "Games"},
+            usage = "<target[*optional*]>",
+            brief = "Traditional *Rock, Paper, Scissors* game."
+    )
+    async def rps(self, ctx: commands.Context[commands.Bot], user: discord.User | str | None = None):
+        #if user mentions an invalid user
+        if user and not isinstance(user, discord.User):
+            raise commands.BadArgument
+        
+        #if the user runs this command in dm to play with another user
+        if not ctx.guild and user and user.id != ctx.me.id:
+            return await ctx.reply("You can only play this game with others in a server. (except me!)")
+        
+        if user and ctx.guild:
+            target = ctx.guild.get_member(user.id)
+            if not target:
+                return await ctx.reply(f"{user.mention} is now a member of this server.")
+        else:
+            target = None
+        
+        #if users wants to play with himself
+        if target and target.id == ctx.author.id:
+            return await ctx.reply("You can't play with yourself.")
+        
+        #if user wants to play with a bot except this bot
+        if target and target.bot and target.id != ctx.me.id:
+            return await ctx.reply("You can't play with bots. (except me!)")
+        
+        #plays with bot if no target is mentioned or the target is the bot itself
+        if not target or target.id == ctx.me.id:
+            view = RpsView(ctx, ctx.me, botPlay = True)
+        
+        else:
+            view = RpsView(ctx, target)
+
+        await view.start()
+        
+    @rps.error
+    async def rps_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
+        #if user mentioned an invalid user
+        if isinstance(error, commands.BadArgument):
+            await ctx.reply("User not found. Please mention a valid user.")
+        else:
+            print(f"❌ something went wrong with rps command: {error}")
+            await ctx.reply("something went wrong with **rps**.")
         
 class RpsView(discord.ui.View):
     def __init__(self, ctx: commands.Context[commands.Bot], target: discord.Member | discord.ClientUser, botPlay: bool = False):
@@ -165,50 +217,6 @@ class RpsView(discord.ui.View):
             pass
             
         self.stop() #stops further interaction
-
-class Rps(commands.Cog):
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-
-    @commands.command(
-            name = "rps",
-            extras = {"Category": "Games"},
-            usage = "<target[*optional*]>",
-            brief = "Traditional *Rock, Paper, Scissors* game."
-    )
-    async def rps(self, ctx: commands.Context[commands.Bot], target: discord.Member | None = None):
-        #if the user runs this command in dm to play with another user
-        if ctx.guild is None and target and target.id != ctx.me.id:
-            await ctx.reply("You can only run this command in a server to play with this user.")
-            return
-        
-        #if users wants to play with himself
-        if target and target.id == ctx.author.id:
-            await ctx.reply("You can't play with yourself.")
-            return
-        
-        #if user wants to play with a bot except this bot
-        if target and target.bot and target.id != ctx.me.id:
-            await ctx.reply("You can't play with bots. (except me!)")
-            return
-        
-        #plays with bot if no target is mentioned or the target is the bot itself
-        if target is None or target.id == ctx.me.id:
-            view = RpsView(ctx, ctx.me, botPlay = True)
-        
-        else:
-            view = RpsView(ctx, target)
-
-        await view.start()
-        
-    @rps.error
-    async def rps_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
-        #if user mentioned an invalid user
-        if isinstance(error, commands.BadArgument):
-            await ctx.reply("Member not found. Please mention a valid user.")
-        else:
-            print(f"❌ something went wrong with rps command: {error}")
-            await ctx.reply("something went wrong with **rps**.")
 
 
 async def setup(bot: commands.Bot):

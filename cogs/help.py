@@ -105,6 +105,16 @@ class HelpView(discord.ui.View):
     async def start(self):
         self.msg = await self.ctx.reply(embed = self.categoryEmbeds[0], view = self) #sends the help menu from the first category
 
+    #close button
+    @discord.ui.button(label = "Close", style = discord.ButtonStyle.red, row = 0)
+    async def close(self, interaction: discord.Interaction, button: discord.ui.Button[discord.ui.View]):
+        if interaction.user.id != self.ctx.author.id:
+            return await interaction.response.send_message("You can't control this help menu. try help command yourself.", ephemeral = True)
+        
+        await interaction.response.defer()
+        await self.msg.delete() #deletes the menu
+        self.stop()
+
     #previous button
     @discord.ui.button(emoji = "◀️", style = discord.ButtonStyle.grey, row = 0)
     async def previous(self, interaction: discord.Interaction, button: discord.ui.Button[discord.ui.View]):

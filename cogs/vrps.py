@@ -40,12 +40,31 @@ class Vrps(commands.Cog):
             name = "vrps",
             aliases = ["voterps"],
             usage = "<target[*optional*]>",
-            extras = {"Category": "Games"}
+            extras = {"Category": "Games"},
+            brief = "It's like rock-paper-scissors, but played with predetermined drawings on cards instead of using the hands.",
+            help = (
+                "The game is played between two people."
+                "\nThe idea is that it's like rock-paper-scissors, but played with predetermined drawings on cards instead of using the hands. Despite the fact that only two are actually playing, the game requires a full class of people to work."
+                "\nThe cards are determined by a voting phase, where each of the class members participating (except the players themselves) draw a rock, paper, or scissors symbol on a card, which are all added to a ballot box. The players then draw three cards at random, and select one from their hand to use in a showdown."
+                "\nUnlike the traditional game, the player does not usually have all three options; it is more common that they get two of the same move and one different; having all three in one hand is extremely rare. If there is a tie, they play their cards until someone wins the hand."
+                "\nYou can only play with Amélie herself if you run this game in her dm."
+            )
     )
-    async def vrps(self, ctx: commands.Context[commands.Bot], target: discord.Member | None = None):
+    async def vrps(self, ctx: commands.Context[commands.Bot], user: discord.User | str | None = None):
+        #if user mentions an invalid user
+        if user and not isinstance(user, discord.User):
+            raise commands.BadArgument
+        
         #if user runs the command in dm
-        if not ctx.guild:
-            return await ctx.send("This command can only be used in a server.")
+        if not ctx.guild and user and user.id != ctx.me.id:
+            return await ctx.reply("You can only play this game with others in a server. (except me!)")
+        
+        if user and ctx.guild:
+            target = ctx.guild.get_member(user.id) #fetches the target member from the server, None if not found
+            if not target:
+                return await ctx.reply(f"{user.mention} is now a member of this server.")
+        else:
+            target = None
         
         #if users wants to play with himself
         if target and target.id == ctx.author.id:
@@ -57,7 +76,7 @@ class Vrps(commands.Cog):
 
         #plays with bot if no target is mentioned or the target is the bot itself
         if not target or target.id == ctx.me.id:
-            view = ReadyView(ctx, ctx.guild.me, botPlay = True)
+            view = ReadyView(ctx, ctx.me, botPlay = True)
         
         #plays with the target
         else:
@@ -69,13 +88,13 @@ class Vrps(commands.Cog):
     async def vrps_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
         #if user mentioned an invalid user
         if isinstance(error, commands.BadArgument):
-            await ctx.reply("user not found. Please mention a valid user.")
+            await ctx.reply("User not found. Please mention a valid user.")
         else:
             print(f"❌ something went wrong with vrps command: {error}")
             await ctx.reply("something went wrong with **vrps**.")
 
 class ReadyView(discord.ui.View):
-    def __init__(self, ctx: commands.Context[commands.Bot], target: discord.Member, botPlay: bool = False):
+    def __init__(self, ctx: commands.Context[commands.Bot], target: discord.Member | discord.ClientUser, botPlay: bool = False):
         super().__init__(timeout = 180)
         self.ctx = ctx
         self.target = target
@@ -163,7 +182,7 @@ class ReadyView(discord.ui.View):
         self.stop() #stops further interaction
     
 class VrpsView(discord.ui.View):
-    def __init__(self, ctx: commands.Context[commands.Bot], target: discord.Member, msg: discord.Message, botPlay: bool = False, embedColor: discord.Color | None = None, userDeck: list[DeckInfo] | None = None, targetDeck: list[DeckInfo] | None = None):
+    def __init__(self, ctx: commands.Context[commands.Bot], target: discord.Member | discord.ClientUser, msg: discord.Message, botPlay: bool = False, embedColor: discord.Color | None = None, userDeck: list[DeckInfo] | None = None, targetDeck: list[DeckInfo] | None = None):
         super().__init__(timeout = 180)
         self.ctx = ctx
         self.target = target
