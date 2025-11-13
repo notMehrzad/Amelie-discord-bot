@@ -239,13 +239,45 @@ class VrpsView(discord.ui.View):
 
     @property
     def userDeckStr(self):
-        s = f"{"\u00A0" * 8}".join("🎴" if not c["shown"] else f"{c["card"]["emoji"]} ({c["match"]}th)" for c in self.userDeck)
-        f = f"{"\u00A0" * 8}".join(f"{c["card"]["emoji"]} ({c["match"]}th)" if c["match"] != 0 else f"{c["card"]["emoji"]}" for c in self.userDeck)
+        s = f"{"\u00A0" * 8}".join(
+            (
+                "🎴"
+                if not c["shown"]
+                else f"{c["card"]["emoji"]} ({c["match"]}{"st" if c["match"] == 1 else "nd" if c["match"] == 2 else "rd"})"
+            )
+            for c in self.userDeck
+        )
+        f = f"{"\u00A0" * 8}".join(
+            (
+                f"{c["card"]["emoji"]} ({c["match"]}{"st" if c["match"] == 1 else "nd" if c["match"] == 2 else "rd"})"
+                if c["match"] != 0
+                else f"{c["card"]["emoji"]}"
+            )
+            for c in self.userDeck
+        )
+        #s = f"{"\u00A0" * 8}".join("🎴" if not c["shown"] else f"{c["card"]["emoji"]} ({c["match"]}th)" for c in self.userDeck)
+        #f = f"{"\u00A0" * 8}".join(f"{c["card"]["emoji"]} ({c["match"]}th)" if c["match"] != 0 else f"{c["card"]["emoji"]}" for c in self.userDeck)
         return s if not self.final else f
     @property
     def targetDeckStr(self):
-        s = f"{"\u00A0" * 8}".join("🎴" if not c["shown"] else f"{c["card"]["emoji"]} ({c["match"]}th)" for c in self.targetDeck)
-        f = f"{"\u00A0" * 8}".join(f"{c["card"]["emoji"]} ({c["match"]}th)" if c["match"] != 0 else f"{c["card"]["emoji"]}" for c in self.targetDeck)
+        s = f"{"\u00A0" * 8}".join(
+            (
+                "🎴"
+                if not c["shown"]
+                else f"{c["card"]["emoji"]} ({c["match"]}{"st" if c["match"] == 1 else "nd" if c["match"] == 2 else "rd"})"
+            )
+            for c in self.targetDeck
+        )
+        f = f"{"\u00A0" * 8}".join(
+            (
+                f"{c["card"]["emoji"]} ({c["match"]}{"st" if c["match"] == 1 else "nd" if c["match"] == 2 else "rd"})"
+                if c["match"] != 0
+                else f"{c["card"]["emoji"]}"
+            )
+            for c in self.targetDeck
+        )
+        #s = f"{"\u00A0" * 8}".join("🎴" if not c["shown"] else f"{c["card"]["emoji"]} ({c["match"]}th)" for c in self.targetDeck)
+        #f = f"{"\u00A0" * 8}".join(f"{c["card"]["emoji"]} ({c["match"]}th)" if c["match"] != 0 else f"{c["card"]["emoji"]}" for c in self.targetDeck)
         return s if not self.final else f
     @property
     def playersDeckStr(self):
