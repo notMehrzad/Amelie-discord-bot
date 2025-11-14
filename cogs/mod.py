@@ -4,6 +4,7 @@ from datetime import timedelta, timezone
 import dateparser
 import re
 from database import connection
+import aiosqlite
 
 def timeDeltaParser(untilStr: str):
     try:
@@ -220,13 +221,13 @@ class Mod(commands.Cog):
         if target.id == ctx.guild.owner_id:
             return await ctx.reply("You can't time out the server *Owner*.")
         
-        #if user trys to time out a bot except the bot
-        if target.bot and target.id != ctx.me.id:
-            return await ctx.reply("You can't time out poor bots.")
-        
         #if user trys to time out the bot itself
         if target.id == ctx.me.id:
             return await ctx.reply("You can't time out me hon.")
+        
+        #if user trys to time out a bot except the bot
+        if target.bot:
+            return await ctx.reply("You can't time out poor bots.")
         
         #if user has lower or equal role position than target
         if target.top_role >= ctx.author.top_role and ctx.author.id != ctx.guild.owner_id:
@@ -319,7 +320,7 @@ class Mod(commands.Cog):
             return await ctx.reply("You must enter a valid target user ID.")
         
         try:
-            target = await self.bot.fetch_user(userId) #fetches the user from id
+            target = self.bot.get_user(userId) or await self.bot.fetch_user(userId) #fetches the user from id
         except discord.NotFound:
             return await ctx.reply(f"User with this ID doesn't exist.")
         
@@ -394,7 +395,11 @@ class Mod(commands.Cog):
         if target.id == ctx.me.id:
             return await ctx.reply("You can't run my moderation commands on myself darling.")
         
-        #if user trys to kick the server owner
+        #if user wants to warn bots
+        if target.bot:
+            return await ctx.reply("-agh seriously?. You can't warn bots.")
+        
+        #if user wants to kick the server owner
         if target.id == ctx.guild.owner_id:
             return await ctx.reply("You can't warn the server *Owner*.")
         
@@ -410,32 +415,37 @@ class Mod(commands.Cog):
         warnLimit = 3 #allowed number of warnings before getting kicked
 
         #makes a connection to the database for fetching warns
-        async with await connection() as conn:
-            #inserts a new warn for target
-            await conn.execute("""
-            INSERT INTO warns (server_id, mod_id, user_id, reason)
-            VALUES (?, ?, ?, ?)
-            """, (ctx.guild.id, ctx.author.id, target.id, reason))
-            await conn.commit() #commits and saves the changes
+        conn = await connection()
 
-            #counts the number of warnings the target has
-            async with conn.execute("""
-            SELECT COUNT(*) FROM warns
-            WHERE server_id = ? AND user_id = ?
-            """, (ctx.guild.id, target.id)) as cursor:
-                result = await cursor.fetchone()
-                warnCount: int = result[0] if result else 0
+        #counts the number of warnings the target has
+        async with conn.execute("""
+        SELECT COUNT(*) FROM warns
+        WHERE server_id = ? AND user_id = ?
+        """, (ctx.guild.id, target.id)) as cursor:
+            result = await cursor.fetchone()
+        
+        warnCount: int = result[0] if result else 0
 
-            if warnCount >= warnLimit:
-                try:
-                    await ctx.guild.kick(user = target, reason = f"Reached the maximum allowed number of warnings *({warnLimit})*.")
-                    await ctx.reply(f"{target.display_name} has been kicked due to reaching the maximum allowed number of warnings *({warnLimit})*.")
-                except Exception as e:
-                    print(f".kick failed to kick: {e}")
-                    await ctx.reply("Failed to kick.")
+        #inserts a new warn for target
+        await conn.execute("""
+        INSERT INTO warns (server_id, warn_number, mod_id, user_id, reason)
+        VALUES (?, ?, ?, ?, ?)
+        """, (ctx.guild.id, warnCount + 1, ctx.author.id, target.id, reason))
+        await conn.commit() #commits and saves the changes
+        await conn.close()
+
+        await ctx.reply(f"{target.mention} has been warned." + (f"\nreason: {reason}" if reason else ""))
+
+        if warnCount + 1 >= warnLimit:
+            try:
+                #await ctx.guild.kick(user = target, reason = f"Reached the maximum allowed number of warnings *({warnLimit})*.")
+                await ctx.reply(f"{target.display_name} has been kicked due to reaching the maximum allowed number of warnings *({warnLimit})*.")
+            except Exception as e:
+                print(f".kick failed to kick: {e}")
+                await ctx.reply("Failed to kick.")
         
     @warn.error
-    async def warm_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
+    async def warn_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
         #if user entered an invalid user
         if isinstance(error, commands.BadArgument):
             await ctx.reply("Member not found. Please mention a valid member.")
@@ -443,6 +453,150 @@ class Mod(commands.Cog):
             print(f"❌ something went wrong with mod-warn command: {error}")
             await ctx.reply("something went wrong with **warn**.")
 
+    #warnlist command
+    @commands.command(
+            name = "warnlist",
+            aliases = ["wl"],
+            usage = "<target>",
+            brief = "Shows warns of a member from the server.",
+            help = (
+                ""
+            ),
+            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
+    )
+    async def warnlist(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None = None):
+        #if user runs the command in dm
+        if not ctx.guild or not isinstance(ctx.author, discord.Member):
+            return await ctx.reply("You can only run moderation commands in a server.")
+        
+        #if the user has no permission to to see the warns
+        if not ctx.author.guild_permissions.kick_members:
+            return await ctx.reply("You have no permission to *see the warnings* of Members.")
+        
+        #if the bot has no permission to see the warns
+        if not ctx.guild.me.guild_permissions.kick_members:
+            return await ctx.reply("I have no permission to *see the warnings* of Members.")
+        
+        #if user didn't enter any target member
+        if not user:
+            return await ctx.reply("You must mention a target Member for this command (or \"all\" to get the warning list).")
+        
+        #if user mentions an invalid user
+        if isinstance(user, str) and user.lower() != "all":
+            raise commands.BadArgument
+
+        #shows warns of the target user
+        if not isinstance(user, str):
+            try:
+                target = (self.bot.get_user(user) or await self.bot.fetch_user(user)) if isinstance(user, int) else user #fetches the target from id
+            except discord.NotFound:
+                return await ctx.reply(f"User with this ID doesn't exist.")
+            
+            #if user wants to run moderation command on the bot
+            if target.id == ctx.me.id:
+                return await ctx.reply("I have no warnings for you to see. agh.")
+            
+            #if user trys to see the server owner warns
+            if target.id == ctx.guild.owner_id:
+                return await ctx.reply("Server *Owner* has no warning i guess?")
+            
+            guildTarget = ctx.guild.get_member(target.id) #checks if the target user is also in the server or not
+            #if target user is also in the current server, checks roles position
+            if guildTarget:
+                #if user has lower role position than target
+                if guildTarget.top_role > ctx.author.top_role and ctx.author.id != ctx.guild.owner_id:
+                    return await ctx.reply("You can't see warnings of a Member with *higher* role position as you.")
+                
+                #if the bot has lower role position than target
+                if guildTarget.top_role > ctx.guild.me.top_role:
+                    return await ctx.reply("I can't see warnings of a Member with *higher* role position as me.")
+                
+            #creates a connection to the database
+            conn = await connection()
+            conn.row_factory = aiosqlite.Row
+
+            #searchs database with given arguments
+            async with conn.execute(
+                "SELECT * FROM warns WHERE server_id = ? AND user_id = ?",
+                (ctx.guild.id, target.id)
+                ) as cursor:
+                result = await cursor.fetchall()
+            await conn.close()
+
+            warns: list[str] = [] #a list to store warnings
+            if result:
+                for warn in result:
+                    #trys to find moderator name
+                    try:
+                        moderatorUser = (self.bot.get_user(warn["mod_id"]) or await self.bot.fetch_user(warn["mod_id"])) if warn["mod_id"] else None
+                    except Exception:
+                        moderatorUser = None
+                    moderatorName = moderatorUser.display_name if moderatorUser else "*unknown*"
+                    desc = f"Warn No.{warn['warn_number']} | Reason: {warn['reason'] if warn['reason'] else "*no reason provided*"} | Moderator: {moderatorName} | Date: {warn['timestamp']}"
+                    warns.append(desc)
+
+            resultEmbed = discord.Embed(
+                title = f"{target.display_name}'s warnings",
+                description = "\n".join(warns) if warns else f"{target.display_name} has no warnings.",
+                color = discord.Color.dark_blue()
+            )
+            await ctx.reply(embed = resultEmbed)
+            
+        #shows all warn list
+        else:
+            #creates a connection to the database
+            conn = await connection()
+            conn.row_factory = aiosqlite.Row
+
+            #searchs database with given arguments
+            async with conn.execute(
+                "SELECT * FROM warns WHERE server_id = ?",
+                (ctx.guild.id,)
+                ) as cursor:
+                result = await cursor.fetchall()
+            await conn.close()
+
+            warns: list[str] = [] #a list to store all server warns
+            if result:
+                for warn in result:
+                    #trys to find the target
+                    try:
+                        target = self.bot.get_user(warn["user_id"]) or await self.bot.fetch_user(warn["user_id"])
+                    except Exception:
+                        target = None
+
+                    #checks if the target is also in the server
+                    guildTarget = ctx.guild.get_member(target.id) if target else None
+                    #if the target is also in the server, checks role positions
+                    if guildTarget and guildTarget.top_role > ctx.author.top_role and ctx.author.id != ctx.guild.owner_id:
+                        continue
+                    if guildTarget and guildTarget.top_role > ctx.guild.me.top_role:
+                        continue
+
+                    #trys to find moderator name
+                    try:
+                        moderatorUser = (self.bot.get_user(warn["mod_id"]) or await self.bot.fetch_user(warn["mod_id"])) if warn["mod_id"] else None
+                    except Exception:
+                        moderatorUser = None
+                    moderatorName = moderatorUser.display_name if moderatorUser else "*unknown*"
+                    desc = f"{warn['warn_id']}. Warn No.{warn['warn_number']} | User: {target.display_name if target else "*unknown*"} | Reason: {warn['reason'] if warn['reason'] else "*no reason provided*"} | Moderator: {moderatorName} | Date: {warn['timestamp']}"
+                    warns.append(desc)
+
+            resultEmbed = discord.Embed(
+                title = f"Server's warning list",
+                description = "\n".join(warns) if warns else f"There is no warning commited yet.",
+                color = discord.Color.dark_blue()
+            )
+            await ctx.reply(embed = resultEmbed)
+
+    @warnlist.error
+    async def warnlist_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
+        #if user entered an invalid user
+        if isinstance(error, commands.BadArgument):
+            await ctx.reply("User not found. Please mention a valid user.")
+        else:
+            print(f"❌ something went wrong with mod-warnlist command: {error}")
+            await ctx.reply("something went wrong with **warnlist**.")
 
     #سکوت 60
     @commands.Cog.listener()

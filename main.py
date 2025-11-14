@@ -4,6 +4,7 @@ import json
 import asyncio
 import os
 from itertools import cycle
+from database import setup
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix = '.', intents = intents, case_insensitive = True, help_command = None) #defines bot object
@@ -50,6 +51,9 @@ with open("config.json") as file:
     config = json.load(file)
 
 async def main():
+    await setup()
+    print("💾 Database has been connected successfully.")
+
     async with bot:
         await cogsload() #loads the cogs
         try:
