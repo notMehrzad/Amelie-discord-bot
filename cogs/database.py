@@ -13,6 +13,7 @@ async def setup():
         CREATE TABLE IF NOT EXISTS warns (
             warn_id INTEGER PRIMARY KEY AUTOINCREMENT,
             server_id INTEGER NOT NULL,
+            mod_id INTEGER NOT NULL,
             user_id INTEGER NOT NULL,
             reason TEXT,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
