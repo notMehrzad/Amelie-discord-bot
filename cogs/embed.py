@@ -140,7 +140,7 @@ class Embed(commands.Cog):
 
     @commands.command(
             name = "embed",
-            usage = "embed <subcommand> <embed_arguments>",
+            usage = "<subcommand> <embed_arguments>",
             help = (
                 "This command can sends or edits an embed in the channel."
                 "\nYou can specify Embed attributes like `key: (value)` (title: (hi) for instance). Supports all kind of Embed attributes."
