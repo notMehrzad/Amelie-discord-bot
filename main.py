@@ -32,26 +32,40 @@ bot_status = cycle([
 async def botStatusChange():
     await bot.change_presence(activity = next(bot_status))
 
+#cogloader function
 async def cogsload():
     success: list[str] = []
-    for filename in os.listdir("./cogs"):
-        if filename.endswith(".py"):
+    for root, _, files in os.walk("./cogs"):
+        for file in files:
+            #must be .py
+            if not file.endswith(".py"):
+                continue
+
+            #skips package initializers
+            if file == "__init__.py":
+                continue
+
+            #Builds cog path
+            #./cogs/moderation/kick.py  →  cogs.moderation.kick
+            rel_path = os.path.join(root, file)
+            module = rel_path.replace("\\", "/")[:-3]
+            if module.startswith("./"):
+                module = module[2:]
+            module = module.replace("/", ".")
+
             try:
-                await bot.load_extension(f"cogs.{filename[:-3]}")
-                success.append(filename[:-3])
-
+                await bot.load_extension(module) #loads cog
+                success.append(module.split(".")[-1])
             except Exception as e:
-                print(f"❌ Failed to load {filename[:-3]} cog: {e}")
-
+                print(f"❌ Failed to load {module}: {e}")
     print(f"{success} cogs loaded ☑️")
-
 
 #reads the stored token from config.json
 with open("config.json") as file:
     config = json.load(file)
 
 async def main():
-    await setup()
+    await setup() #sets up the database
     print("💾 Database has been connected successfully.")
 
     async with bot:

@@ -55,6 +55,10 @@ class Warn(commands.Cog):
         if target.id == ctx.author.id:
             return await ctx.reply("You can't warn yourself!")
         
+        #if user wants to warn the server owner
+        if target.id == ctx.guild.owner_id:
+            return await ctx.reply("You can't warn the server *Owner*.")
+        
         #if user wants to run moderation command on the bot
         if target.id == ctx.me.id:
             return await ctx.reply("You can't run my moderation commands on myself darling.")
@@ -62,10 +66,6 @@ class Warn(commands.Cog):
         #if user wants to warn bots
         if target.bot:
             return await ctx.reply("-agh seriously?. You can't warn bots.")
-        
-        #if user wants to warn the server owner
-        if target.id == ctx.guild.owner_id:
-            return await ctx.reply("You can't warn the server *Owner*.")
         
         #if user has lower or equal role position than target
         if target.top_role >= ctx.author.top_role and ctx.author.id != ctx.guild.owner_id:
@@ -78,6 +78,7 @@ class Warn(commands.Cog):
         #warns the target
         warnLimit = 3 #allowed number of warnings before getting kicked
 
+        #warns the target
         conn = await connection() #makes a connection to the database
 
         #creates the warn ID based on the last warn id
@@ -123,7 +124,7 @@ class Warn(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("Member not found. Please mention a valid member.")
         else:
-            print(f"❌ something went wrong with mod-warn command: {error}")
+            print(f"❌ something went wrong with warn command: {error}")
             await ctx.reply("something went wrong with **warn**.")
 
         

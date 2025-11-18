@@ -47,13 +47,17 @@ class WarnList(commands.Cog):
             except discord.NotFound:
                 return await ctx.reply(f"User with this ID doesn't exist.")
             
+            #if user trys to see the server owner warns
+            if target.id == ctx.guild.owner_id:
+                return await ctx.reply("Server *Owner* has no warning i guess?")
+            
             #if user wants to run moderation command on the bot
             if target.id == ctx.me.id:
                 return await ctx.reply("I have no warnings for you to see. agh.")
             
-            #if user trys to see the server owner warns
-            if target.id == ctx.guild.owner_id:
-                return await ctx.reply("Server *Owner* has no warning i guess?")
+            #if user wants to see bots warnings
+            if target.bot:
+                return await ctx.reply("Bots have no warning for you to see.")
                 
             conn = await connection() #creates a connection to the database
             conn.row_factory = aiosqlite.Row
@@ -133,7 +137,7 @@ class WarnList(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("User not found. Please mention a valid user.")
         else:
-            print(f"❌ something went wrong with mod-warnlist command: {error}")
+            print(f"❌ something went wrong with warnlist command: {error}")
             await ctx.reply("something went wrong with **warnlist**.")
 
         

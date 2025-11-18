@@ -33,7 +33,7 @@ class Timeout(commands.Cog):
             ),
             extras = {"Category": "Moderation", "Permissions needed": "`Timeout Members`", "in-Server": "Yes"}
     )
-    async def timeout(self, ctx: commands.Context[commands.Bot], user: discord.User | str | None = None, untilStr: str | None = None, *, reason: str | None = None):
+    async def timeout(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None = None, untilStr: str | None = None, *, reason: str | None = None):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
             return await ctx.reply("You can only run moderation commands in a server.")
@@ -46,14 +46,19 @@ class Timeout(commands.Cog):
         if not ctx.guild.me.guild_permissions.moderate_members:
             return await ctx.reply("I have no permisson to *time out* Members.")
         
-        #if user didn't mention any target user
+        #if user doesn't mention any target user
         if not user:
             return await ctx.reply("You must mention a target Member for this command.")
         
         #if user mentions an invalid user
-        if not isinstance(user, discord.abc.User):
+        if not isinstance(user, (discord.abc.User, int)):
             raise commands.BadArgument
         
+        try:
+            user = (self.bot.get_user(user) or await self.bot.fetch_user(user)) if isinstance(user, int) else user #trys to fetch the target if id is given
+        except discord.NotFound:
+            return await ctx.reply(f"User with given ID doesn't exist.")
+
         target = ctx.guild.get_member(user.id) #fetches the target user from the server, None if not found
         if not target:
             return await ctx.reply(f"{user.display_name} is not a Member of this server.")
@@ -129,7 +134,7 @@ class Timeout(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("Member not found. Please mention a valid member.")
         else:
-            print(f"❌ something went wrong with mod-timeout command: {error}")
+            print(f"❌ something went wrong with timeout command: {error}")
             await ctx.reply("something went wrong with **timeout**.")
 
     #سکوت 60

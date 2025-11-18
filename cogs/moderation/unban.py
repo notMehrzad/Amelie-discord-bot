@@ -15,7 +15,7 @@ class Unban(commands.Cog):
             ),
             extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "in-Server": "Yes"}
     )
-    async def unban(self, ctx: commands.Context[commands.Bot], userId: int | str | None = None, *, reason: str = "`no reason provided`"):
+    async def unban(self, ctx: commands.Context[commands.Bot], userId: int | str | None = None, *, reason: str | None= None):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
             return await ctx.reply("You can only run moderation commands in a server.")
@@ -45,13 +45,13 @@ class Unban(commands.Cog):
         if target.id == ctx.author.id:
             return await ctx.reply("You were never banned for you to undo it now.")
         
-        #if user wants to do moderation command on the bot
-        if target.id == ctx.me.id:
-            return await ctx.reply("I was never (and can't be) banned for you to undo it now.")
-        
         #if user trys to kick the server owner
         if target.id == ctx.guild.owner_id:
             return await ctx.reply("The server *Owner* was never (and couldn't be) banned for you to undo it now.")
+        
+        #if user wants to do moderation command on the bot
+        if target.id == ctx.me.id:
+            return await ctx.reply("If i'm texting you rn, that means I wasn't banned I guess?")
         
         #unbans the target
         try:
@@ -66,7 +66,7 @@ class Unban(commands.Cog):
     
     @unban.error
     async def unban_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
-        print(f"❌ something went wrong with mod-unban command: {error}")
+        print(f"❌ something went wrong with unban command: {error}")
         await ctx.reply("something went wrong with **unban**.")
 
         

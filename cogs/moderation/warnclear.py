@@ -55,6 +55,10 @@ class WarnClear(commands.Cog):
         if target.id == ctx.author.id:
             return await ctx.reply("You can't clear your own warnings.")
         
+        #if user wants to clear warns of the server owner
+        if target.id == ctx.guild.owner_id:
+            return await ctx.reply("Server *Owner* has no warning for you to remove it now.")
+        
         #if user wants to run moderation command on the bot
         if target.id == ctx.me.id:
             return await ctx.reply("I have no warning for you to remove it now??.")
@@ -62,10 +66,6 @@ class WarnClear(commands.Cog):
         #if user wants to clear warns of bots
         if target.bot:
             return await ctx.reply("Bots have no warning for you to remove it now.")
-        
-        #if user wants to clear warns of the server owner
-        if target.id == ctx.guild.owner_id:
-            return await ctx.reply("Server *Owner* has no warning for you to remove it now.")
         
         #if user has lower or equal role position than target
         if target.top_role >= ctx.author.top_role and ctx.author.id != ctx.guild.owner_id:
@@ -133,7 +133,7 @@ class WarnClear(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("User not found. Please mention a valid user.")
         else:
-            print(f"❌ something went wrong with mod-warnclear command: {error}")
+            print(f"❌ something went wrong with warnclear command: {error}")
             await ctx.reply("something went wrong with **warnclear**.")
 
 

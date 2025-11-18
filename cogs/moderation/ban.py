@@ -50,13 +50,13 @@ class Ban(commands.Cog):
         if target.id == ctx.author.id:
             return await ctx.reply("You can't ban yourself.")
         
-        #if user wants to run moderation command on the bot
-        if target.id == ctx.me.id:
-            return await ctx.reply("You can't run my moderation commands on myself.\nnice try.")
-        
         #if user trys to ban the server owner
         if target.id == ctx.guild.owner_id:
             return await ctx.reply("You can't ban the server *Owner*.")
+        
+        #if user wants to run moderation command on the bot
+        if target.id == ctx.me.id:
+            return await ctx.reply("You can't run my moderation commands on myself.\nnice try.")
         
         #if user has lower or equal role position than target
         if target.top_role >= ctx.author.top_role and ctx.author.id != ctx.guild.owner_id:
@@ -80,7 +80,7 @@ class Ban(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("Member not found. Please mention a valid member.")
         else:
-            print(f"❌ something went wrong with mod-ban command: {error}")
+            print(f"❌ something went wrong with ban command: {error}")
             await ctx.reply("something went wrong with **ban**.")
 
 
