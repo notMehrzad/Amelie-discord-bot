@@ -111,7 +111,6 @@ class HelpView(discord.ui.View):
         if interaction.user.id != self.ctx.author.id:
             return await interaction.response.send_message("You can't control this help menu. try help command yourself.", ephemeral = True)
         
-        await interaction.response.defer()
         await self.msg.delete() #deletes the menu
         self.stop()
 
