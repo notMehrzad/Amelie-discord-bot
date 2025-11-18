@@ -1,0 +1,74 @@
+import discord
+from discord.ext import commands
+
+class Unban(commands.Cog):
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+
+    @commands.command(
+            name = "unban",
+            aliases = ["ub"],
+            usage = "<target_ID> <reason[*optional*]>",
+            brief = "Unbans a user from the server.",
+            help = (
+                ""
+            ),
+            extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "in-Server": "Yes"}
+    )
+    async def unban(self, ctx: commands.Context[commands.Bot], userId: int | str | None = None, *, reason: str = "`no reason provided`"):
+        #if user runs the command in dm
+        if not ctx.guild or not isinstance(ctx.author, discord.Member):
+            return await ctx.reply("You can only run moderation commands in a server.")
+        
+        #if the user has no permission to unban
+        if not ctx.author.guild_permissions.ban_members:
+            return await ctx.reply("You have no permission to *unban* Members.")
+        
+        #if the bot has no permission to unban
+        if not ctx.guild.me.guild_permissions.ban_members:
+            return await ctx.reply("I have no permisson to *unban* Members.")
+        
+        #if user doesn't enter any target ID
+        if not userId:
+            return await ctx.reply("You must enter a target user ID for this command.")
+        
+        #if user enters an invalid argument
+        if not isinstance(userId, int):
+            return await ctx.reply("You must enter a valid target user ID.")
+        
+        try:
+            target = self.bot.get_user(userId) or await self.bot.fetch_user(userId) #fetches the user from id
+        except discord.NotFound:
+            return await ctx.reply(f"User with this ID doesn't exist.")
+        
+        #if user wants to unban himself
+        if target.id == ctx.author.id:
+            return await ctx.reply("You were never banned for you to undo it now.")
+        
+        #if user wants to do moderation command on the bot
+        if target.id == ctx.me.id:
+            return await ctx.reply("I was never (and can't be) banned for you to undo it now.")
+        
+        #if user trys to kick the server owner
+        if target.id == ctx.guild.owner_id:
+            return await ctx.reply("The server *Owner* was never (and couldn't be) banned for you to undo it now.")
+        
+        #unbans the target
+        try:
+            entry = await ctx.guild.fetch_ban(discord.Object(id = target.id)) #checks if the target is banned
+            await ctx.guild.unban(user = entry.user, reason = reason)
+            await ctx.reply(f"{target.display_name} has been *unbanned* via {ctx.author.display_name}." + (f"\nreason: {reason}" if reason else ""))
+        except discord.NotFound:
+            return await ctx.reply(f"{target.display_name} was never banned for you to undo it now.")
+        except Exception as e:
+            print(f".unban failed to unban: {e}")
+            await ctx.reply("Failed to unban.")
+    
+    @unban.error
+    async def unban_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
+        print(f"❌ something went wrong with mod-unban command: {error}")
+        await ctx.reply("something went wrong with **unban**.")
+
+        
+async def setup(bot: commands.Bot):
+    await bot.add_cog(Unban(bot))
