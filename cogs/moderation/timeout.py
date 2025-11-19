@@ -180,7 +180,7 @@ class Timeout(commands.Cog):
         if target.id == msg.guild.me.id:
             return await msg.reply("نمی توانید من را ساکت کنید.")
         
-        if target.top_role >= msg.author.top_role:
+        if target.top_role >= msg.author.top_role and msg.author.id != msg.guild.owner_id:
             return await msg.reply("نمی توانید عضوی با رول *بالاتر یا برابر* از خودتان را ساکت کنید.")
         
         if target.top_role >= msg.guild.me.top_role:

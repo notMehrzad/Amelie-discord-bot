@@ -8,6 +8,8 @@ sys.path.append(parent)
 
 from database import connection
 
+warnLimit = 3 #allowed number of warnings before getting kicked
+
 class Warn(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -76,9 +78,6 @@ class Warn(commands.Cog):
             return await ctx.reply("I can't warn a Member with *higher or equal* role position as me.")
         
         #warns the target
-        warnLimit = 3 #allowed number of warnings before getting kicked
-
-        #warns the target
         conn = await connection() #makes a connection to the database
 
         #creates the warn ID based on the last warn id
@@ -126,6 +125,94 @@ class Warn(commands.Cog):
         else:
             print(f"❌ something went wrong with warn command: {error}")
             await ctx.reply("something went wrong with **warn**.")
+
+    #گزارش
+    @commands.Cog.listener()
+    async def on_message(self, msg: discord.Message):
+        if msg.author.bot:
+            return
+        
+        content = msg.content.strip().split()
+        if content[0] != "گزارش":
+            return
+        
+        reason = " ".join(content[1:]) if len(content) >= 2 else None
+        
+        if not msg.guild or not isinstance(msg.author, discord.Member):
+            return await msg.reply("افراد رو فقط داخل یک سرور میتونید گزارش کنید.")
+        
+        if not msg.author.guild_permissions.kick_members:
+            return await msg.reply("شما اجازه *گزارش کردن* کسی را ندارید.")
+        
+        if not msg.guild.me.guild_permissions.kick_members:
+            return await msg.reply("من اجازه *گزارش کردن* کسی را ندارم.")
+        
+        if not msg.reference or not msg.reference.message_id:
+            return
+        
+        try:
+            refMsg = await msg.channel.fetch_message(msg.reference.message_id)
+            target = msg.guild.get_member(refMsg.author.id)
+        except discord.NotFound:
+            return
+        
+        if not target:
+            return await msg.reply(f"\u202b{refMsg.author.display_name} عضو این سرور نیست.\u202c")
+        
+        if target.id == msg.author.id:
+            return await msg.reply("نمی توانید خود را گزارش کنید.")
+        
+        if target.id == msg.guild.owner_id:
+            return await msg.reply("نمی توانید *صاحب* سرور را گزارش کنید.")
+        
+        if target.id == msg.guild.me.id:
+            return await msg.reply("نمی توانید من را گزارش کنید.")
+        
+        if target.bot:
+            return await msg.reply("نمی توانید بات های بدبخت بیچاره را گزارش کنید.")
+        
+        if target.top_role >= msg.author.top_role and msg.author.id != msg.guild.owner_id:
+            return await msg.reply("نمی توانید عضوی با رول *بالاتر یا برابر* از خودتان را گزارش کنید.")
+        
+        if target.top_role >= msg.guild.me.top_role:
+            return await msg.reply("نمی توانم عضوی با رول *بالاتر یا برابر* از خودم را گزارش کنم.")
+        
+        conn = await connection()
+
+        async with conn.execute("""
+        SELECT COALESCE(MAX(user_warn_id), 0) + 1
+        FROM warns
+        WHERE server_id = ? AND user_id = ?;
+        """, (msg.guild.id, target.id)) as cursor:
+            result = await cursor.fetchone()
+        warnID: int = result[0] if result else 1
+            
+        await conn.execute("""
+        INSERT INTO warns (server_id, user_warn_id, mod_id, user_id, reason, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?);
+        """, (msg.guild.id, warnID, msg.author.id, target.id, reason, discord.utils.utcnow()))
+        await conn.commit()
+
+        async with conn.execute("""
+        SELECT COUNT(*) FROM warns
+        WHERE server_id = ? AND user_id = ?;
+        """, (msg.guild.id, target.id)) as cursor:
+            result = await cursor.fetchone()
+        warnCount: int = result[0] if result else 0
+
+        await conn.close()
+
+        await msg.reply(f"\u202b{target.mention} گزارش داده شد.\u202c" + (f"\n\u202bدلیل: {reason}\u202c" if reason else ""))
+
+        if warnCount >= warnLimit:
+            try:
+                #await ctx.guild.kick(user = target, reason = f"Reached the maximum allowed number of warnings *({warnLimit})*.")
+                await msg.reply(f"\u202b{target.display_name} به دلیل دریافت بیش از حد مجاز گزارش ها اخراج شد *({warnLimit})*.\u202c")
+            except Exception as e:
+                print(f"سکوت failed to kick: {e}")
+                await msg.reply("اخراج کردن ناموفق بود.")
+
+        await self.bot.process_commands(msg)
 
         
 async def setup(bot: commands.Bot):
