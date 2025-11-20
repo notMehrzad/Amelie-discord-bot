@@ -4,3 +4,4 @@ __pycache__/
 .vscode/
 stuff/
 bot_database.db
+log.log

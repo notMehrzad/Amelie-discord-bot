@@ -5,32 +5,10 @@ import asyncio
 import os
 from itertools import cycle
 from database import setup
+from logHandler import loggerSetup
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix = '.', intents = intents, case_insensitive = True, help_command = None) #defines bot object
-
-@bot.event
-async def on_ready():
-        #prints a message when bot is ready
-        print(
-            "--------------"
-            f"\nWe have logged in as {bot.user} ✅"
-        )
-        
-        botStatusChange.start() #starts changing bot statuses
-
-#different possible bot status
-bot_status = cycle([
-    discord.Activity(type = discord.ActivityType.playing, name = "Fortnite", platform = "PS4"),
-    discord.Activity(type = discord.ActivityType.playing, name = "playing with your server"),
-    discord.Activity(type = discord.ActivityType.listening, name = "listening to your complaints"),
-    discord.Activity(type = discord.ActivityType.watching, name = "watching reels"),
-    discord.Activity(type = discord.ActivityType.playing, name = "lanat be in zendegi")
-])
-#changes bot status message every 2 minutes
-@tasks.loop(minutes = 2)
-async def botStatusChange():
-    await bot.change_presence(activity = next(bot_status))
 
 #cogloader function
 async def cogsload():
@@ -56,15 +34,42 @@ async def cogsload():
             try:
                 await bot.load_extension(module) #loads cog
                 success.append(module.split(".")[-1])
-            except Exception as e:
-                print(f"❌ Failed to load {module}: {e}")
+            except Exception:
+                logger.exception(f"❌ Failed to load {module}:")
     print(f"{success} cogs loaded ☑️")
+
+@bot.event
+async def on_ready():
+        #prints a message when bot is ready
+        print(
+            "--------------"
+            f"\nWe have logged in as {bot.user} ✅"
+        )
+        
+        botStatusChange.start() #starts changing bot statuses
+
+#different possible bot status
+bot_status = cycle([
+    discord.Activity(type = discord.ActivityType.playing, name = "Fortnite", platform = "PS4"),
+    discord.Activity(type = discord.ActivityType.playing, name = "playing with your server"),
+    discord.Activity(type = discord.ActivityType.listening, name = "listening to your complaints"),
+    discord.Activity(type = discord.ActivityType.watching, name = "watching reels"),
+    discord.Activity(type = discord.ActivityType.playing, name = "lanat be in zendegi")
+])
+#changes bot status message every 2 minutes
+@tasks.loop(minutes = 2)
+async def botStatusChange():
+    await bot.change_presence(activity = next(bot_status))
 
 #reads the stored token from config.json
 with open("config.json") as file:
     config = json.load(file)
 
 async def main():
+    #sets up the initial logger
+    global logger
+    logger = loggerSetup(__name__)
+
     await setup() #sets up the database
     print("💾 Database has been connected successfully.")
 
@@ -72,7 +77,7 @@ async def main():
         await cogsload() #loads the cogs
         try:
             await bot.start(config["TOKEN"]) #starts the bot
-        except Exception as e:
-            print(f"❌ Failed to start the bot: {e}")
+        except Exception:
+            logger.exception(f"❌ Failed to start the bot:")
 
 asyncio.run(main())

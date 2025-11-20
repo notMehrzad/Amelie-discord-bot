@@ -8,7 +8,6 @@ class StartUp(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    #command cog
     @commands.command(
             name = "cog",
             hidden = True,
