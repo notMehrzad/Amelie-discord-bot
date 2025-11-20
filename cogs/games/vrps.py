@@ -3,6 +3,9 @@ from discord.ext import commands
 import random
 import asyncio
 from typing import TypedDict
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 #specifies each card info types
 class Card(TypedDict):
@@ -92,7 +95,7 @@ class Vrps(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("User not found. Please mention a valid user.")
         else:
-            print(f"❌ something went wrong with vrps command: {error}")
+            logger.error(f"❌ something went wrong with vrps command:", exc_info = error)
             await ctx.reply("something went wrong with **vrps**.")
 
 class ReadyView(discord.ui.View):
@@ -173,7 +176,7 @@ class ReadyView(discord.ui.View):
         self.stop() #stops the interaction upon timeout
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        print(f"❌ something went wrong with vrps ready interaction-> error: {error} | item: {getattr(item, "label", "unknown")}")
+        logger.error(f"❌ something went wrong with vrps ready interaction - button: {getattr(item, "label", "unknown")}", exc_info = error)
         try:
             await interaction.response.send_message("something went wrong with **vrps**.", ephemeral = True)
         except discord.InteractionResponded:
@@ -453,7 +456,7 @@ class VrpsView(discord.ui.View):
         self.stop() #stops the interaction upon timeout
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        print(f"❌ something went wrong with vrps interaction -> error: {error} | item: {getattr(item, 'label', 'unknown')}")
+        logger.error(f"❌ something went wrong with vrps interaction - button: {getattr(item, 'label', 'unknown')}", exc_info = error)
         try:
             await interaction.response.send_message("something went wrong with **vrps**.", ephemeral = True)
         except discord.InteractionResponded:

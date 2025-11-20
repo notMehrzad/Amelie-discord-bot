@@ -71,7 +71,7 @@ async def main():
     logger = loggerSetup(__name__)
 
     await setup() #sets up the database
-    print("💾 Database has been connected successfully.")
+    print("💾 Database has been connected.")
 
     async with bot:
         await cogsload() #loads the cogs

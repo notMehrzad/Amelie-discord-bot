@@ -2,6 +2,9 @@ import discord
 from discord.ext import commands
 import time
 import asyncio
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 class Ping(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -78,7 +81,7 @@ class Ping(commands.Cog):
 
     @ping.error
     async def ping_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        print(f"❌ something went wrong with ping command: {error}")
+        logger.error(f"❌ something went wrong with ping command:", exc_info = error)
         await ctx.reply("something went wrong with **ping**.")
 
 

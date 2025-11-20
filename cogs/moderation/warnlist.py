@@ -1,13 +1,10 @@
 import discord
 from discord.ext import commands
 import aiosqlite
-import sys
-import os
-
-parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(parent)
-
 from database import connection
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 class WarnList(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -137,7 +134,7 @@ class WarnList(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("User not found. Please mention a valid user.")
         else:
-            print(f"❌ something went wrong with warnlist command: {error}")
+            logger.error(f"❌ something went wrong with warnlist command:", exc_info = error)
             await ctx.reply("something went wrong with **warnlist**.")
 
         

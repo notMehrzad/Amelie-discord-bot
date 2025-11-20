@@ -1,4 +1,7 @@
 from discord.ext import commands
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 class Say(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -22,7 +25,7 @@ class Say(commands.Cog):
 
     @say.error
     async def say_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        print(f"❌ something went wrong with say command: {error}")
+        logger.error(f"❌ something went wrong with say command:", exc_info = error)
         await ctx.reply("something went wrong with **say**.")
 
 

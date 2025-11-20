@@ -3,6 +3,9 @@ from discord.ext import commands
 import re
 from urllib.parse import urlparse
 import datetime
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 def parse_args(args: str):
     matches: list[tuple[str, str]] = re.findall(r'(\w+)\s*:\s*\((.*?)\)', args)
@@ -191,8 +194,8 @@ class Embed(commands.Cog):
 
                 await ctx.send(embed = embed)
 
-            except Exception as e:
-                print(f"\n❌ something went wrong with embed-send command: {e}")
+            except Exception:
+                logger.exception(f"\n❌ something went wrong with embed-send command:")
                 await ctx.reply(f"something went wrong with **embed**.")
 
         else:
@@ -201,7 +204,7 @@ class Embed(commands.Cog):
 
     @embed.error
     async def embed_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        print(f"❌ something went wrong with embed command: {error}")
+        logger.error(f"❌ something went wrong with embed command:", exc_info = error)
         await ctx.reply(f"something went wrong with **embed**.", delete_after = 5)
 
 

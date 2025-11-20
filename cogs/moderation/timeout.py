@@ -3,6 +3,9 @@ from discord.ext import commands
 from datetime import timedelta, timezone
 import dateparser
 import re
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 def timeDeltaParser(untilStr: str):
     try:
@@ -124,8 +127,8 @@ class Timeout(commands.Cog):
             else:
                 await ctx.reply(f"{target.display_name} has been *timed out* via {ctx.author.display_name} until `{until}` ." + (f"\nreason: {reason}" if reason else ""))
 
-        except Exception as e:
-            print(f".timeout failed to time out: {e}")
+        except Exception:
+            logger.exception(f".timeout failed to time out:")
             await ctx.reply("Failed to time out.")
         
     @timeout.error
@@ -134,7 +137,7 @@ class Timeout(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("Member not found. Please mention a valid member.")
         else:
-            print(f"❌ something went wrong with timeout command: {error}")
+            logger.error(f"❌ something went wrong with timeout command:", exc_info = error)
             await ctx.reply("something went wrong with **timeout**.")
 
     #سکوت 60
@@ -220,8 +223,8 @@ class Timeout(commands.Cog):
                 await msg.reply(f"\u202b{target.display_name} به مدت *{until.total_seconds() / 60}* دقیقه ساکت شد.\u202c" + (f"\n\u202bدلیل: {reason}\u202c" if reason else ""))
             else:
                 await msg.reply(f"\u202b{target.display_name} تا *{until}* ساکت شد.\u202c" + (f"\n\u202bدلیل: {reason}\u202c" if reason else ""))
-        except Exception as e:
-            print(f"سکوت failed to timeout: {e}")
+        except Exception:
+            logger.exception(f"sokut failed to timeout:")
             await msg.reply("ساکت کردن ناموفق بود.")
 
         await self.bot.process_commands(msg)

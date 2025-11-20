@@ -1,12 +1,9 @@
 import discord
 from discord.ext import commands
-import sys
-import os
-
-parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(parent)
-
 from database import connection
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 warnLimit = 3 #allowed number of warnings before getting kicked
 
@@ -111,10 +108,10 @@ class Warn(commands.Cog):
         #if the target has over alowed number of warns, kicks it
         if warnCount >= warnLimit:
             try:
-                #await ctx.guild.kick(user = target, reason = f"Reached the maximum allowed number of warnings *({warnLimit})*.")
+                await ctx.guild.kick(user = target, reason = f"Reached the maximum allowed number of warnings *({warnLimit})*.")
                 await ctx.reply(f"{target.display_name} has been kicked due to reaching the maximum allowed number of warnings *({warnLimit})*.")
-            except Exception as e:
-                print(f".kick failed to kick: {e}")
+            except Exception:
+                logger.exception(f".warn failed to kick:")
                 await ctx.reply("Failed to kick.")
         
     @warn.error
@@ -123,7 +120,7 @@ class Warn(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("Member not found. Please mention a valid member.")
         else:
-            print(f"❌ something went wrong with warn command: {error}")
+            logger.error(f"❌ something went wrong with warn command:", exc_info = error)
             await ctx.reply("something went wrong with **warn**.")
 
     #گزارش
@@ -208,8 +205,8 @@ class Warn(commands.Cog):
             try:
                 #await ctx.guild.kick(user = target, reason = f"Reached the maximum allowed number of warnings *({warnLimit})*.")
                 await msg.reply(f"\u202b{target.display_name} به دلیل دریافت بیش از حد مجاز گزارش ها اخراج شد *({warnLimit})*.\u202c")
-            except Exception as e:
-                print(f"سکوت failed to kick: {e}")
+            except Exception:
+                logger.exception(f"gozaresh failed to kick:")
                 await msg.reply("اخراج کردن ناموفق بود.")
 
         await self.bot.process_commands(msg)

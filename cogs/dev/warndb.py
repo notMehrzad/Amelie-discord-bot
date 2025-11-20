@@ -1,13 +1,10 @@
 import discord
 from discord.ext import commands
 import json
-import sys
-import os
-
-parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(parent)
-
 from database import connection
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 with open("config.json") as file:
     config = json.load(file)
@@ -132,6 +129,11 @@ class WarnDb(commands.Cog):
             await ctx.reply("Enter a valid subcommand.", delete_after = 5)
             await ctx.message.delete(delay = 5)
             return
+        
+    @warndb.error
+    async def warndb_error(self, ctx: commands.Context[commands.Bot], error: Exception):
+        logger.error(f"❌ something went wrong with warndb command:", exc_info = error)
+        await ctx.reply("something went wrong with **warndb**.", delete_after = 5)
         
 
 async def setup(bot: commands.Bot):

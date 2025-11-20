@@ -1,5 +1,8 @@
 import discord
 from discord.ext import commands
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 class Ban(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -70,8 +73,8 @@ class Ban(commands.Cog):
         try:
             await ctx.guild.ban(user = target, reason = reason)
             await ctx.reply(f"{target.display_name} has been *banned* via {ctx.author.display_name}." + (f"\nreason: {reason}" if reason else ""))
-        except Exception as e:
-            print(f".ban failed to ban: {e}")
+        except Exception:
+            logger.exception(f".ban failed to ban:")
             await ctx.reply("Failed to ban.")
 
     @ban.error
@@ -80,7 +83,7 @@ class Ban(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("Member not found. Please mention a valid member.")
         else:
-            print(f"❌ something went wrong with ban command: {error}")
+            logger.error(f"❌ something went wrong with ban command:", exc_info = error)
             await ctx.reply("something went wrong with **ban**.")
 
 

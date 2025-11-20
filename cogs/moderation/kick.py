@@ -1,5 +1,8 @@
 import discord
 from discord.ext import commands
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 class Kick(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -69,8 +72,8 @@ class Kick(commands.Cog):
         try:
             await ctx.guild.kick(user = target, reason = reason)
             await ctx.reply(f"{target.display_name} has been *kicked* via {ctx.author.display_name}." + (f"\nreason: {reason}" if reason else ""))
-        except Exception as e:
-            print(f".kick failed to kick: {e}")
+        except Exception:
+            logger.exception(f".kick failed to kick:")
             await ctx.reply("Failed to kick.")
 
     @kick.error
@@ -79,7 +82,7 @@ class Kick(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("Member not found. Please mention a valid member.")
         else:
-            print(f"❌ something went wrong with kick command: {error}")
+            logger.error(f"❌ something went wrong with kick command:", exc_info = error)
             await ctx.reply("something went wrong with **kick**.")
 
 

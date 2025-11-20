@@ -2,12 +2,20 @@ import aiosqlite
 
 #connection helper function
 async def connection():
+    """
+    Makes a connection to the database.
+    """
+
     conn = await aiosqlite.connect("bot_database.db") #connects to the db file
     await conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
 #setups the db helper function
 async def setup():
+    """
+    Sets up the initial database tables.
+    """
+
     conn = await connection()
 
     #warns table

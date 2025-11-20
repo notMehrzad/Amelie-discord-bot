@@ -1,5 +1,8 @@
 from discord.ext import commands
 import json
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 with open("config.json") as file:
     config = json.load(file)
@@ -16,7 +19,7 @@ class CommandSync(commands.Cog):
             help = "",
             extras = {"Category": "Dev"}
     )
-    async def cog(self, ctx: commands.Context[commands.Bot]):
+    async def commandsync(self, ctx: commands.Context[commands.Bot]):
         #checks if the user is an admin to use the command
         if str(ctx.author.id) not in config["ADMINS"]:
             await ctx.reply(content ="You can't use this command.", delete_after = 5)
@@ -25,6 +28,11 @@ class CommandSync(commands.Cog):
         
         syncedCmds = await self.bot.tree.sync()
         print(syncedCmds)
+    
+    @commandsync.error
+    async def commandsync_error(self, ctx: commands.Context[commands.Bot], error: Exception):
+        logger.error(f"❌ something went wrong with commandsync command:", exc_info = error)
+        await ctx.reply("something went wrong with **commandsync**.", delete_after = 5)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(CommandSync(bot))

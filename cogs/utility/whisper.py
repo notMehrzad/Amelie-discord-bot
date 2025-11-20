@@ -1,5 +1,8 @@
 import discord
 from discord.ext import commands
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 class Whisper(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -58,7 +61,7 @@ class Whisper(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("user not found. Please mention a valid member.")
         else:
-            print(f"❌ something went wrong with whisper command: {error}")
+            logger.error(f"❌ something went wrong with whisper command:", exc_info = error)
             await ctx.reply("something went wrong with **whisper**.")
 
 class WhisperView(discord.ui.View):
@@ -107,7 +110,7 @@ class WhisperView(discord.ui.View):
         self.stop()
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        print(f"❌ something went wrong with whisper interaction -> error: {error}\nbtn_name: {getattr(item, 'label', 'unknown')}")
+        logger.error(f"❌ something went wrong with whisper interaction - button: {getattr(item, 'label', 'unknown')}", exc_info = error)
         try:
             await interaction.response.send_message("something went wrong with **whisper**.", ephemeral = True)
         except discord.InteractionResponded:

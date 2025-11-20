@@ -1,5 +1,8 @@
 from discord.ext import commands
 import json
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 with open("config.json") as file:
     config = json.load(file)
@@ -90,7 +93,7 @@ class StartUp(commands.Cog):
 
     @cog.error
     async def cog_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        print(f"❌ something went wrong with cog command: {error}")
+        logger.error(f"❌ something went wrong with cog command:", exc_info = error)
         await ctx.reply("something went wrong with **cog**.", delete_after = 5)
 
 

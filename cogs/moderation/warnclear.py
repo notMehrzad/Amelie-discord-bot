@@ -1,12 +1,9 @@
 import discord
 from discord.ext import commands
-import sys
-import os
-
-parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(parent)
-
 from database import connection
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 class WarnClear(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -133,7 +130,7 @@ class WarnClear(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("User not found. Please mention a valid user.")
         else:
-            print(f"❌ something went wrong with warnclear command: {error}")
+            logger.error(f"❌ something went wrong with warnclear command:", exc_info = error)
             await ctx.reply("something went wrong with **warnclear**.")
 
 

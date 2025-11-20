@@ -1,6 +1,9 @@
 import discord
 from discord.ext import commands
 from typing import Any
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 class Help(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -92,7 +95,7 @@ class Help(commands.Cog):
     
     @help.error
     async def help_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        print(f"❌ something went wrong with help command: {error}")
+        logger.error(f"❌ something went wrong with help command:", exc_info = error)
         await ctx.reply("something went wrong with **help**.")
 
 class HelpView(discord.ui.View):
@@ -150,7 +153,7 @@ class HelpView(discord.ui.View):
         self.stop() #stops further interaction on timeout
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        print(f"❌ something went wrong with help interaction -> error: {error} | item: {getattr(item, 'emoji', 'unknown')}")
+        logger.error(f"❌ something went wrong with help interaction - button: {getattr(item, 'emoji', 'unknown')}", exc_info = error)
         try:
             await interaction.response.send_message("something went wrong with **help**.", ephemeral = True)
         except Exception:

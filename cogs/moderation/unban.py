@@ -1,5 +1,8 @@
 import discord
 from discord.ext import commands
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 class Unban(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -60,13 +63,13 @@ class Unban(commands.Cog):
             await ctx.reply(f"{target.display_name} has been *unbanned* via {ctx.author.display_name}." + (f"\nreason: {reason}" if reason else ""))
         except discord.NotFound:
             return await ctx.reply(f"{target.display_name} was never banned for you to undo it now.")
-        except Exception as e:
-            print(f".unban failed to unban: {e}")
+        except Exception:
+            logger.exception(f".unban failed to unban:")
             await ctx.reply("Failed to unban.")
     
     @unban.error
     async def unban_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
-        print(f"❌ something went wrong with unban command: {error}")
+        logger.error(f"❌ something went wrong with unban command:", exc_info = error)
         await ctx.reply("something went wrong with **unban**.")
 
         

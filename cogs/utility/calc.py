@@ -1,5 +1,8 @@
 from discord.ext import commands
 import sympy as sp
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 class Calc(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -43,7 +46,7 @@ class Calc(commands.Cog):
 
     @calc.error
     async def calc_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        print(f"❌ something went wrong with calc command: {error}")
+        logger.error(f"❌ something went wrong with calc command:", exc_info = error)
         await ctx.reply("something went wrong with **calc**.")
 
 async def setup(bot: commands.Bot):

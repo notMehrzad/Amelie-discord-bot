@@ -9,11 +9,11 @@ Includes moderation, messaging, economy and automation features.
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/YourUsername/YourBotName.git
+   git clone https://github.com/notMehrzad/Hades-discord-bot.git
    cd Hades Bot
    ```
-   
 2. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -21,28 +21,27 @@ Includes moderation, messaging, economy and automation features.
 3. **Create a `config.jason` file**
    ```json
    {
-    "TOKEN": "Bot-Token",
-    "ADMINS": ["Admins-Id"]
+     "TOKEN": "Bot-Token",
+     "ADMINS": ["Admins-Id"]
    }
    ```
 4. **Run the Bot**
    ```bash
    python main.py
    ```
-   
+
 ---
 
 ## 🧑‍💻 Contributing
 
-
 Pull requests are welcome!
-If you’d like to suggest a new command or report a bug, please open an [issue](https://github.com/YourUsername/YourBotName/issues).
+If you’d like to suggest a new command or report a bug, please open an [issue](https://github.com/notMehrzad/Hades-discord-bot/issues).
 
 ---
 
 ### ©️ License
 
-Copyright © 2025 Mehrzad & AmirMakan
+Copyright © 2025 Mehrzad
 All rights reserved.
 
 This project is private.  

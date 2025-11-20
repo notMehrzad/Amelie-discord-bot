@@ -1,6 +1,9 @@
 import discord
 from discord.ext import commands
 import random
+from logHandler import loggerSetup
+
+logger = loggerSetup(__name__)
 
 choices = [
     {"name": "Rock", "beats": "Scissors", "emoji": "<:susrock:1013833657749864529>"},
@@ -71,7 +74,7 @@ class Rps(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("User not found. Please mention a valid user.")
         else:
-            print(f"❌ something went wrong with rps command: {error}")
+            logger.error(f"❌ something went wrong with rps command:", exc_info = error)
             await ctx.reply("something went wrong with **rps**.")
         
 class RpsView(discord.ui.View):
@@ -213,7 +216,7 @@ class RpsView(discord.ui.View):
         self.stop() #stops the interaction upon timeout
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        print(f"❌ something went wrong with rps interaction -> error: {error}\nbtn_name: {getattr(item, 'label', 'unknown')}")
+        logger.error(f"❌ something went wrong with rps interaction - button: {getattr(item, 'label', 'unknown')}", exc_info = error)
         try:
             await interaction.response.send_message("something went wrong with **rps**.", ephemeral = True)
         except discord.InteractionResponded:
