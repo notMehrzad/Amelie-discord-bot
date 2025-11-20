@@ -27,11 +27,14 @@ class CommandSync(commands.Cog):
             return
         
         syncedCmds = await self.bot.tree.sync()
+        syncedCmds = [cmd.name for cmd in syncedCmds]
         print(syncedCmds)
+        await ctx.reply("All slash commands are synced.", delete_after = 5)
+        await ctx.message.delete(delay = 5)
     
     @commandsync.error
     async def commandsync_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        logger.error(f"❌ something went wrong with commandsync command:", exc_info = error)
+        logger.exception(f"❌ something went wrong with commandsync command:")
         await ctx.reply("something went wrong with **commandsync**.", delete_after = 5)
 
 async def setup(bot: commands.Bot):
