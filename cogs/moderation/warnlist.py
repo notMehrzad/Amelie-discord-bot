@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 import aiosqlite
 from database import connection
 from logHandler import loggerSetup
@@ -136,6 +137,126 @@ class WarnList(commands.Cog):
         else:
             logger.error(f"❌ something went wrong with warnlist command:", exc_info = error)
             await ctx.reply("something went wrong with **warnlist**.")
+
+    #warnlist slash command
+    @app_commands.command(
+        name = "warnlist",
+        description = "Shows warnings of a member from the server.",
+        extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
+    )
+    @app_commands.guild_only()
+    @app_commands.describe(user = "The target user to get warning list for.")
+    async def slashWarnlist(self, interaction: discord.Interaction, user: discord.Member | int | None = None):
+        #if user runs the command in dm
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            return await interaction.response.send_message("You can only run moderation commands in a server.", ephemeral = True)
+        
+        #if the user has no permission to to see the warns
+        if not interaction.user.guild_permissions.kick_members:
+            return await interaction.response.send_message("You have no permission to *see the warnings* of Members.", ephemeral = True)
+        
+        #if the bot has no permission to see the warns
+        if not interaction.guild.me.guild_permissions.kick_members:
+            return await interaction.response.send_message("I have no permission to *see the warnings* of Members.", ephemeral = True)
+
+        #shows warns of the target user
+        if user:
+            try:
+                target = (self.bot.get_user(user) or await self.bot.fetch_user(user)) if isinstance(user, int) else user #trys to fetch the target if id is given
+            except discord.NotFound:
+                return await interaction.response.send_message(f"User with this ID doesn't exist.", ephemeral = True)
+            
+            #if user trys to see the server owner warns
+            if target.id == interaction.guild.owner_id:
+                return await interaction.response.send_message("Server *Owner* has no warning i guess?", ephemeral = True)
+            
+            #if user wants to run moderation command on the bot
+            if target.id == interaction.client.application_id:
+                return await interaction.response.send_message("I have no warnings for you to see. agh.", ephemeral = True)
+            
+            #if user wants to see bots warnings
+            if target.bot:
+                return await interaction.response.send_message("Bots have no warning for you to see.", ephemeral = True)
+                
+            conn = await connection() #creates a connection to the database
+            conn.row_factory = aiosqlite.Row
+
+            #searchs database with given arguments
+            async with conn.execute(
+                "SELECT * FROM warns WHERE server_id = ? AND user_id = ? ORDER BY timestamp;",
+                (interaction.guild.id, target.id)
+                ) as cursor:
+                result = await cursor.fetchall()
+            await conn.close()
+
+            warns: list[str] = [] #a list to store warnings
+            if result:
+                for number, warn in enumerate(result, start = 1):
+                    #trys to find moderator name
+                    try:
+                        moderatorUser = (self.bot.get_user(warn["mod_id"]) or await self.bot.fetch_user(warn["mod_id"])) if warn["mod_id"] else None
+                    except Exception:
+                        moderatorUser = None
+                    moderatorName = moderatorUser.mention if moderatorUser else "*unknown*"
+                    desc = f"{number}. Warn ID: {warn['user_warn_id']} | Reason: {warn['reason'] if warn['reason'] else "*no reason provided*"} | Moderator: {moderatorName} | Date: {warn['timestamp']}"
+                    warns.append(desc)
+
+            resultEmbed = discord.Embed(
+                title = f"{target.display_name}'s warnings",
+                description = "\n".join(warns) if warns else f"{target.mention} has no warnings.",
+                color = discord.Color.dark_blue()
+            )
+            await interaction.response.send_message(embed = resultEmbed)
+            
+        #shows all warn list
+        else:
+            conn = await connection() #creates a connection to the database
+            conn.row_factory = aiosqlite.Row
+
+            #searchs database with given arguments
+            async with conn.execute(
+                "SELECT * FROM warns WHERE server_id = ? ORDER BY timestamp;",
+                (interaction.guild.id,)
+                ) as cursor:
+                result = await cursor.fetchall()
+            await conn.close()
+
+            warns: list[str] = [] #a list to store all server warns
+            if result:
+                for number, warn in enumerate(result, start = 1):
+                    #trys to find the target
+                    try:
+                        target = self.bot.get_user(warn["user_id"]) or await self.bot.fetch_user(warn["user_id"])
+                    except discord.NotFound:
+                        #if fetched target user doesn't exist, deletes the warning
+                        await conn.execute("DELETE FROM warns WHERE warn_id = ?;", (warn['warn_id'],))
+                        await conn.commit()
+                        await conn.close()
+                        continue
+
+                    #trys to find moderators name
+                    try:
+                        moderatorUser = (self.bot.get_user(warn["mod_id"]) or await self.bot.fetch_user(warn["mod_id"])) if warn["mod_id"] else None
+                    except Exception:
+                        moderatorUser = None
+                    moderatorName = moderatorUser.mention if moderatorUser else "*unknown*"
+                    desc = f"{number}. Warn ID: {warn['user_warn_id']} | User: {target.display_name} | Reason: {warn['reason'] if warn['reason'] else "*no reason provided*"} | Moderator: {moderatorName} | Date: {warn['timestamp']}"
+                    warns.append(desc)
+
+            resultEmbed = discord.Embed(
+                title = f"{interaction.guild.name}'s warning list",
+                description = "\n".join(warns) if warns else f"There is no warning commited yet in this server.",
+                color = discord.Color.dark_blue()
+            )
+            await interaction.response.send_message(embed = resultEmbed)
+
+    @slashWarnlist.error
+    async def slashWarnlist_error(self, interaction: discord.Interaction, error: Exception):
+        logger.exception(f"❌ something went wrong with /warnlist command:")
+        try:
+            await interaction.response.send_message("something went wrong with **warnlist**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **warnlist**.", ephemeral = True)
 
         
 async def setup(bot: commands.Bot):

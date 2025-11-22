@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 import random
 from logHandler import loggerSetup
 
@@ -51,7 +52,7 @@ class Rps(commands.Cog):
         else:
             target = None
         
-        #if users wants to play with himself
+        #if user wants to play with himself
         if target and target.id == ctx.author.id:
             return await ctx.reply("You can't play with yourself.")
         
@@ -76,11 +77,62 @@ class Rps(commands.Cog):
         else:
             logger.error(f"❌ something went wrong with rps command:", exc_info = error)
             await ctx.reply("something went wrong with **rps**.")
+
+    #rps slash command
+    @app_commands.command(
+        name = "rps",
+        description = "Traditional *Rock, Paper, Scissors* game.",
+        extras = {"Category": "Games"}
+    )
+    @app_commands.describe(user = "The user you want to play rps with.")
+    async def slashRps(self, interaction: discord.Interaction, user: discord.Member | None = None):
+        #if the user runs this command in dm to play with another user
+        if not interaction.guild and user and user.id != interaction.client.application_id:
+            return await interaction.response.send_message("You can only play this game with others in a server. (except me!)", ephemeral = True)
         
+        if user and interaction.guild:
+            target = interaction.guild.get_member(user.id)
+            if not target:
+                return await interaction.response.send_message(f"{user.mention} is now a member of this server.", ephemeral = True)
+        else:
+            target = None
+        
+        #if user wants to play with himself
+        if target and target.id == interaction.user.id:
+            return await interaction.response.send_message("You can't play with yourself.", ephemeral = True)
+        
+        #if user wants to play with a bot except this bot
+        if target and target.bot and target.id != interaction.client.application_id:
+            return await interaction.response.send_message("You can't play with bots. (except me!)", ephemeral = True)
+        
+        #plays with bot if no target is mentioned or the target is the bot itself
+        if not target or target.id == interaction.client.application_id:
+            if isinstance(interaction.client.user, discord.abc.User):
+                view = RpsView(interaction, interaction.client.user, botPlay = True)
+                await view.start()
+        
+        else:
+            view = RpsView(interaction, target)
+            await view.start()
+
+    @slashRps.error
+    async def slashRps_error(self, interaction: discord.Interaction, error: Exception):
+        logger.exception(f"❌ something went wrong with /rps command:")
+        try:
+            await interaction.response.send_message("something went wrong with **rps**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **rps**.", ephemeral = True)
+
 class RpsView(discord.ui.View):
-    def __init__(self, ctx: commands.Context[commands.Bot], target: discord.Member | discord.ClientUser, botPlay: bool = False):
+    def __init__(self, ctx: commands.Context[commands.Bot] | discord.Interaction, target: discord.abc.User, botPlay: bool = False):
         super().__init__(timeout = 180)
-        self.ctx = ctx
+        if isinstance(ctx, discord.Interaction):
+            self.slash = True
+            self.interaction = ctx
+        else:
+            self.slash = False
+            self.ctx = ctx
+        self.user = self.interaction.user if self.slash else self.ctx.author
         self.target = target
         self.botPlay = botPlay
         self.embedColor = discord.Color.random()
@@ -103,7 +155,7 @@ class RpsView(discord.ui.View):
             desc = "*You wanna play with ME??\nsounds fine-\nlets start the game then.*"
         
         else:
-            content = f"{self.target.mention}, You're challenged to a game of *Rock, Paper, Scissors !* by {self.ctx.author.mention}" #notifies the target
+            content = f"{self.target.mention}, You're challenged to a game of *Rock, Paper, Scissors !* by {self.user.mention}" #notifies the target
             desc = f"It's currently {self.target.mention}'s turn to play."
 
         startEmbed = discord.Embed(
@@ -111,46 +163,48 @@ class RpsView(discord.ui.View):
             description = desc,
             color = self.embedColor
         )
-        self.msg = await self.ctx.send(content = content, embed = startEmbed, view = self)
+        if not self.slash:
+            self.msg = await self.ctx.send(content = content, embed = startEmbed, view = self)
+        else:
+            await self.interaction.response.send_message(content = content, embed = startEmbed, view = self)
 
     def make_callback(self, name: str, emoji: str):
         async def callback(interaction: discord.Interaction):
             #checks if only the user and target can interact with buttons
-            if interaction.user.id not in [self.target.id, self.ctx.author.id]:
-                await interaction.response.send_message("You can't play in this match.", ephemeral = True)
-                return
+            if interaction.user.id not in [self.target.id, self.user.id]:
+                return await interaction.response.send_message("You can't play in this match.", ephemeral = True)
             
-            if self.botPlay and self.playerschoice["player2"] is None:
+            if self.botPlay and not self.playerschoice["player2"]:
                 botChoice = random.choice(choices)
                 self.playerschoice["player2"] = botChoice["name"]
                 self.playerschoice["player2emoji"] = botChoice["emoji"]
 
-            if interaction.user.id == self.ctx.author.id:
-                if self.playerschoice["player2"] is None:
-                    await interaction.response.send_message(f"You must wait for {self.target.mention} to play first.", ephemeral = True)
-                    return
+            if interaction.user.id == self.user.id:
+                if not self.playerschoice["player2"]:
+                    return await interaction.response.send_message(f"You must wait for {self.target.mention} to play first.", ephemeral = True)
 
                 else:
                     self.playerschoice["player1"] = name
                     self.playerschoice["player1emoji"] = emoji
 
             if interaction.user.id == self.target.id:
-                if self.playerschoice["player2"] is None:
+                if not self.playerschoice["player2"]:
                     self.playerschoice["player2"] = name
                     self.playerschoice["player2emoji"] = emoji
 
                     secondPhaseEmbed = discord.Embed(
                         title = "Rock, Paper, Scissors !",
-                        description = f"It's currently {self.ctx.author.mention}'s turn to play.",
+                        description = f"It's currently {self.user.mention}'s turn to play.",
                         color = self.embedColor
                     )
-
-                    await self.msg.edit(content = None, embed = secondPhaseEmbed)
-                    await interaction.response.send_message(f"{self.ctx.author.mention}, It's your turn now!", delete_after = 180)
+                    if not self.slash:
+                        await self.msg.edit(content = None, embed = secondPhaseEmbed)
+                    else:
+                        await self.interaction.edit_original_response(content = None, embed = secondPhaseEmbed)
+                    await interaction.response.send_message(f"{self.user.mention}, It's your turn now!", delete_after = 180)
 
                 else:
-                    await interaction.response.send_message(f"You have already played your turn. It's {self.ctx.author.mention}'s turn now", ephemeral = True)
-                    return
+                    return await interaction.response.send_message(f"You have already played your turn. It's {self.user.mention}'s turn now", ephemeral = True)
 
             if self.playerschoice["player1"] and self.playerschoice["player2"]:
                 result = rpsResult(self.playerschoice["player1"], self.playerschoice["player2"])
@@ -159,10 +213,10 @@ class RpsView(discord.ui.View):
                 if result == 0:
                     winneravatarurl = None
                     desc = "**It was a Draw !**"
-                    cori = f"{self.ctx.author} escaped this time." if self.botPlay else None
+                    cori = f"{self.user} escaped this time." if self.botPlay else None
                 elif result == 1:
-                    winneravatarurl = self.ctx.author.display_avatar.url
-                    desc = f"**{self.ctx.author.mention} has Won !**"
+                    winneravatarurl = self.user.display_avatar.url
+                    desc = f"**{self.user.mention} has Won !**"
                     cori = "-ahh. maybe another time." if self.botPlay else None
                 else:
                     winneravatarurl = self.target.display_avatar.url
@@ -175,7 +229,7 @@ class RpsView(discord.ui.View):
                         description = desc,
                         color = discord.Color.random()
                     ).set_footer(text = cori)\
-                    .add_field(name = f"{self.ctx.author.name} Choice", value = f"{self.playerschoice['player1']} {self.playerschoice['player1emoji']}", inline = True)\
+                    .add_field(name = f"{self.user.name} Choice", value = f"{self.playerschoice['player1']} {self.playerschoice['player1emoji']}", inline = True)\
                     .add_field(name = f"{self.target.name} Choice", value = f"{self.playerschoice['player2']} {self.playerschoice['player2emoji']}", inline = True)\
                     .set_thumbnail(url = winneravatarurl)
             
@@ -192,7 +246,7 @@ class RpsView(discord.ui.View):
 
         #player 1 is guilty
         if not self.playerschoice["player1"] and (self.botPlay or self.playerschoice["player2"]):
-            guilty = self.ctx.author.mention
+            guilty = self.user.mention
 
         #player 2 is guilty
         elif self.playerschoice["player1"]:
@@ -200,7 +254,7 @@ class RpsView(discord.ui.View):
 
         #both players are guilty
         else:
-            guilty = f"{self.ctx.author.mention} and {self.target.mention}"
+            guilty = f"{self.user.mention} and {self.target.mention}"
 
         toEmbed = discord.Embed(
             title = "Rock, Paper, Scissors !",
@@ -208,7 +262,11 @@ class RpsView(discord.ui.View):
             color = discord.Color.dark_gray()
         )
         try:
-            await self.msg.edit(content = None, embed = toEmbed, view = self) #sends the timeout message
+            #sends the timeout message
+            if not self.slash:
+                await self.msg.edit(content = None, embed = toEmbed, view = self)
+            else:
+                await self.interaction.edit_original_response(content = None, embed = toEmbed, view = self)
         #if context message is deleted
         except discord.NotFound:
             pass
@@ -216,7 +274,7 @@ class RpsView(discord.ui.View):
         self.stop() #stops the interaction upon timeout
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        logger.error(f"❌ something went wrong with rps interaction - button: {getattr(item, 'label', 'unknown')}", exc_info = error)
+        logger.exception(f"❌ something went wrong with rps interaction - button: {getattr(item, 'label', 'unknown')}")
         try:
             await interaction.response.send_message("something went wrong with **rps**.", ephemeral = True)
         except discord.InteractionResponded:

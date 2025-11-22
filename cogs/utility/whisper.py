@@ -19,7 +19,7 @@ class Whisper(commands.Cog):
                 "Whispers a message to a member. use this command to talk with a member privately inside a server."
             )
     )
-    async def whisper(self, ctx: commands.Context[commands.Bot], user: discord.User | str | None, *, msg: str | None):
+    async def whisper(self, ctx: commands.Context[commands.Bot], user: discord.User | str | None, *, message: str | None):
         #if user runs the command in dm
         if not ctx.guild:
             return await ctx.reply("You can only whisper someone in a server.")
@@ -44,7 +44,7 @@ class Whisper(commands.Cog):
         if target.bot and target.id != ctx.me.id:
             return await ctx.reply("You can't whisper to dumb bots. (except me ofc)")
         
-        if not msg:
+        if not message:
             return await ctx.reply("You must write your message to be whispered.")
         
         await ctx.message.delete() #deletes the users message
@@ -53,7 +53,7 @@ class Whisper(commands.Cog):
         if target.id == ctx.me.id:
             return await ctx.reply("I hear your words..")
         
-        view = WhisperView(ctx, ctx.author, target, msg) #initializes the view
+        view = WhisperView(ctx, ctx.author, target, message) #initializes the view
         await view.start() #starts the view
 
     @whisper.error
@@ -71,38 +71,40 @@ class Whisper(commands.Cog):
         description = "Whispers something to a member.",
         extras = {"Category": "Utility", "in-Server": "Yes"}
     )
-    async def slashWhisper(self, interaction: discord.Interaction, target: discord.Member, msg: str):
-        #if user runs the command in dm
-        if not interaction.guild:
-            return await interaction.response.send_message("You can only whisper someone in a server.", ephemeral = True)
-        
+    @app_commands.guild_only()
+    @app_commands.describe(target = "The Member to whisper.", message = "The message to be whispered.")
+    async def slashWhisper(self, interaction: discord.Interaction, target: discord.Member, message: str):
         #if user target is user himself
         if target.id == interaction.user.id:
             return await interaction.response.send_message("You can't whisper to yourself.", ephemeral = True)
         
         #the bot responds if target is the bot
-        if target.id == interaction.guild.me.id:
-            return await interaction.response.send_message("I hear your words..")
+        if target.id == interaction.application_id:
+            return await interaction.response.send_message("I hear your words..", ephemeral = True)
         
         #if target user is a bot except the bot itself
         if target.bot:
             return await interaction.response.send_message("You can't whisper to dumb bots. (except me ofc)", ephemeral = True)
 
-        view = WhisperView(interaction, interaction.user, target, msg) #initializes the view
+        view = WhisperView(interaction, interaction.user, target, message) #initializes the view
         await view.start() #starts the view
 
     @slashWhisper.error
     async def slashWhisper_error(self, interaction: discord.Interaction, error: Exception):
         logger.exception(f"❌ something went wrong with /whisper command:")
-        await interaction.response.send_message("something went wrong with **whisper**.", ephemeral = True)
+        try:
+            await interaction.response.send_message("something went wrong with **whisper**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **whisper**.", ephemeral = True)
 
 class WhisperView(discord.ui.View):
     def __init__(self, ctx: commands.Context[commands.Bot] | discord.Interaction, user: discord.abc.User, target: discord.Member, msg: str):
         super().__init__(timeout = 300)
-        self.slash = True if isinstance(ctx, discord.Interaction) else False
         if isinstance(ctx, discord.Interaction):
+            self.slash = True
             self.interaction = ctx
         else:
+            self.slash = False
             self.ctx = ctx
         self.user = user
         self.target = target
@@ -113,7 +115,8 @@ class WhisperView(discord.ui.View):
         if not self.slash:
             self.ctxMsg = await self.ctx.send(content = desc, view = self)
         else:
-            await self.interaction.response.send_message(content = desc, view = self)
+            if isinstance(self.interaction.channel, discord.TextChannel):
+                self.ctxMsg = await self.interaction.channel.send(content = desc, view = self)
 
     #defines read button
     @discord.ui.button(label = "read" , style = discord.ButtonStyle.grey)
@@ -131,7 +134,7 @@ class WhisperView(discord.ui.View):
             title = "whisper",
             description = f"{self.target.display_name} has read the whisper from {self.user.display_name}."
         )
-        await self.ctxMsg.edit(content = None, embed = finalEmbed, view = None) if not self.slash else await self.interaction.response.edit_message(content = None, embed = finalEmbed, view = None) #edits the sent message to show the reading status
+        await self.ctxMsg.edit(content = None, embed = finalEmbed, view = None) #edits the sent message to show the reading status
 
         self.stop() #stops the view after target has read the whisper
 
@@ -143,7 +146,7 @@ class WhisperView(discord.ui.View):
             description = f"⏰ The whisper got forgotten.. {self.target.display_name} didn't get it early."
         )
         try:
-            await self.ctxMsg.edit(embed = toEmbed, view = self) if not self.slash else await self.interaction.response.edit_message(embed = toEmbed, view = self)
+            await self.ctxMsg.edit(embed = toEmbed, view = self)
         except discord.NotFound:
             pass
 

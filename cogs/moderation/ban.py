@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -18,7 +19,7 @@ class Ban(commands.Cog):
                 ),
                 extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "in-Server": "Yes"}
         )
-    async def ban(self, ctx: commands.Context[commands.Bot], user: discord.User | str | None = None, *, reason: str | None = None):
+    async def ban(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None, *, reason: str | None = None):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
             return await ctx.reply("You can only run moderation commands in a server.")
@@ -36,8 +37,13 @@ class Ban(commands.Cog):
             return await ctx.reply("You must mention a target Member for this command.")
         
         #if user mentions an invalid user
-        if not isinstance(user, discord.abc.User):
+        if not isinstance(user, (discord.abc.User, int)):
             raise commands.BadArgument
+        
+        try:
+            user = (self.bot.get_user(user) or await self.bot.fetch_user(user)) if isinstance(user, int) else user #trys to fetch the target if id is given
+        except discord.NotFound:
+            return await ctx.reply(f"User with given ID doesn't exist.")
         
         target = ctx.guild.get_member(user.id) #fetches the target user from the server, None if not found
         if not target:
@@ -85,6 +91,78 @@ class Ban(commands.Cog):
         else:
             logger.error(f"❌ something went wrong with ban command:", exc_info = error)
             await ctx.reply("something went wrong with **ban**.")
+
+    #ban slash command
+    @app_commands.command(
+        name = "ban",
+        description = "Bans a member from the server.",
+        extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "in-Server": "Yes"}
+    )
+    @app_commands.guild_only()
+    @app_commands.describe(target = "The target Member to ban from the server.", reason = "The reason you want to ban the target.")
+    async def slashBan(self, interaction: discord.Interaction, user: discord.Member | int, reason: str | None = None):
+        #if user runs the command in dm
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            return await interaction.response.send_message("You can only run moderation commands in a server.", ephemeral = True)
+        
+        #if the user has no permission to ban
+        if not interaction.user.guild_permissions.ban_members:
+            return await interaction.response.send_message("You have no permission to *ban* Members.", ephemeral = True)
+        
+        #if the bot has no permission to ban
+        if not interaction.guild.me.guild_permissions.ban_members:
+            return await interaction.response.send_message("I have no permisson to *ban* Members.", ephemeral = True)
+        
+        try:
+            targetUser = (self.bot.get_user(user) or await self.bot.fetch_user(user)) if isinstance(user, int) else user #trys to fetch the target if id is given
+        except discord.NotFound:
+            return await interaction.response.send_message(f"User with given ID doesn't exist.", ephemeral = True)
+        
+        target = interaction.guild.get_member(targetUser.id) #fetches the target user from the server, None if not found
+        if not target:
+            #if the target is not a member and is in the ban list
+            try:
+                await interaction.guild.fetch_ban(discord.Object(id = targetUser.id))
+                await interaction.response.send_message(f"{targetUser.display_name} is banned already.", ephemeral = True)
+                return
+            except discord.NotFound:
+                return await interaction.response.send_message(f"{targetUser.display_name} is not a Member of this server.", ephemeral = True)
+        
+        #if user wants to ban himself
+        if target.id == interaction.user.id:
+            return await interaction.response.send_message("You can't ban yourself.", ephemeral = True)
+        
+        #if user trys to ban the server owner
+        if target.id == interaction.guild.owner_id:
+            return await interaction.response.send_message("You can't ban the server *Owner*.", ephemeral = True)
+        
+        #if user wants to run moderation command on the bot
+        if target.id == interaction.client.application_id:
+            return await interaction.response.send_message("You can't run my moderation commands on myself.\nnice try.", ephemeral = True)
+        
+        #if user has lower or equal role position than target
+        if target.top_role >= interaction.user.top_role and interaction.user.id != interaction.guild.owner_id:
+            return await interaction.response.send_message("You can't ban a Member with *higher or equal* role position as you.", ephemeral = True)
+        
+        #if the bot has lower or equal role position than target
+        if target.top_role >= interaction.guild.me.top_role:
+            return await interaction.response.send_message("I can't ban a Member with *higher or equal* role position as me.", ephemeral = True)
+        
+        #bans the target
+        try:
+            await interaction.guild.ban(user = target, reason = reason)
+            await interaction.response.send_message(f"{target.display_name} has been *banned* via {interaction.user.display_name}." + (f"\nreason: {reason}" if reason else ""))
+        except Exception:
+            logger.exception(f".ban failed to ban:")
+            await interaction.response.send_message("Failed to ban.", ephemeral = True)
+
+    @slashBan.error
+    async def slashBan_error(self, interaction: discord.Interaction, error: Exception):
+        logger.exception(f"❌ something went wrong with /ban command:")
+        try:
+            await interaction.response.send_message("something went wrong with **ban**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **ban**.", ephemeral = True)
 
 
 async def setup(bot: commands.Bot):

@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 from database import connection
 from logHandler import loggerSetup
 
@@ -19,7 +20,8 @@ class WarnClear(commands.Cog):
             ),
             extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
     )
-    async def warnclear(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None = None, warnId: int | str | None = None, *, reason: str | None = None):
+    async def warnclear(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None, warnId: int | str | None = None, *, reason: str | None = None):
+        #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
             return await ctx.reply("You can only run moderation commands in a server.")
         
@@ -112,7 +114,7 @@ class WarnClear(commands.Cog):
             #if the target has no warn, notifys the user
             if not result:
                 await conn.close()
-                return await ctx.reply(f"{target.display_name} has no warning with that ID.")
+                return await ctx.reply(f"{target.display_name} has no warning.")
             
             #deletes all warns
             await conn.execute("""
@@ -133,6 +135,115 @@ class WarnClear(commands.Cog):
             logger.error(f"❌ something went wrong with warnclear command:", exc_info = error)
             await ctx.reply("something went wrong with **warnclear**.")
 
+    #warnclear slash command
+    @app_commands.command(
+        name = "warnclear",
+        description = "Clears warnings of a member from the server.",
+        extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
+    )
+    @app_commands.guild_only()
+    @app_commands.describe(user = "The target user to clear it's warning.", warn_id = "The ID of warning to clear.", reason = "The reason to clear warning.")
+    async def slashWarnclear(self, interaction: discord.Interaction, user: discord.Member | int, warn_id: int | None = None, reason: str | None = None):
+        #if user runs the command in dm
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            return await interaction.response.send_message("You can only run moderation commands in a server.", ephemeral = True)
+        
+        #if the user has no permission to clear warns
+        if not interaction.user.guild_permissions.kick_members:
+            return await interaction.response.send_message("You have no permission to *clear* Members' warnings.", ephemeral = True)
+        
+        #if the bot has no permission to clear warns
+        if not interaction.guild.me.guild_permissions.kick_members:
+            return await interaction.response.send_message("I have no permisson to *clear* Members' warnings.", ephemeral = True)
+        
+        try:
+            targetUser = (self.bot.get_user(user) or await self.bot.fetch_user(user)) if isinstance(user, int) else user #trys to fetch the target if id is given
+        except discord.NotFound:
+            return await interaction.response.send_message(f"User with given ID doesn't exist.", ephemeral = True)
+        
+        target = interaction.guild.get_member(targetUser.id) #fetches the target user from the server, None if not found
+        if not target:
+            return await interaction.response.send_message(f"{targetUser.display_name} is not a Member of this server.", ephemeral = True)
+        
+        #if user wants to clear its own warns
+        if target.id == interaction.user.id:
+            return await interaction.response.send_message("You can't clear your own warnings.", ephemeral = True)
+        
+        #if user wants to clear warns of the server owner
+        if target.id == interaction.guild.owner_id:
+            return await interaction.response.send_message("Server *Owner* has no warning for you to remove it now.", ephemeral = True)
+        
+        #if user wants to run moderation command on the bot
+        if target.id == interaction.client.application_id:
+            return await interaction.response.send_message("I have no warning for you to remove it now??.", ephemeral = True)
+        
+        #if user wants to clear warns of bots
+        if target.bot:
+            return await interaction.response.send_message("Bots have no warning for you to remove it now.", ephemeral = True)
+        
+        #if user has lower or equal role position than target
+        if target.top_role >= interaction.user.top_role and interaction.user.id != interaction.guild.owner_id:
+            return await interaction.response.send_message("You can't clear warn of a Member with *higher or equal* role position as you.", ephemeral = True)
+        
+        #if the bot has lower or equal role position than target
+        if target.top_role >= interaction.guild.me.top_role:
+            return await interaction.response.send_message("I can't clear warn of a Member with *higher or equal* role position as me.", ephemeral = True)
+        
+        conn = await connection() #makes a connection to the database
+
+        #clears the warn with given id
+        if warn_id:
+            #trys to find if target user has the warn with given id or not
+            async with conn.execute("""
+            SELECT * FROM warns
+            WHERE server_id = ? AND user_id = ? AND user_warn_id = ?;
+            """, (interaction.guild.id, target.id, warn_id)) as cursor:
+                result = await cursor.fetchone()
+            #if no warn with given id is found, notifys the user
+            if not result:
+                await conn.close()
+                return await interaction.response.send_message(f"{target.display_name} has no warning with that ID.", ephemeral = True)
+            
+            #deletes the warn with given id
+            await conn.execute("""
+            DELETE FROM warns
+            WHERE server_id = ? AND user_id = ? AND user_warn_id = ?;
+            """, (interaction.guild.id, target.id, warn_id))
+            await conn.commit()
+            await conn.close()
+        
+            await interaction.response.send_message(f"{target.mention}'s warning with ID {warn_id} has been cleared." + (f"\nreason: {reason}" if reason else ""))
+        
+        #clears all warns of the target
+        else:
+            #trys to find if target user has any warn or not
+            async with conn.execute("""
+            SELECT * FROM warns
+            WHERE server_id = ? AND user_id = ?;
+            """, (interaction.guild.id, target.id)) as cursor:
+                result = await cursor.fetchall()
+            #if the target has no warn, notifys the user
+            if not result:
+                await conn.close()
+                return await interaction.response.send_message(f"{target.display_name} has no warning.", ephemeral = True)
+            
+            #deletes all warns
+            await conn.execute("""
+            DELETE FROM warns
+            WHERE server_id = ? AND user_id = ?;
+            """, (interaction.guild.id, target.id))
+            await conn.commit()
+            await conn.close()
+        
+            await interaction.response.send_message(f"{target.mention}'s warnings have been cleared." + (f"\nreason: {reason}" if reason else ""))
+
+    @slashWarnclear.error
+    async def slashWarnclear_error(self, interaction: discord.Interaction, error: Exception):
+        logger.exception(f"❌ something went wrong with /warnclear command:")
+        try:
+            await interaction.response.send_message("something went wrong with **warnclear**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **warnclear**.", ephemeral = True)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(WarnClear(bot))

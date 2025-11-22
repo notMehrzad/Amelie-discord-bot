@@ -7,6 +7,8 @@ from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 
+pingNumbers = 4 #number of attempt to get pings
+
 class Ping(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -81,7 +83,7 @@ class Ping(commands.Cog):
 
     @ping.error
     async def ping_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        logger.error(f"❌ something went wrong with ping command:", exc_info = error)
+        logger.exception(f"❌ something went wrong with ping command:")
         await ctx.reply("something went wrong with **ping**.")
 
     #ping slash command
@@ -90,16 +92,15 @@ class Ping(commands.Cog):
             description = "Pings Amélie.",
             extras = {"Category": "Utility"}
     )
-    async def slashPing(self, interaction: discord.Interaction):
+    @app_commands.describe(hidden = "Whether the result should be visible only to you or not.")
+    async def slashPing(self, interaction: discord.Interaction, hidden: bool = False):
         pings: list[float] | None = [] #stores pings results
-        pingNumbers = 4
 
-        await interaction.response.send_message("pinging...") #initial message
+        await interaction.response.send_message("pinging...", ephemeral = hidden) #initial message
 
         ws = self.bot.latency * 1000 #getting websocket latency
         #starts pinging n times
         for i in range(pingNumbers):
-            
             try:
                 start = time.perf_counter()
                 await interaction.edit_original_response(content = f"ping {i + 1}..")
@@ -135,7 +136,7 @@ class Ping(commands.Cog):
             description = (
                 f"📡 WebSocket: `{ws:.2f} ms`\n"
                 + (f"🌐 REST: `{avg:.2f} ms`\n\n" if avg else f"🌐 REST: Failed")
-                + (f"Min: `{minping:.2f} ms` | Max: `{maxping:.2f} ms`" if pings else "")
+                + ((f"Min: `{minping:.2f} ms` | Max: `{maxping:.2f} ms`") if pings else "")
             ),
             timestamp = discord.utils.utcnow()
         ).set_footer(text = f"requested by {interaction.user.name}")
@@ -143,12 +144,15 @@ class Ping(commands.Cog):
             await interaction.edit_original_response(content = None, embed = resultEmbed) #sends the final results
         #if user deletes the pings message
         except discord.NotFound:
-            await interaction.followup.send(embed = resultEmbed)
+            await interaction.followup.send(embed = resultEmbed, ephemeral = hidden)
 
     @slashPing.error
     async def slashPing_error(self, interaction: discord.Interaction, error: Exception):
-        logger.exception(f"❌ something went wrong with /Ping command:")
-        await interaction.followup.send("something went wrong with **ping**.", ephemeral = True)
+        logger.exception(f"❌ something went wrong with /ping command:")
+        try:
+            await interaction.response.send_message("something went wrong with **ping**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **ping**.", ephemeral = True)
 
 
 async def setup(bot: commands.Bot):

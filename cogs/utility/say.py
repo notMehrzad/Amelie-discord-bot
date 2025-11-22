@@ -19,11 +19,11 @@ class Say(commands.Cog):
                 "Says a custom message inside the channel."
             )
     )
-    async def say(self, ctx: commands.Context[commands.Bot], *, text: str | None):
-        if not text:
+    async def say(self, ctx: commands.Context[commands.Bot], *, message: str | None):
+        if not message:
             return await ctx.reply("You must write your text to be said.")
         
-        await ctx.send(text)
+        await ctx.send(message)
 
     @say.error
     async def say_error(self, ctx: commands.Context[commands.Bot], error: Exception):
@@ -36,19 +36,23 @@ class Say(commands.Cog):
         description = "Says something in the channel.",
         extras = {"Category": "Utility"}
     )
-    async def slashSay(self, interaction: discord.Interaction, text: str, visible_slash_command: bool = True):
+    @app_commands.describe(message = "The message to be said.", visible_slash_command = "Whether it should be visible if it was a slash command or not.")
+    async def slashSay(self, interaction: discord.Interaction, message: str, visible_slash_command: bool = True):
         if visible_slash_command:
-            await interaction.response.send_message(text)
+            await interaction.response.send_message(message)
         else:
             await interaction.response.defer(ephemeral = True)
             if isinstance(interaction.channel, discord.TextChannel):
-                await interaction.channel.send(text)
+                await interaction.channel.send(message)
             await interaction.edit_original_response(content = "Sent.")
 
     @slashSay.error
     async def slashSay_error(self, interaction: discord.Interaction, error: Exception):
         logger.exception(f"❌ something went wrong with /say command:")
-        await interaction.response.send_message("something went wrong with **say**.", ephemeral = True)
+        try:
+            await interaction.response.send_message("something went wrong with **say**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **say**.", ephemeral = True)
 
 
 async def setup(bot: commands.Bot):

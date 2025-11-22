@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 import re
 from urllib.parse import urlparse
 import datetime
@@ -9,7 +10,7 @@ logger = loggerSetup(__name__)
 
 def parse_args(args: str):
     matches: list[tuple[str, str]] = re.findall(r'(\w+)\s*:\s*\((.*?)\)', args)
-    return matches
+    return matches if matches else None
 
 def colorValidation(value: str):
     #removes leading '#' if any
@@ -28,7 +29,13 @@ def urlValidation(url: str):
     except:
         return False
 
-async def assignVars(ctx: commands.Context[commands.Bot], arg_list: list[tuple[str, str]]):
+async def respond(ctx: commands.Context[commands.Bot] | discord.Interaction, msg: str, ephem: bool = True):
+    if isinstance(ctx, discord.Interaction):
+        return await ctx.response.send_message(msg, ephemeral = ephem)
+    else:
+        return await ctx.reply(msg)
+
+async def assignVars(ctx: commands.Context[commands.Bot] | discord.Interaction, arg_list: list[tuple[str, str]]):
     data: dict[str, None | str | discord.Color | datetime.datetime] = {
         "title": None,
         "desc": None,
@@ -47,13 +54,13 @@ async def assignVars(ctx: commands.Context[commands.Bot], arg_list: list[tuple[s
                     arg = arg.lower()
                     if arg == "title":
                         if len(value) > 256:
-                            await ctx.reply("title can only be up to **256** characters.")
+                            await respond(ctx, msg = "title can only be up to **256** characters.")
                             return None
                         data["title"] = value
 
                     elif arg in ["desc", "description"]:
                         if len(value) > 4096 :
-                            await ctx.reply("description can only be up to **4096** characters.")
+                            await respond(ctx, msg = "description can only be up to **4096** characters.")
                             return None
                         data["desc"] = value
 
@@ -61,7 +68,7 @@ async def assignVars(ctx: commands.Context[commands.Bot], arg_list: list[tuple[s
                         if urlValidation(value):
                             data["url"] = value
                         else:
-                            await ctx.reply("enter a valid **url** for the embed (like 'https://example.com').")
+                            await respond(ctx, msg = "enter a valid **url** for the embed (like 'https://example.com').")
                             return None
                         
                     elif arg in ["color", "colour"]:
@@ -70,26 +77,26 @@ async def assignVars(ctx: commands.Context[commands.Bot], arg_list: list[tuple[s
                                 value = f"#{value}"
                             data["color"] = discord.Color.from_str(value)
                         else:
-                            await ctx.reply("enter a valid **hex code** for `color` (like '#ffffff').")
+                            await respond(ctx, msg = "enter a valid **hex code** for `color` (like '#ffffff').")
                             return None
                             
                     elif arg in ["image url", "imageurl", "imgurl"]:
                         if urlValidation(value):
                             data["imgurl"] = value
                         else:
-                            await ctx.reply("enter a valid **url** for `imageurl` (like 'https://example.com').")
+                            await respond(ctx, msg = "enter a valid **url** for `imageurl` (like 'https://example.com').")
                             return None
                         
                     elif arg in ["thumbnail url", "thumbnailurl"]:
                         if urlValidation(value):
                             data["thumbnailurl"] = value
                         else:
-                            await ctx.reply("enter a valid **url** for `thumbnailurl` (like 'https://example.com').")
+                            await respond(ctx, msg = "enter a valid **url** for `thumbnailurl` (like 'https://example.com').")
                             return None
                         
                     elif arg in ["author", "author name", "authorname"]:
                         if len(value) > 256:
-                            await ctx.reply("author name can only be up to **256** characters.")
+                            await respond(ctx, msg = "author name can only be up to **256** characters.")
                             return None
                         data["author"] = value
 
@@ -97,19 +104,19 @@ async def assignVars(ctx: commands.Context[commands.Bot], arg_list: list[tuple[s
                         if urlValidation(value):
                             data["authorurl"] = value
                         else:
-                            await ctx.reply("enter a valid **url** for `authorurl` (like 'https://example.com').")
+                            await respond(ctx, msg = "enter a valid **url** for `authorurl` (like 'https://example.com').")
                             return None
                         
                     elif arg in ["authoriconurl", "author icon url"]:
                         if urlValidation(value):
                             data["authoriconurl"] = value
                         else:
-                            await ctx.reply("enter a valid **url** for `authoriconurl` (like 'https://example.com').")
+                            await respond(ctx, msg = "enter a valid **url** for `authoriconurl` (like 'https://example.com').")
                             return None
                         
                     elif arg == "footer":
                         if len(value) > 2048 :
-                            await ctx.reply("footer can only be up to **2048** characters.")
+                            await respond(ctx, msg = "footer can only be up to **2048** characters.")
                             return None
                         data["footer"] = value
 
@@ -117,7 +124,7 @@ async def assignVars(ctx: commands.Context[commands.Bot], arg_list: list[tuple[s
                         if urlValidation(value):
                             data["footericonurl"] = value
                         else:
-                            await ctx.reply("enter a valid **url** for `footericonurl` (like 'https://example.com').")
+                            await respond(ctx, msg = "enter a valid **url** for `footericonurl` (like 'https://example.com').")
                             return None
                         
                     elif arg in ["timestamp", "ts"]:
@@ -128,11 +135,11 @@ async def assignVars(ctx: commands.Context[commands.Bot], arg_list: list[tuple[s
                             pass
                     
                         else:
-                            await ctx.reply("you must select **yes/no** for `timestamp`.")
+                            await respond(ctx, msg = "you must select **yes/no** for `timestamp`.")
                             return None
                         
                     else:
-                        await ctx.reply(f"{arg} is not a valid argument.")
+                        await respond(ctx, msg = f"{arg} is not a valid argument.")
                         return None
                         
     return data #returns the data dictionary if no problems else None is returned
@@ -148,64 +155,105 @@ class Embed(commands.Cog):
                 "This command can sends or edits an embed in the channel."
                 "\nYou can specify Embed attributes like `key: (value)` (title: (hi) for instance). Supports all kind of Embed attributes."
             ),
-            brief = "Sends or Edits an embed in the channel.",
-            extras = {"Category": "Utility", "Subcommands": "send | edit(soon.)"}
+            brief = "Sends an Embed in the channel.",
+            extras = {"Category": "Utility"}
     )
     async def embed(self, ctx: commands.Context[commands.Bot], cmd: str | None = None, *, args: str | None = None):
-        #if user runs the command in dm
-        if not ctx.guild:
-            return await ctx.reply("You can't use this command in dm.")
+        #if user doesn't enter the arguments
+        if not args:
+            return await ctx.reply("You must enter at least one argument to create the Embed.")
         
-        #if user doesn't enter a subcommand
-        if not cmd:
-            await ctx.reply("You must enter a subcommand for this command.", delete_after = 5)
-            await ctx.message.delete(delay = 5)
+        argList = parse_args(args) #parsing args
+        if not argList:
+            return await ctx.reply("enter valid forms of arguments.")
+        
+        data = await assignVars(ctx, argList) #collecting the data from args
+        if not data:
             return
         
-        cmd = cmd.lower()
-        #send subcommand
-        if cmd == "send":
-            #if user doesn't enter the arguments
-            if not args:
-                return await ctx.reply("You must enter the arguments to create the Embed.")
-            
-            try:
-                argList = parse_args(args) #parsing args
-                data = await assignVars(ctx, argList) #collecting the data from args
+        #creates the embed with the fetched data
+        embed = discord.Embed(
+            title = data.get("title"),
+            description = data.get("desc"),
+            url = data.get("url"),
+            color = data["color"] if isinstance(data["color"], discord.Color) else None,
+            timestamp = data["timestamp"] if isinstance(data["timestamp"], datetime.datetime) else None
+        )
+        if data.get("footer"):
+            embed.set_footer(text = data.get("footer"), icon_url = data.get("footericonurl"))
+        if data.get("author"):
+            embed.set_author(name = data.get("author"), url = data.get("authorurl"), icon_url = data.get("authoriconurl"))
+        if data.get("imgurl"):
+            embed.set_image(url = data.get("imgurl"))
+        if data.get("thumbnailurl"):
+            embed.set_thumbnail(url = data.get("thumbnailurl"))
 
-                #returns if no data is available
-                if not data:
-                    return
-                
-                #creates the embed with the fetched data
-                embed = discord.Embed(
-                    title = data["title"],
-                    description = data["desc"],
-                    url = data["url"],
-                    color = data["color"] if data["color"] is discord.Color else None,
-                    timestamp = data["timestamp"] if data["timestamp"] is datetime.datetime else None
-                ).set_footer(text = data["footer"], icon_url = data["footericonurl"])
-                if data["author"]:
-                    embed = embed.set_author(name = data["author"], url = data["authorurl"], icon_url = data["authoriconurl"])
-                if data["imgurl"]:
-                    embed = embed.set_image(url = data["imgurl"])
-                if data["thumbnailurl"]:
-                    embed = embed.set_thumbnail(url = data['thumbnailurl'])
-
-                await ctx.send(embed = embed)
-
-            except Exception:
-                logger.exception(f"\n❌ something went wrong with embed-send command:")
-                await ctx.reply(f"something went wrong with **embed**.")
-
-        else:
-            await ctx.reply("Enter a valid subcommand.", delete_after = 5)
-            await ctx.message.delete(delay = 5)
+        await ctx.send(embed = embed)
 
     @embed.error
     async def embed_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        logger.error(f"❌ something went wrong with embed command:", exc_info = error)
-        await ctx.reply(f"something went wrong with **embed**.", delete_after = 5)
+        logger.exception(f"❌ something went wrong with embed command:")
+        await ctx.reply(f"something went wrong with **embed**.")
+
+    #embed slash command
+    @app_commands.command(
+        name = "embed",
+        description = "Sends an Embed in the channel.",
+        extras = {"Category": "Utility"}
+    )
+    async def slashEmbed(
+        self,
+        interaction: discord.Interaction,
+        title: str | None = None,
+        description: str | None = None,
+        url: str | None = None,
+        color: str | None = None,
+        image_url: str | None = None,
+        thumbnail_url: str | None = None,
+        author: str | None = None,
+        author_url: str | None = None,
+        author_icon_url: str | None = None,
+        footer: str | None = None,
+        footer_icon_url: str | None = None,
+        timestamp: bool = False
+        ):
+        
+        argList = [(name, value) for name, value in locals().items() if name not in ["interaction", "timestamp"] and value]
+        if not argList:
+            return await interaction.response.send_message("You must enter at least one argument to create the Embed.", ephemeral = True)
+        
+        data = await assignVars(interaction, argList) #collecting the data from args
+
+        #returns if no data is available
+        if not data:
+            return
+        
+        #creates the embed with the fetched data
+        embed = discord.Embed(
+            title = data.get("title"),
+            description = data.get("desc"),
+            url = data.get("url"),
+            color = data["color"] if isinstance(data["color"], discord.Color) else None,
+            timestamp = discord.utils.utcnow() if timestamp else None
+        )
+        if data.get("footer"):
+            embed.set_footer(text = data.get("footer"), icon_url = data.get("footericonurl"))
+        if data.get("author"):
+            embed.set_author(name = data.get("author"), url = data.get("authorurl"), icon_url = data.get("authoriconurl"))
+        if data.get("imgurl"):
+            embed.set_image(url = data.get("imgurl"))
+        if data.get("thumbnailurl"):
+            embed.set_thumbnail(url = data.get("thumbnailurl"))
+
+        await interaction.response.send_message(embed = embed)
+
+    @slashEmbed.error
+    async def slashEmbed_error(self, interaction: discord.Interaction, error: Exception):
+        logger.exception(f"❌ something went wrong with /embed command:")
+        try:
+            await interaction.response.send_message("something went wrong with **embed**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **embed**.", ephemeral = True)
 
 
 async def setup(bot: commands.Bot):

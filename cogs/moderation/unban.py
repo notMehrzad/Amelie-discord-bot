@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -18,7 +19,7 @@ class Unban(commands.Cog):
             ),
             extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "in-Server": "Yes"}
     )
-    async def unban(self, ctx: commands.Context[commands.Bot], userId: int | str | None = None, *, reason: str | None= None):
+    async def unban(self, ctx: commands.Context[commands.Bot], userId: int | str | None, *, reason: str | None = None):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
             return await ctx.reply("You can only run moderation commands in a server.")
@@ -71,6 +72,62 @@ class Unban(commands.Cog):
     async def unban_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
         logger.error(f"❌ something went wrong with unban command:", exc_info = error)
         await ctx.reply("something went wrong with **unban**.")
+
+    @app_commands.command(
+        name = "unban",
+        description = "Unbans a user from the server.",
+        extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "in-Server": "Yes"}
+    )
+    @app_commands.guild_only()
+    @app_commands.describe(user_id = "The target user ID to unban.", reason = "The reason you want to unban the target.")
+    async def slashUnban(self, interaction: discord.Interaction, user_id: int, reason: str | None = None):
+        #if user runs the command in dm
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            return await interaction.response.send_message("You can only run moderation commands in a server.", ephemeral = True)
+        
+        #if the user has no permission to unban
+        if not interaction.user.guild_permissions.ban_members:
+            return await interaction.response.send_message("You have no permission to *unban* Members.", ephemeral = True)
+        
+        #if the bot has no permission to unban
+        if not interaction.guild.me.guild_permissions.ban_members:
+            return await interaction.response.send_message("I have no permisson to *unban* Members.", ephemeral = True)
+        
+        try:
+            target = self.bot.get_user(user_id) or await self.bot.fetch_user(user_id) #fetches the user from id
+        except discord.NotFound:
+            return await interaction.response.send_message(f"User with this ID doesn't exist.", ephemeral = True)
+        
+        #if user wants to unban himself
+        if target.id == interaction.user.id:
+            return await interaction.response.send_message("You were never banned for you to undo it now.", ephemeral = True)
+        
+        #if user trys to unban the server owner
+        if target.id == interaction.guild.owner_id:
+            return await interaction.response.send_message("The server *Owner* was never (and couldn't be) banned for you to undo it now.", ephemeral = True)
+        
+        #if user wants to do moderation command on the bot
+        if target.id == interaction.client.application_id:
+            return await interaction.response.send_message("If I'm texting you rn, that means I wasn't banned I guess?", ephemeral = True)
+        
+        #unbans the target
+        try:
+            entry = await interaction.guild.fetch_ban(discord.Object(id = target.id)) #checks if the target is banned
+            await interaction.guild.unban(user = entry.user, reason = reason)
+            await interaction.response.send_message(f"{target.display_name} has been *unbanned* via {interaction.user.display_name}." + (f"\nreason: {reason}" if reason else ""))
+        except discord.NotFound:
+            return await interaction.response.send_message(f"{target.display_name} was never banned for you to undo it now.", ephemeral = True)
+        except Exception:
+            logger.exception(f".unban failed to unban:")
+            await interaction.response.send_message("Failed to unban.", ephemeral = True)
+
+    @slashUnban.error
+    async def slashUnban_error(self, interaction: discord.Interaction, error: Exception):
+        logger.exception(f"❌ something went wrong with /unban command:")
+        try:
+            await interaction.response.send_message("something went wrong with **unban**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **unban**.", ephemeral = True)
 
         
 async def setup(bot: commands.Bot):

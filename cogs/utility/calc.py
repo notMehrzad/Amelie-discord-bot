@@ -1,4 +1,6 @@
+import discord
 from discord.ext import commands
+from discord import app_commands
 import sympy as sp
 from logHandler import loggerSetup
 
@@ -46,8 +48,47 @@ class Calc(commands.Cog):
 
     @calc.error
     async def calc_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        logger.error(f"❌ something went wrong with calc command:", exc_info = error)
+        logger.exception(f"❌ something went wrong with calc command:")
         await ctx.reply("something went wrong with **calc**.")
+
+    #calc slash command
+    @app_commands.command(
+        name = "calc",
+        description = "Calculates the given math expression."
+    )
+    @app_commands.describe(expression = "The expression to be calculated.", hidden = "Whether the result should be vsible only to you or not.")
+    async def slashCalc(self, interaction: discord.Interaction, expression: str, hidden: bool = False):
+        await interaction.response.defer()
+        expression = expression.replace("^", "**")
+        expression = expression.replace("√", "sqrt")
+
+        try:
+            result = sp.sympify(expression, locals = { # type: ignore
+                "pi": sp.pi, "e": sp.E,
+                "sin": sp.sin, "cos": sp.cos, "tan": sp.tan, "cot": sp.cot, "sec": sp.sec, "csc": sp.csc,
+                "asin": sp.asin, "acos": sp.acos, "atan": sp.atan, "acot": sp.acot, "asec": sp.asec, "acsc": sp.acsc,
+                "sinh": sp.sinh, "cosh": sp.cosh, "tanh": sp.tanh, "coth": sp.coth, "sech": sp.sech, "csch": sp.csch,
+                "asinh": sp.asinh, "acosh": sp.acosh, "atanh": sp.atanh, "acoth": sp.acoth, "asech": sp.asech, "acsch": sp.acsch,
+                "log": sp.log,
+                "sqrt": sp.sqrt # type: ignore
+            })
+        except Exception:
+            return await interaction.followup.send("Enter a valid math expression.", ephemeral = True)
+
+        #Converts symbolic to numeric if needed
+        numeric_result = result.evalf() if result.is_real or result.is_complex else result # type: ignore
+
+        await interaction.followup.send(f"= `{numeric_result:.2f}`", ephemeral = hidden)
+
+    @slashCalc.error
+    async def slashCalc_error(self, interaction: discord.Interaction, error: Exception):
+        logger.exception(f"❌ something went wrong with /calc command:")
+        try:
+            await interaction.response.send_message("something went wrong with **calc**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **calc**.", ephemeral = True)
+        
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Calc(bot))

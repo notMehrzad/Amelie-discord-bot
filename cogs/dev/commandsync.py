@@ -27,8 +27,9 @@ class CommandSync(commands.Cog):
             return
         
         syncedCmds = await self.bot.tree.sync()
-        syncedCmds = [cmd.name for cmd in syncedCmds]
-        print(syncedCmds)
+        syncedCmds = [("/" + cmd.name) for cmd in syncedCmds]
+        print("\n--------------")
+        print(f"✔️ {syncedCmds} commands have been synced.")
         await ctx.reply("All slash commands are synced.", delete_after = 5)
         await ctx.message.delete(delay = 5)
     

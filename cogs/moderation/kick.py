@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -18,7 +19,7 @@ class Kick(commands.Cog):
             ),
             extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
     )
-    async def kick(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None = None, *, reason: str | None = None):
+    async def kick(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None, *, reason: str | None = None):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
             return await ctx.reply("You can only run moderation commands in a server.")
@@ -84,6 +85,72 @@ class Kick(commands.Cog):
         else:
             logger.error(f"❌ something went wrong with kick command:", exc_info = error)
             await ctx.reply("something went wrong with **kick**.")
+
+    #kick slash command
+    @app_commands.command(
+        name = "kick",
+        description = "Kicks a member from the server.",
+        extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
+    )
+    @app_commands.guild_only()
+    @app_commands.describe(target = "The target Member to kick from the server.", reason = "The reason you want to kick the target.")
+    async def slashKick(self, interaction: discord.Interaction, user: discord.Member | int, reason: str | None = None):
+        #if user runs the command in dm
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            return await interaction.response.send_message("You can only run moderation commands in a server.", ephemeral = True)
+        
+        #if the user has no permission to kick
+        if not interaction.user.guild_permissions.kick_members:
+            return await interaction.response.send_message("You have no permission to *kick* Members.", ephemeral = True)
+        
+        #if the bot has no permission to kick
+        if not interaction.guild.me.guild_permissions.kick_members:
+            return await interaction.response.send_message("I have no permisson to *kick* Members.", ephemeral = True)
+        
+        try:
+            targetUser = (self.bot.get_user(user) or await self.bot.fetch_user(user)) if isinstance(user, int) else user #trys to fetch the target if id is given
+        except discord.NotFound:
+            return await interaction.response.send_message(f"User with given ID doesn't exist.", ephemeral = True)
+        
+        target = interaction.guild.get_member(targetUser.id) #fetches the target user from the server, None if not found
+        if not target:
+            return await interaction.response.send_message(f"{targetUser.display_name} is not a Member of this server.", ephemeral = True)
+        
+        #if user wants to kick himself
+        if target.id == interaction.user.id:
+            return await interaction.response.send_message("You can't kick yourself!", ephemeral = True)
+        
+        #if user trys to kick the server owner
+        if target.id == interaction.guild.owner_id:
+            return await interaction.response.send_message("You can't kick the server *Owner*.", ephemeral = True)
+        
+        #if user wants to run moderation command on the bot
+        if target.id == interaction.client.application_id:
+            return await interaction.response.send_message("You can't run my moderation commands on myself darling.", ephemeral = True)
+          
+        #if user has lower or equal role position than target
+        if target.top_role >= interaction.user.top_role and interaction.user.id != interaction.guild.owner_id:
+            return await interaction.response.send_message("You can't kick a Member with *higher or equal* role position as you.", ephemeral = True)
+        
+        #if the bot has lower or equal role position than target
+        if target.top_role >= interaction.guild.me.top_role:
+            return await interaction.response.send_message("I can't kick a Member with *higher or equal* role position as me.", ephemeral = True)
+        
+        #kicks the target
+        try:
+            await interaction.guild.kick(user = target, reason = reason)
+            await interaction.response.send_message(f"{target.display_name} has been *kicked* via {interaction.user.display_name}." + (f"\nreason: {reason}" if reason else ""))
+        except Exception:
+            logger.exception(f".kick failed to kick:")
+            await interaction.response.send_message("Failed to kick.", ephemeral = True)
+
+    @slashKick.error
+    async def slashKick_error(self, interaction: discord.Interaction, error: Exception):
+        logger.exception(f"❌ something went wrong with /kick command:")
+        try:
+            await interaction.response.send_message("something went wrong with **kick**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **kick**.", ephemeral = True)
 
 
 async def setup(bot: commands.Bot):
