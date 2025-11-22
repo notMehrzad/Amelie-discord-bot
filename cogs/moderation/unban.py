@@ -70,9 +70,10 @@ class Unban(commands.Cog):
     
     @unban.error
     async def unban_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
-        logger.error(f"❌ something went wrong with unban command:", exc_info = error)
+        logger.exception(f"❌ something went wrong with unban command:")
         await ctx.reply("something went wrong with **unban**.")
 
+    #unban slash command
     @app_commands.command(
         name = "unban",
         description = "Unbans a user from the server.",

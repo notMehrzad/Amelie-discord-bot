@@ -62,7 +62,7 @@ class Whisper(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("user not found. Please mention a valid member.")
         else:
-            logger.error(f"❌ something went wrong with whisper command:", exc_info = error)
+            logger.exception(f"❌ something went wrong with whisper command:")
             await ctx.reply("something went wrong with **whisper**.")
 
     #whisper slash command
@@ -116,7 +116,9 @@ class WhisperView(discord.ui.View):
             self.ctxMsg = await self.ctx.send(content = desc, view = self)
         else:
             if isinstance(self.interaction.channel, discord.TextChannel):
+                await self.interaction.response.defer(ephemeral = True)
                 self.ctxMsg = await self.interaction.channel.send(content = desc, view = self)
+                await self.interaction.edit_original_response(content = "Whisper has been sent.")
 
     #defines read button
     @discord.ui.button(label = "read" , style = discord.ButtonStyle.grey)

@@ -96,7 +96,7 @@ class Help(commands.Cog):
     
     @help.error
     async def help_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        logger.error(f"❌ something went wrong with help command:", exc_info = error)
+        logger.exception(f"❌ something went wrong with help command:")
         await ctx.reply("something went wrong with **help**.")
 
     #help slash command

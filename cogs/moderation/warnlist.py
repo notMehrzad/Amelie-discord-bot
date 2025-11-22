@@ -135,7 +135,7 @@ class WarnList(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("User not found. Please mention a valid user.")
         else:
-            logger.error(f"❌ something went wrong with warnlist command:", exc_info = error)
+            logger.exception(f"❌ something went wrong with warnlist command:")
             await ctx.reply("something went wrong with **warnlist**.")
 
     #warnlist slash command
@@ -146,7 +146,7 @@ class WarnList(commands.Cog):
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target user to get warning list for.")
-    async def slashWarnlist(self, interaction: discord.Interaction, user: discord.Member | int | None = None):
+    async def slashWarnlist(self, interaction: discord.Interaction, user: discord.User | None = None):
         #if user runs the command in dm
         if not interaction.guild or not isinstance(interaction.user, discord.Member):
             return await interaction.response.send_message("You can only run moderation commands in a server.", ephemeral = True)
@@ -161,21 +161,16 @@ class WarnList(commands.Cog):
 
         #shows warns of the target user
         if user:
-            try:
-                target = (self.bot.get_user(user) or await self.bot.fetch_user(user)) if isinstance(user, int) else user #trys to fetch the target if id is given
-            except discord.NotFound:
-                return await interaction.response.send_message(f"User with this ID doesn't exist.", ephemeral = True)
-            
             #if user trys to see the server owner warns
-            if target.id == interaction.guild.owner_id:
+            if user.id == interaction.guild.owner_id:
                 return await interaction.response.send_message("Server *Owner* has no warning i guess?", ephemeral = True)
             
             #if user wants to run moderation command on the bot
-            if target.id == interaction.client.application_id:
+            if user.id == interaction.client.application_id:
                 return await interaction.response.send_message("I have no warnings for you to see. agh.", ephemeral = True)
             
             #if user wants to see bots warnings
-            if target.bot:
+            if user.bot:
                 return await interaction.response.send_message("Bots have no warning for you to see.", ephemeral = True)
                 
             conn = await connection() #creates a connection to the database
@@ -184,7 +179,7 @@ class WarnList(commands.Cog):
             #searchs database with given arguments
             async with conn.execute(
                 "SELECT * FROM warns WHERE server_id = ? AND user_id = ? ORDER BY timestamp;",
-                (interaction.guild.id, target.id)
+                (interaction.guild.id, user.id)
                 ) as cursor:
                 result = await cursor.fetchall()
             await conn.close()
@@ -202,8 +197,8 @@ class WarnList(commands.Cog):
                     warns.append(desc)
 
             resultEmbed = discord.Embed(
-                title = f"{target.display_name}'s warnings",
-                description = "\n".join(warns) if warns else f"{target.mention} has no warnings.",
+                title = f"{user.display_name}'s warnings",
+                description = "\n".join(warns) if warns else f"{user.mention} has no warnings.",
                 color = discord.Color.dark_blue()
             )
             await interaction.response.send_message(embed = resultEmbed)

@@ -41,10 +41,10 @@ class Say(commands.Cog):
         if visible_slash_command:
             await interaction.response.send_message(message)
         else:
-            await interaction.response.defer(ephemeral = True)
             if isinstance(interaction.channel, discord.TextChannel):
+                await interaction.response.defer(ephemeral = True)
                 await interaction.channel.send(message)
-            await interaction.edit_original_response(content = "Sent.")
+                await interaction.edit_original_response(content = "Sent.")
 
     @slashSay.error
     async def slashSay_error(self, interaction: discord.Interaction, error: Exception):

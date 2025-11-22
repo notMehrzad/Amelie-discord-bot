@@ -132,7 +132,7 @@ class WarnDb(commands.Cog):
         
     @warndb.error
     async def warndb_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        logger.error(f"❌ something went wrong with warndb command:", exc_info = error)
+        logger.exception(f"❌ something went wrong with warndb command:")
         await ctx.reply("something went wrong with **warndb**.", delete_after = 5)
         
 

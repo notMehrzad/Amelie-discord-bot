@@ -122,7 +122,7 @@ class Warn(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("Member not found. Please mention a valid member.")
         else:
-            logger.error(f"❌ something went wrong with warn command:", exc_info = error)
+            logger.exception(f"❌ something went wrong with warn command:")
             await ctx.reply("something went wrong with **warn**.")
 
     #warn slash command
@@ -133,7 +133,7 @@ class Warn(commands.Cog):
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target member to warn.", reason = "The reason to warn the target.")
-    async def slashWarn(self, interaction: discord.Interaction, user: discord.Member | int, reason: str | None = None):
+    async def slashWarn(self, interaction: discord.Interaction, user: discord.Member, reason: str | None = None):
         #if user runs the command in dm
         if not interaction.guild or not isinstance(interaction.user, discord.Member):
             return await interaction.response.send_message("You can only run moderation commands in a server.", ephemeral = True)
@@ -146,37 +146,28 @@ class Warn(commands.Cog):
         if not interaction.guild.me.guild_permissions.kick_members:
             return await interaction.response.send_message("I have no permisson to *warn* Members.", ephemeral = True)
         
-        try:
-            targetUser = (self.bot.get_user(user) or await self.bot.fetch_user(user)) if isinstance(user, int) else user #trys to fetch the target if id is given
-        except discord.NotFound:
-            return await interaction.response.send_message(f"User with given ID doesn't exist.", ephemeral = True)
-        
-        target = interaction.guild.get_member(targetUser.id) #fetches the target user from the server, None if not found
-        if not target:
-            return await interaction.response.send_message(f"{targetUser.display_name} is not a Member of this server.", ephemeral = True)
-        
         #if user wants to warn himself
-        if target.id == interaction.user.id:
+        if user.id == interaction.user.id:
             return await interaction.response.send_message("You can't warn yourself!", ephemeral = True)
         
         #if user wants to warn the server owner
-        if target.id == interaction.guild.owner_id:
+        if user.id == interaction.guild.owner_id:
             return await interaction.response.send_message("You can't warn the server *Owner*.", ephemeral = True)
         
         #if user wants to run moderation command on the bot
-        if target.id == interaction.client.application_id:
+        if user.id == interaction.client.application_id:
             return await interaction.response.send_message("You can't run my moderation commands on myself darling.", ephemeral = True)
         
         #if user wants to warn bots
-        if target.bot:
+        if user.bot:
             return await interaction.response.send_message("-agh seriously?. You can't warn bots.", ephemeral = True)
         
         #if user has lower or equal role position than target
-        if target.top_role >= interaction.user.top_role and interaction.user.id != interaction.guild.owner_id:
+        if user.top_role >= interaction.user.top_role and interaction.user.id != interaction.guild.owner_id:
             return await interaction.response.send_message("You can't warn a Member with *higher or equal* role position as you.", ephemeral = True)
         
         #if the bot has lower or equal role position than target
-        if target.top_role >= interaction.guild.me.top_role:
+        if user.top_role >= interaction.guild.me.top_role:
             return await interaction.response.send_message("I can't warn a Member with *higher or equal* role position as me.", ephemeral = True)
         
         #warns the target
@@ -187,7 +178,7 @@ class Warn(commands.Cog):
         SELECT COALESCE(MAX(user_warn_id), 0) + 1
         FROM warns
         WHERE server_id = ? AND user_id = ?;
-        """, (interaction.guild.id, target.id)) as cursor:
+        """, (interaction.guild.id, user.id)) as cursor:
             result = await cursor.fetchone()
         warnID: int = result[0] if result else 1
             
@@ -195,26 +186,26 @@ class Warn(commands.Cog):
         await conn.execute("""
         INSERT INTO warns (server_id, user_warn_id, mod_id, user_id, reason, timestamp)
         VALUES (?, ?, ?, ?, ?, ?);
-        """, (interaction.guild.id, warnID, interaction.user.id, target.id, reason, discord.utils.utcnow()))
+        """, (interaction.guild.id, warnID, interaction.user.id, user.id, reason, discord.utils.utcnow()))
         await conn.commit() #commits and saves the changes
 
         #counts the number of warns the target has
         async with conn.execute("""
         SELECT COUNT(*) FROM warns
         WHERE server_id = ? AND user_id = ?;
-        """, (interaction.guild.id, target.id)) as cursor:
+        """, (interaction.guild.id, user.id)) as cursor:
             result = await cursor.fetchone()
         warnCount: int = result[0] if result else 0
 
         await conn.close()
 
-        await interaction.response.send_message(f"{target.mention} has been warned." + (f"\nreason: {reason}" if reason else ""))
+        await interaction.response.send_message(f"{user.mention} has been warned." + (f"\nreason: {reason}" if reason else ""))
 
         #if the target has over alowed number of warns, kicks it
         if warnCount >= warnLimit:
             try:
-                await interaction.guild.kick(user = target, reason = f"Reaching the maximum allowed number of warnings *({warnLimit})*.")
-                await interaction.response.send_message(f"{target.display_name} has been kicked due to reaching the maximum allowed number of warnings *({warnLimit})*.")
+                await interaction.guild.kick(user = user, reason = f"Reaching the maximum allowed number of warnings *({warnLimit})*.")
+                await interaction.response.send_message(f"{user.display_name} has been kicked due to reaching the maximum allowed number of warnings *({warnLimit})*.")
             except Exception:
                 logger.exception(f".warn failed to kick:")
                 await interaction.response.send_message("Failed to kick.")

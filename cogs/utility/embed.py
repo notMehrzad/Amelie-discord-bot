@@ -54,13 +54,13 @@ async def assignVars(ctx: commands.Context[commands.Bot] | discord.Interaction, 
                     arg = arg.lower()
                     if arg == "title":
                         if len(value) > 256:
-                            await respond(ctx, msg = "title can only be up to **256** characters.")
+                            await respond(ctx, msg = f"`{arg}` can only be up to **256** characters.")
                             return None
                         data["title"] = value
 
                     elif arg in ["desc", "description"]:
                         if len(value) > 4096 :
-                            await respond(ctx, msg = "description can only be up to **4096** characters.")
+                            await respond(ctx, msg = f"`{arg}` can only be up to **4096** characters.")
                             return None
                         data["desc"] = value
 
@@ -68,7 +68,7 @@ async def assignVars(ctx: commands.Context[commands.Bot] | discord.Interaction, 
                         if urlValidation(value):
                             data["url"] = value
                         else:
-                            await respond(ctx, msg = "enter a valid **url** for the embed (like 'https://example.com').")
+                            await respond(ctx, msg = f"enter a valid **url** for `{arg}` (like 'https://example.com').")
                             return None
                         
                     elif arg in ["color", "colour"]:
@@ -77,54 +77,54 @@ async def assignVars(ctx: commands.Context[commands.Bot] | discord.Interaction, 
                                 value = f"#{value}"
                             data["color"] = discord.Color.from_str(value)
                         else:
-                            await respond(ctx, msg = "enter a valid **hex code** for `color` (like '#ffffff').")
+                            await respond(ctx, msg = f"enter a valid **hex code** for `{arg}` (like '#ffffff').")
                             return None
                             
-                    elif arg in ["image url", "imageurl", "imgurl"]:
+                    elif arg in ["image url", "imageurl", "imgurl", "image_url"]:
                         if urlValidation(value):
                             data["imgurl"] = value
                         else:
-                            await respond(ctx, msg = "enter a valid **url** for `imageurl` (like 'https://example.com').")
+                            await respond(ctx, msg = f"enter a valid **url** for `{arg}` (like 'https://example.com').")
                             return None
                         
-                    elif arg in ["thumbnail url", "thumbnailurl"]:
+                    elif arg in ["thumbnail url", "thumbnailurl", "thumbnail_url"]:
                         if urlValidation(value):
                             data["thumbnailurl"] = value
                         else:
-                            await respond(ctx, msg = "enter a valid **url** for `thumbnailurl` (like 'https://example.com').")
+                            await respond(ctx, msg = f"enter a valid **url** for `{arg}` (like 'https://example.com').")
                             return None
                         
                     elif arg in ["author", "author name", "authorname"]:
                         if len(value) > 256:
-                            await respond(ctx, msg = "author name can only be up to **256** characters.")
+                            await respond(ctx, msg = f"`{arg}` can only be up to **256** characters.")
                             return None
                         data["author"] = value
 
-                    elif arg in ["authorurl", "author url"]:
+                    elif arg in ["authorurl", "author url", "author_url"]:
                         if urlValidation(value):
                             data["authorurl"] = value
                         else:
-                            await respond(ctx, msg = "enter a valid **url** for `authorurl` (like 'https://example.com').")
+                            await respond(ctx, msg = f"enter a valid **url** for `{arg}` (like 'https://example.com').")
                             return None
                         
-                    elif arg in ["authoriconurl", "author icon url"]:
+                    elif arg in ["authoriconurl", "author icon url", "author_icon_url"]:
                         if urlValidation(value):
                             data["authoriconurl"] = value
                         else:
-                            await respond(ctx, msg = "enter a valid **url** for `authoriconurl` (like 'https://example.com').")
+                            await respond(ctx, msg = f"enter a valid **url** for `{arg}` (like 'https://example.com').")
                             return None
                         
                     elif arg == "footer":
                         if len(value) > 2048 :
-                            await respond(ctx, msg = "footer can only be up to **2048** characters.")
+                            await respond(ctx, msg = f"`{arg}` can only be up to **2048** characters.")
                             return None
                         data["footer"] = value
 
-                    elif arg in ["footericonurl", "footer icon url"]:
+                    elif arg in ["footericonurl", "footer icon url", "footer_icon_url"]:
                         if urlValidation(value):
                             data["footericonurl"] = value
                         else:
-                            await respond(ctx, msg = "enter a valid **url** for `footericonurl` (like 'https://example.com').")
+                            await respond(ctx, msg = f"enter a valid **url** for `{arg}` (like 'https://example.com').")
                             return None
                         
                     elif arg in ["timestamp", "ts"]:
@@ -135,7 +135,7 @@ async def assignVars(ctx: commands.Context[commands.Bot] | discord.Interaction, 
                             pass
                     
                         else:
-                            await respond(ctx, msg = "you must select **yes/no** for `timestamp`.")
+                            await respond(ctx, msg = f"you must select **yes/no** for `{arg}`.")
                             return None
                         
                     else:
@@ -218,7 +218,7 @@ class Embed(commands.Cog):
         timestamp: bool = False
         ):
         
-        argList = [(name, value) for name, value in locals().items() if name not in ["interaction", "timestamp"] and value]
+        argList = [(name, value) for name, value in locals().items() if name not in ["self", "interaction", "timestamp"] and value]
         if not argList:
             return await interaction.response.send_message("You must enter at least one argument to create the Embed.", ephemeral = True)
         

@@ -48,7 +48,7 @@ class Rps(commands.Cog):
         if user and ctx.guild:
             target = ctx.guild.get_member(user.id)
             if not target:
-                return await ctx.reply(f"{user.mention} is now a member of this server.")
+                return await ctx.reply(f"{user.mention} is not a member of this server.")
         else:
             target = None
         
@@ -75,7 +75,7 @@ class Rps(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("User not found. Please mention a valid user.")
         else:
-            logger.error(f"❌ something went wrong with rps command:", exc_info = error)
+            logger.exception(f"❌ something went wrong with rps command:")
             await ctx.reply("something went wrong with **rps**.")
 
     #rps slash command
@@ -85,7 +85,7 @@ class Rps(commands.Cog):
         extras = {"Category": "Games"}
     )
     @app_commands.describe(user = "The user you want to play rps with.")
-    async def slashRps(self, interaction: discord.Interaction, user: discord.Member | None = None):
+    async def slashRps(self, interaction: discord.Interaction, user: discord.User | None = None):
         #if the user runs this command in dm to play with another user
         if not interaction.guild and user and user.id != interaction.client.application_id:
             return await interaction.response.send_message("You can only play this game with others in a server. (except me!)", ephemeral = True)
@@ -93,7 +93,7 @@ class Rps(commands.Cog):
         if user and interaction.guild:
             target = interaction.guild.get_member(user.id)
             if not target:
-                return await interaction.response.send_message(f"{user.mention} is now a member of this server.", ephemeral = True)
+                return await interaction.response.send_message(f"{user.mention} is not a member of this server.", ephemeral = True)
         else:
             target = None
         
@@ -232,8 +232,10 @@ class RpsView(discord.ui.View):
                     .add_field(name = f"{self.user.name} Choice", value = f"{self.playerschoice['player1']} {self.playerschoice['player1emoji']}", inline = True)\
                     .add_field(name = f"{self.target.name} Choice", value = f"{self.playerschoice['player2']} {self.playerschoice['player2emoji']}", inline = True)\
                     .set_thumbnail(url = winneravatarurl)
-            
-                await self.msg.edit(embed = finalEmbed, view = None)
+                if not self.slash:
+                    await self.msg.edit(embed = finalEmbed, view = None)
+                else:
+                    await self.interaction.edit_original_response(embed = finalEmbed, view = None)
                 self.stop()
 
         return callback

@@ -12,7 +12,8 @@ bot = commands.Bot(command_prefix = '.', intents = intents, case_insensitive = T
 
 #cogloader function
 async def cogsload():
-    success: list[str] = []
+    succeed: list[str] = []
+    failed: list[str] = []
     for root, _, files in os.walk("./cogs"):
         for file in files:
             #must be .py
@@ -33,10 +34,13 @@ async def cogsload():
 
             try:
                 await bot.load_extension(module) #loads cog
-                success.append(module.split(".")[-1])
+                succeed.append(module.split(".")[-1])
             except Exception:
                 logger.exception(f"❌ Failed to load {module}:")
-    print(f"{success} cogs loaded ☑️")
+                failed.append(module.split(".")[-1])
+    if failed:
+        print(f"{failed} cogs failed to load ❌")
+    print(f"{succeed} cogs loaded ☑️")
 
 @bot.event
 async def on_ready():

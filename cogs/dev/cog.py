@@ -93,7 +93,7 @@ class StartUp(commands.Cog):
 
     @cog.error
     async def cog_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        logger.error(f"❌ something went wrong with cog command:", exc_info = error)
+        logger.exception(f"❌ something went wrong with cog command:")
         await ctx.reply("something went wrong with **cog**.", delete_after = 5)
 
 

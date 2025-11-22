@@ -45,7 +45,7 @@ class Vrps(commands.Cog):
             aliases = ["voterps"],
             usage = "<target[*optional*]>",
             extras = {"Category": "Games"},
-            brief = "It's like rock-paper-scissors, but played with predetermined drawings on cards instead of using the hands.",
+            brief = "Classic rock-paper-scissors, but played with predetermined drawings on cards.",
             help = (
                 "A game between two people. yet needed a whole class-"
                 "\nFirst, everyone in the class draws either a Rock, Paper or Scissors on a card. Then they drop those cards into the ballot box so players can't see them."
@@ -68,7 +68,7 @@ class Vrps(commands.Cog):
         if user and ctx.guild:
             target = ctx.guild.get_member(user.id) #fetches the target member from the server, None if not found
             if not target:
-                return await ctx.reply(f"{user.mention} is now a member of this server.")
+                return await ctx.reply(f"{user.mention} is not a member of this server.")
         else:
             target = None
         
@@ -96,17 +96,17 @@ class Vrps(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.reply("User not found. Please mention a valid user.")
         else:
-            logger.error(f"❌ something went wrong with vrps command:", exc_info = error)
+            logger.exception(f"❌ something went wrong with vrps command:")
             await ctx.reply("something went wrong with **vrps**.")
 
     #vrps slash command
     @app_commands.command(
         name = "vrps",
-        description = "It's like rock-paper-scissors, but played with predetermined drawings on cards instead of using the hands.",
+        description = "Classic rock-paper-scissors, but played with predetermined drawings on cards.",
         extras = {"Category": "Games"}
     )
     @app_commands.describe(user = "The user you want to play vrps with.")
-    async def slashVrps(self, interaction: discord.Interaction, user: discord.Member | None = None):
+    async def slashVrps(self, interaction: discord.Interaction, user: discord.User | None = None):
         #if user runs the command in dm
         if not interaction.guild and user and user.id != interaction.client.application_id:
             return await interaction.response.send_message("You can only play this game with others in a server. (except me!)", ephemeral = True)
@@ -114,7 +114,7 @@ class Vrps(commands.Cog):
         if user and interaction.guild:
             target = interaction.guild.get_member(user.id) #fetches the target member from the server, None if not found
             if not target:
-                return await interaction.response.send_message(f"{user.mention} is now a member of this server.", ephemeral = True)
+                return await interaction.response.send_message(f"{user.mention} is not a member of this server.", ephemeral = True)
         else:
             target = None
         
@@ -136,6 +136,14 @@ class Vrps(commands.Cog):
         else:
             view = ReadyView(interaction, target)
             await view.start()
+
+    @slashVrps.error
+    async def slashVrps_error(self, interaction: discord.Interaction, error: Exception):
+        logger.exception(f"❌ something went wrong with /vrps command:")
+        try:
+            await interaction.response.send_message("something went wrong with **vrps**.", ephemeral = True)
+        except discord.InteractionResponded:
+            await interaction.followup.send("something went wrong with **vrps**.", ephemeral = True)
 
 class ReadyView(discord.ui.View):
     def __init__(self, ctx: commands.Context[commands.Bot] | discord.Interaction, target: discord.abc.User, botPlay: bool = False):
