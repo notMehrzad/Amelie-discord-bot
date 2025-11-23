@@ -18,7 +18,7 @@ class Ping(commands.Cog):
             brief = "Pings Amélie.",
             help = (
                 "Checks Amelies conenction speed by measuring WebSocket Latency (which is the delay between bots server and Discord Gateway) and Bot Latency"
-                " (which is the time it takes Amelie to send a message and recieve a response)."
+                " (which is the time it takes Amélie to send a message and recieve a response)."
             ),
             extras = {"Category": "Utility"}
     )

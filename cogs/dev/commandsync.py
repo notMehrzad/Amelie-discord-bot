@@ -30,7 +30,7 @@ class CommandSync(commands.Cog):
         syncedCmds = [("/" + cmd.name) for cmd in syncedCmds]
         print("\n--------------")
         print(f"{syncedCmds} commands have been synced. ✔️")
-        await ctx.reply("All slash commands are synced.", delete_after = 5)
+        await ctx.reply("All slash commands have been synced.", delete_after = 5)
         await ctx.message.delete(delay = 5)
     
     @commandsync.error

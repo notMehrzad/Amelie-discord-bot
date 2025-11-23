@@ -31,5 +31,14 @@ async def setup():
     );
     """)
 
+    #anon links table
+    await conn.execute("""
+    CREATE TABLE IF NOT EXISTS anonpublicids (
+        public_id TEXT PRIMARY KEY NOT NULL,
+        user_id INTEGER NOT NULL,
+        created_date DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
     await conn.commit() #commits the changes
     await conn.close()

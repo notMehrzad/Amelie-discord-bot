@@ -24,16 +24,22 @@ class StartUp(commands.Cog):
             extras = {"Category": "Dev", "Subcommands": "\"reload\"[aliases: \"r\"] | \"list\"[aliases: \"show\"]"}
     )
     async def cog(self, ctx: commands.Context[commands.Bot], cmd: str | None, extension: str | None = None):
+        inGuild = True if ctx.guild else False
+
         #checks if the user is an admin to use the command
         if str(ctx.author.id) not in config["ADMINS"]:
-            await ctx.reply(content ="You can't use this command.", delete_after = 5)
-            await ctx.message.delete(delay = 5)
+            msg = await ctx.reply(content ="You can't use this command.")
+            if inGuild:
+                await msg.delete(delay = 5)
+                await ctx.message.delete()
             return
         
         #if user entered no subcommand
         if not cmd:
-            await ctx.reply(content ="You must enter a subcommand for this command.", delete_after = 5)
-            await ctx.message.delete(delay = 5)
+            msg = await ctx.reply(content ="You must enter a subcommand for this command.")
+            if inGuild:
+                await msg.delete(delay = 5)
+                await ctx.message.delete(delay = 5)
             return
         
         cmd = cmd.lower()
@@ -52,7 +58,7 @@ class StartUp(commands.Cog):
                     await self.bot.reload_extension(ext)
                     print(f"🔄️ {ext.split(".")[-1]} reloaded.")
                 
-                await msg.edit(content = "All cogs have been reloaded succesfully. ✅", delete_after = 5)
+                await msg.edit(content = "All cogs have been reloaded succesfully. ✅")
 
             #reloads the given extention
             else:
@@ -65,8 +71,10 @@ class StartUp(commands.Cog):
                 
                 #if no match was found, notifys the user
                 if not match:
-                    await ctx.reply(f"`{extension}` is not a loaded cog.", delete_after = 5)
-                    await ctx.message.delete()
+                    msg = await ctx.reply(f"`{extension}` is not a loaded cog.")
+                    if inGuild:
+                        await msg.delete(delay = 5)
+                        await ctx.message.delete(delay = 5)
                     return
                 
                 #reloads the matched extention
@@ -76,20 +84,26 @@ class StartUp(commands.Cog):
                 await self.bot.reload_extension(match)
                 print(f"🔄️ {match.split(".")[-1]} cog is reloaded.")
 
-                await msg.edit(content = f"`{match.split(".")[-1]}` cog has been reloaded succesfully. ✅", delete_after = 5)
-
-            await ctx.message.delete()
+                await msg.edit(content = f"`{match.split(".")[-1]}` cog has been reloaded succesfully. ✅")
+            
+            if inGuild:
+                await msg.delete(delay = 5)
+                await ctx.message.delete()
         
         #list subcommand
         elif cmd in ["list", "show"]:
             print(f"\n--------------\n{extensionList}")
-            await ctx.reply(content = "Cogs list has been sent. ✅", delete_after = 5)
-            await ctx.message.delete(delay = 5)
+            msg = await ctx.reply(content = "Cogs list has been sent to the console. ✅")
+            if inGuild:
+                await msg.delete(delay = 5)
+                await ctx.message.delete(delay = 5)
 
         #invalid subcommand
         else:
-            await ctx.reply(content = "Enter a valid subcommand.", delete_after = 5)
-            await ctx.message.delete(delay = 5)
+            msg = await ctx.reply(content = "Enter a valid subcommand.")
+            if inGuild:
+                await msg.delete(delay = 5)
+                await ctx.message.delete(delay = 5)
 
     @cog.error
     async def cog_error(self, ctx: commands.Context[commands.Bot], error: Exception):
