@@ -18,7 +18,7 @@ class WarnClear(commands.Cog):
             help = (
                 ""
             ),
-            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
+            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
     )
     async def warnclear(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None, warnId: int | str | None = None, *, reason: str | None = None):
         #if user runs the command in dm
@@ -139,7 +139,7 @@ class WarnClear(commands.Cog):
     @app_commands.command(
         name = "warnclear",
         description = "Clears warnings of a member from the server.",
-        extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
+        extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target user to clear it's warning.", warn_id = "The ID of warning to clear.", reason = "The reason to clear warning.")

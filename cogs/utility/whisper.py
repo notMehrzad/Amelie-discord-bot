@@ -12,7 +12,7 @@ class Whisper(commands.Cog):
     @commands.command(
             name = "whisper",
             aliases = ["wh"],
-            extras = {"Category": "Utility", "in-Server": "Yes"},
+            extras = {"Category": "Utility", "server-only": "Yes"},
             usage = "<target> <message>",
             brief = "Whispers something to a member.",
             help = (
@@ -69,7 +69,7 @@ class Whisper(commands.Cog):
     @app_commands.command(
         name = "whisper",
         description = "Whispers something to a member.",
-        extras = {"Category": "Utility", "in-Server": "Yes"}
+        extras = {"Category": "Utility", "server-only": "Yes"}
     )
     @app_commands.guild_only()
     @app_commands.describe(target = "The Member to whisper.", message = "The message to be whispered.")

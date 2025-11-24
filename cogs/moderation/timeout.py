@@ -35,7 +35,7 @@ class Timeout(commands.Cog):
             help = (
                 ""
             ),
-            extras = {"Category": "Moderation", "Permissions needed": "`Timeout Members`", "in-Server": "Yes"}
+            extras = {"Category": "Moderation", "Permissions needed": "`Timeout Members`", "server-only": "Yes"}
     )
     async def timeout(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None, untilStr: str | None, *, reason: str | None = None):
         #if user runs the command in dm
@@ -145,7 +145,7 @@ class Timeout(commands.Cog):
     @app_commands.command(
             name = "timeout",
             description = "Time outs a member from the server.",
-            extras = {"Category": "Moderation", "Permissions needed": "`Timeout Members`", "in-Server": "Yes"}
+            extras = {"Category": "Moderation", "Permissions needed": "`Timeout Members`", "server-only": "Yes"}
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target member to time out.", until = "When the member's timeout should expire.", reason = "The reason to time out the target.")

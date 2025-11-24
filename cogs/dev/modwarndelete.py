@@ -9,12 +9,12 @@ logger = loggerSetup(__name__)
 with open("config.json") as file:
     config = json.load(file)
 
-class WarnDb(commands.Cog):
+class ModWarnDelete(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.command(
-        name = "warndb",
+        name = "modwarndelete",
         hidden = True,
         extras = {"Category": "Dev", "Subcommands": "all | server | user"},
         usage = "<subcommand> <id>",
@@ -27,7 +27,7 @@ class WarnDb(commands.Cog):
             "\n-If \"user\" subcommand is used, it takes another parameter <id> to fetch the target User and deletes that User warns table data."
         )
     )
-    async def warndb(self, ctx:commands.Context[commands.Bot], cmd : str | None = None, id: int | str | None = None):
+    async def modwarndelete(self, ctx:commands.Context[commands.Bot], cmd : str | None = None, id: int | str | None = None):
         #checks if the user is an admin to use the command
         if str(ctx.author.id) not in config["ADMINS"]:
             await ctx.reply(content ="You can't use this command.", delete_after = 5)
@@ -130,11 +130,11 @@ class WarnDb(commands.Cog):
             await ctx.message.delete(delay = 5)
             return
         
-    @warndb.error
-    async def warndb_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        logger.exception(f"❌ something went wrong with warndb command:")
-        await ctx.reply("something went wrong with **warndb**.", delete_after = 5)
+    @modwarndelete.error
+    async def modwarndelete_error(self, ctx: commands.Context[commands.Bot], error: Exception):
+        logger.exception(f"❌ something went wrong with modwarndelete command:")
+        await ctx.reply("something went wrong with **modwarndelete**.", delete_after = 5)
         
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(WarnDb(bot))
+    await bot.add_cog(ModWarnDelete(bot))

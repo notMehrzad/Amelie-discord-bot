@@ -17,7 +17,7 @@ class Ban(commands.Cog):
                 help = (
                     ""
                 ),
-                extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "in-Server": "Yes"}
+                extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "server-only": "Yes"}
         )
     async def ban(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None, *, reason: str | None = None):
         #if user runs the command in dm
@@ -96,7 +96,7 @@ class Ban(commands.Cog):
     @app_commands.command(
         name = "ban",
         description = "Bans a member from the server.",
-        extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "in-Server": "Yes"}
+        extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "server-only": "Yes"}
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target Member to ban from the server.", reason = "The reason you want to ban the target.")

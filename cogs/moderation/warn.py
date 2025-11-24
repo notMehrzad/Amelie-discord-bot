@@ -20,7 +20,7 @@ class Warn(commands.Cog):
             help = (
                 ""
             ),
-            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
+            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
     )
     async def warn(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None, *, reason: str | None = None):
         #if user runs the command in dm
@@ -129,7 +129,7 @@ class Warn(commands.Cog):
     @app_commands.command(
             name = "warn",
             description = "Warns a member from the server.",
-            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
+            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target member to warn.", reason = "The reason to warn the target.")

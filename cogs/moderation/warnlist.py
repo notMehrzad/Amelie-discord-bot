@@ -19,7 +19,7 @@ class WarnList(commands.Cog):
             help = (
                 ""
             ),
-            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
+            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
     )
     async def warnlist(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None = None):
         #if user runs the command in dm
@@ -142,7 +142,7 @@ class WarnList(commands.Cog):
     @app_commands.command(
         name = "warnlist",
         description = "Shows warnings of a member from the server.",
-        extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
+        extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target user to get warning list for.")

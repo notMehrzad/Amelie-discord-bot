@@ -1,10 +1,14 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+import json
 from typing import Any
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
+
+with open("config.json") as file:
+    config = json.load(file)
 
 class Help(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -30,6 +34,10 @@ class Help(commands.Cog):
             if not cmd:
                 return await ctx.reply(f"*{command}* doesn't exist. enter a valid command.")
             
+            #if command is hidden, checks if the user is an admin or not
+            if cmd.hidden and str(ctx.author.id) not in config["ADMINS"]:
+                return await ctx.reply(f"Help menu for this command is not avaiable.")
+                
             cmdEmbed = discord.Embed(
                 title = "." + cmd.name,
                 description = cmd.help or cmd.brief or "*no description*",
@@ -114,6 +122,10 @@ class Help(commands.Cog):
             #if the cmd is not found
             if not cmd:
                 return await interaction.response.send_message(f"*{command}* doesn't exist. enter a valid command.", ephemeral = True)
+            
+            #if command is hidden, checks if the user is an admin or not
+            if cmd.hidden and str(interaction.user.id) not in config["ADMINS"]:
+                return await interaction.response.send_message(f"Help menu for this command is not avaiable.")
             
             cmdEmbed = discord.Embed(
                 title = "." + cmd.name,

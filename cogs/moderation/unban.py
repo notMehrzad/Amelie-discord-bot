@@ -17,7 +17,7 @@ class Unban(commands.Cog):
             help = (
                 ""
             ),
-            extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "in-Server": "Yes"}
+            extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "server-only": "Yes"}
     )
     async def unban(self, ctx: commands.Context[commands.Bot], userId: int | str | None, *, reason: str | None = None):
         #if user runs the command in dm
@@ -77,7 +77,7 @@ class Unban(commands.Cog):
     @app_commands.command(
         name = "unban",
         description = "Unbans a user from the server.",
-        extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "in-Server": "Yes"}
+        extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "server-only": "Yes"}
     )
     @app_commands.guild_only()
     @app_commands.describe(user_id = "The target user ID to unban.", reason = "The reason you want to unban the target.")

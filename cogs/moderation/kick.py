@@ -17,7 +17,7 @@ class Kick(commands.Cog):
             help = (
                 ""
             ),
-            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
+            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
     )
     async def kick(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None, *, reason: str | None = None):
         #if user runs the command in dm
@@ -90,7 +90,7 @@ class Kick(commands.Cog):
     @app_commands.command(
         name = "kick",
         description = "Kicks a member from the server.",
-        extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "in-Server": "Yes"}
+        extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target Member to kick from the server.", reason = "The reason you want to kick the target.")

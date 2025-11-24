@@ -31,12 +31,25 @@ async def setup():
     );
     """)
 
-    #anon links table
+    #anon public ids table
     await conn.execute("""
     CREATE TABLE IF NOT EXISTS anonpublicids (
         public_id TEXT PRIMARY KEY NOT NULL,
         user_id INTEGER NOT NULL,
         created_date DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    #anon user contact table
+    await conn.execute("""
+    CREATE TABLE IF NOT EXISTS anonusercontact (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        public_id TEXT NOT NULL,
+        sender_id INTEGER NOT NULL,
+        sender_anon_id TEXT NOT NULL,
+        FOREIGN KEY (public_id) REFERENCES anonpublicids(public_id),
+        UNIQUE(public_id, sender_anon_id),
+        UNIQUE(public_id, sender_id)
     );
     """)
 
