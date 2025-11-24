@@ -53,5 +53,21 @@ async def setup():
     );
     """)
 
+    #anon session table
+    await conn.execute("""
+    CREATE TABLE IF NOT EXISTS anonsessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        reciever_id TEXT NOT NULL,
+        sender_id INTEGER NOT NULL,
+        sender_message_channel_id INTEGER NOT NULL,
+        sender_message_collector_id INTEGER NOT NULL,
+        session_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        responded INTEGER DEFAULT 0,
+        FOREIGN KEY (reciever_id) REFERENCES anonpublicids(public_id),
+        UNIQUE(reciever_id, sender_id, session_id)
+    );
+    """)
+
     await conn.commit() #commits the changes
     await conn.close()
