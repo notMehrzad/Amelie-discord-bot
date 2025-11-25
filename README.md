@@ -1,4 +1,4 @@
-# 🤖 Hades Bot
+# 🤖 Amélie
 
 A multipurpose Discord bot built using [discord.py](https://discordpy.readthedocs.io/).  
 Includes moderation, messaging, economy and automation features.
@@ -8,10 +8,12 @@ Includes moderation, messaging, economy and automation features.
 ## 🛠️ Installation
 
 1. **Clone the repository**
+
    ```bash
-   git clone https://github.com/notMehrzad/Hades-discord-bot.git
-   cd Hades Bot
+   git clone https://github.com/notMehrzad/Amelie-discord-bot.git
+   cd Amelie-discord-bot
    ```
+
 2. **Install dependencies**
 
    ```bash
@@ -19,13 +21,16 @@ Includes moderation, messaging, economy and automation features.
    ```
 
 3. **Create a `config.jason` file**
+
    ```json
    {
      "TOKEN": "Bot-Token",
      "ADMINS": ["Admins-Id"]
    }
    ```
+
 4. **Run the Bot**
+
    ```bash
    python main.py
    ```
@@ -35,7 +40,7 @@ Includes moderation, messaging, economy and automation features.
 ## 🧑‍💻 Contributing
 
 Pull requests are welcome!
-If you’d like to suggest a new command or report a bug, please open an [issue](https://github.com/notMehrzad/Hades-discord-bot/issues).
+If you’d like to suggest a new command or report a bug, please open an [issue](https://github.com/notMehrzad/Amelie-discord-bot/issues).
 
 ---
 
