@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import random
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -25,16 +26,25 @@ class Rps(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": (
+            "A game between two people. Both players display one of three symbols: Rock, Paper or Scissors."
+            "\n A Rock beats Scissors, a Paper beats Rock, a Scissors beats Paper."
+            "\nYou can only play with Amélie herself if you run this game in her dm."
+        ),
+        "brief": "Traditional *Rock, Paper, Scissors* game.",
+        "usage": "<target[*optional*]>",
+        "aliases": [],
+        "extras": {"Category": "Games"}
+    }
+
     @commands.command(
             name = "rps",
-            extras = {"Category": "Games"},
-            usage = "<target[*optional*]>",
-            brief = "Traditional *Rock, Paper, Scissors* game.",
-            help = (
-                "A game between two people. Both players display one of three symbols: Rock, Paper or Scissors."
-                "\n A Rock beats Scissors, a Paper beats Rock, a Scissors beats Paper."
-                "\nYou can only play with Amélie herself if you run this game in her dm."
-            )
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def rps(self, ctx: commands.Context[commands.Bot], user: discord.User | str | None = None):
         #if user mentions an invalid user
@@ -81,8 +91,8 @@ class Rps(commands.Cog):
     #rps slash command
     @app_commands.command(
         name = "rps",
-        description = "Traditional *Rock, Paper, Scissors* game.",
-        extras = {"Category": "Games"}
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     @app_commands.describe(user = "The user you want to play rps with.")
     async def slashRps(self, interaction: discord.Interaction, user: discord.User | None = None):

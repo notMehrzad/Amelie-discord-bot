@@ -6,11 +6,11 @@ from database import connection
 import secrets
 import string
 from typing import TypedDict
+from cogs.utility.help import HelpData
+from cogs.anonymous.anonid import publicIdLength
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
-
-publicIdLength = 12 #the length of the public ids
 
 class sessionData(TypedDict):
     messages: list[str]
@@ -20,7 +20,7 @@ def idGenerator(length: int):
     characters = string.ascii_letters + string.digits
     return "".join(secrets.choice(characters) for _ in range(length))
 
-async def privateId(conn: aiosqlite.Connection, publicId: str):
+async def privateIdGenerator(conn: aiosqlite.Connection, publicId: str):
     while True:
         privateId = idGenerator(6)
         async with conn.execute("""
@@ -35,13 +35,22 @@ class AnonSend(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.sessions: dict[int, sessionData] = {}
+    
+    Help: HelpData = {
+        "help": "",
+        "brief": "Sends an anonymous message to someone.",
+        "usage": "<public ID>",
+        "aliases": ["anons"],
+        "extras": {"Category": "Anonymous", "dm-only": "Yes"}
+    }
 
     @commands.command(
-        name = "anonsend",
-        aliases = ["anons"],
-        brief = "Sends an anonymous message to someone.",
-        help = "",
-        extras = {"Category": "Anonymous", "dm-only": "Yes"}
+            name = "anonsend",
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def anonsend(self, ctx: commands.Context[commands.Bot], publicId: str | None):
         #if user runs teh command in a server
@@ -84,17 +93,17 @@ class AnonSend(commands.Cog):
 
         #if user is not in target user anon contact, creates the contact
         if not row:
-            newPrivateId = await privateId(conn, publicId)
+            newId = await privateIdGenerator(conn, publicId)
             await conn.execute("""
             INSERT INTO anonusercontact (public_id, sender_id, sender_anon_id)
             VALUES (?, ?, ?);
-            """, (publicId, ctx.author.id, newPrivateId))
+            """, (publicId, ctx.author.id, newId))
             await conn.commit()
-            private_id = newPrivateId
+            privateId = newId
 
         #user anon contact exists
         else:
-            private_id: str = row["sender_anon_id"]
+            privateId: str = row["sender_anon_id"]
 
         #opens a session
         self.sessions[ctx.author.id] = {
@@ -102,7 +111,7 @@ class AnonSend(commands.Cog):
             "reciever_id" : recieverUser.id
         }
         
-        view = AnonView(ctx, conn, recieverUser, publicId, private_id, self.sessions) #initializes the Anon View
+        view = AnonView(ctx, conn, recieverUser, publicId, privateId, self.sessions) #initializes the Anon View
         await view.start()
 
     @anonsend.error
@@ -113,8 +122,8 @@ class AnonSend(commands.Cog):
     #anonsend slash command
     @app_commands.command(
         name = "anonsend",
-        description = "Sends an anonymous message to someone.",
-         extras = {"Category": "Anonymous", "dm-only": "Yes"}
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     @app_commands.dm_only()
     async def slashAnonsend(self, interaction: discord.Interaction, public_id: str):
@@ -152,17 +161,17 @@ class AnonSend(commands.Cog):
 
         #if user is not in target user anon contact, creates the contact
         if not row:
-            newPrivateId = await privateId(conn, public_id)
+            newId = await privateIdGenerator(conn, public_id)
             await conn.execute("""
             INSERT INTO anonusercontact (public_id, sender_id, sender_anon_id)
             VALUES (?, ?, ?);
-            """, (public_id, interaction.user.id, newPrivateId))
+            """, (public_id, interaction.user.id, newId))
             await conn.commit()
-            private_id = newPrivateId
+            privateId = newId
 
         #user anon contact exists
         else:
-            private_id: str = row["sender_anon_id"]
+            privateId: str = row["sender_anon_id"]
 
         #opens a session
         self.sessions[interaction.user.id] = {
@@ -170,7 +179,7 @@ class AnonSend(commands.Cog):
             "reciever_id" : recieverUser.id
         }
         
-        view = AnonView(interaction, conn, recieverUser, public_id, private_id, self.sessions) #initializes the Anon View
+        view = AnonView(interaction, conn, recieverUser, public_id, privateId, self.sessions) #initializes the Anon View
         await view.start()
 
     @slashAnonsend.error
@@ -198,10 +207,11 @@ class AnonView(discord.ui.View):
         if isinstance(ctx, discord.Interaction):
             self.slash = True
             self.interaction = ctx
+            self.user = ctx.user
         else:
             self.slash = False
             self.ctx = ctx
-        self.user = self.ctx.author if not self.slash else self.interaction.user
+            self.user = ctx.author
         self.conn = conn
         self.recieverUser = recieverUser
         self.public_id = public_id
@@ -217,6 +227,7 @@ class AnonView(discord.ui.View):
                 ),
                 color = discord.Color.blurple()
             )
+        #sends the initial message and stores channel and message id
         if not self.slash:
             self.msg = await self.ctx.reply(embed = initialEmbed, view = self)
             self.msgId = self.msg.id
@@ -230,7 +241,8 @@ class AnonView(discord.ui.View):
     #done button
     @discord.ui.button(
         label = "done",
-        style = discord.ButtonStyle.green
+        style = discord.ButtonStyle.green,
+        row = 0
     )
     async def done(self, interaction: discord.Interaction, button: discord.ui.Button[discord.ui.View]):
         if interaction.user.id != self.user.id:
@@ -242,6 +254,8 @@ class AnonView(discord.ui.View):
         
         endedSession = self.sessions.pop(self.user.id) #ends the session
         messages = endedSession["messages"] #collects the messages
+
+        #if no message is sent, session gets canceled
         if not messages:
             endEmbed = discord.Embed(
                 title = "Anonymous Message",
@@ -257,6 +271,7 @@ class AnonView(discord.ui.View):
             self.stop()
             return
 
+        #creates the session id
         async with self.conn.execute("""
         SELECT COALESCE(MAX(session_id), 0) + 1
         FROM anonsessions
@@ -265,6 +280,7 @@ class AnonView(discord.ui.View):
             row = await cursor.fetchone()
         sessionId: int = row[0] if row else 1
 
+        #stores the session in the database
         await self.conn.execute("""
         INSERT INTO anonsessions (session_id, reciever_id, sender_id, sender_message_channel_id, sender_message_collector_id, session_date)
         VALUES (?, ?, ?, ?, ?, ?);
@@ -273,6 +289,7 @@ class AnonView(discord.ui.View):
 
         await self.conn.close()
 
+        #send the messages to the target
         sendingEmbed = discord.Embed(
             title = "new Anonymous Message !",
             description = (
@@ -283,10 +300,11 @@ class AnonView(discord.ui.View):
         )
         msg = await self.recieverUser.send(embed = sendingEmbed) #sends an initial message to the reciever
 
-        #sends the collected messages
+        #replys the collected messages
         for m in messages:
             await msg.reply(m)
 
+        #sends the succeed message to the user
         notifyEmbed = discord.Embed(
             title = "Anonymous Message",
             description = f"Your messages have been sent to `{self.recieverUser.name}` succesfully. (Session ID: *{sessionId}*)",
@@ -300,10 +318,45 @@ class AnonView(discord.ui.View):
         
         self.stop()
 
-    async def on_timeout(self):
-        self.done.disabled = True
-        self.sessions.pop(self.user.id)
+    #cancel button
+    @discord.ui.button(
+            label = "cancel",
+            style = discord.ButtonStyle.gray,
+            row = 0
+    )
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button[discord.ui.View]):
+        if interaction.user.id != self.user.id:
+            return await interaction.response.send_message("You can't control this session.", ephemeral = True)
+        
+        await interaction.response.defer()
 
+        now = discord.utils.utcnow()
+        
+        self.sessions.pop(self.user.id) #ends the session
+
+        #sends the cancel message to the user
+        endEmbed = discord.Embed(
+                title = "Anonymous Message",
+                description = "You canceled the session.",
+                color = discord.Color.dark_gray(),
+                timestamp = now
+            )
+        if not self.slash:
+            await self.msg.edit(embed = endEmbed, view = None)
+        else:
+            await self.interaction.edit_original_response(embed = endEmbed, view = None)
+    
+        self.stop()
+
+    async def on_timeout(self):
+        #disables buttons on timeout
+        for btn in self.children:
+            if isinstance(btn, discord.ui.Button):
+                btn.disabled = True
+
+        self.sessions.pop(self.user.id) #ends the session
+
+        #sends the timeout message
         toEmbed = discord.Embed(
             title = "Anonymous Message",
             description = f"⏰ Session timeout."
@@ -327,7 +380,7 @@ class AnonView(discord.ui.View):
         except Exception:
             pass
             
-        self.stop() #stops further interaction
+        self.stop()
         
 
 async def setup(bot: commands.Bot):

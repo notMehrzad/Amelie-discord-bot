@@ -1,5 +1,6 @@
 from discord.ext import commands
 import json
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -11,13 +12,22 @@ class CommandSync(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": "",
+        "brief": "A command for syncing bot command tree.",
+        "usage": "",
+        "aliases": ["csync"],
+        "extras": {"Category": "Dev"}
+    }
+
     @commands.command(
             name = "commandsync",
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
             hidden = True,
-            usage = "",
-            brief = "A command for syncing bot command tree.",
-            help = "",
-            extras = {"Category": "Dev"}
+            extras = Help["extras"]
     )
     async def commandsync(self, ctx: commands.Context[commands.Bot]):
         #checks if the user is an admin to use the command

@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import json
 from database import connection
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -13,19 +14,28 @@ class ModWarnDelete(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(
-        name = "modwarndelete",
-        hidden = True,
-        extras = {"Category": "Dev", "Subcommands": "all | server | user"},
-        usage = "<subcommand> <id>",
-        brief = "A developer command to moderate warns table from database.",
-        help = (
+    Help: HelpData = {
+        "help": (
             "This command helps moderating the warns table in database."
             "\nIt has three subcommand (all, server, user):"
             "\n-If \"all\" subcommand is used, deletes all warns table data.."
             "\n-If \"server\" subcommand is used, it takes another parameter <id> to fetch the target Server and deletes that server warns table data."
             "\n-If \"user\" subcommand is used, it takes another parameter <id> to fetch the target User and deletes that User warns table data."
-        )
+        ),
+        "brief": "A developer command to moderate warns table from database.",
+        "usage": "<subcommand> <id>",
+        "aliases": [],
+        "extras": {"Category": "Dev", "Subcommands": "all | server | user"}
+    }
+
+    @commands.command(
+            name = "modwarndelete",
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            hidden = True,
+            extras = Help["extras"]
     )
     async def modwarndelete(self, ctx:commands.Context[commands.Bot], cmd : str | None = None, id: int | str | None = None):
         #checks if the user is an admin to use the command

@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -8,16 +9,22 @@ logger = loggerSetup(__name__)
 class Kick(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+
+    Help: HelpData = {
+        "help": "",
+        "brief": "Kicks a member from the server.",
+        "usage": "<target> <reason[*optional*]>",
+        "aliases": ["k"],
+        "extras": {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
+    }
     
     @commands.command(
             name = "kick",
-            aliases = ["k"],
-            usage = "<target> <reason[*optional*]>",
-            brief = "Kicks a member from the server.",
-            help = (
-                ""
-            ),
-            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def kick(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None, *, reason: str | None = None):
         #if user runs the command in dm
@@ -89,8 +96,8 @@ class Kick(commands.Cog):
     #kick slash command
     @app_commands.command(
         name = "kick",
-        description = "Kicks a member from the server.",
-        extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target Member to kick from the server.", reason = "The reason you want to kick the target.")

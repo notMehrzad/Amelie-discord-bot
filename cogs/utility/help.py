@@ -2,10 +2,17 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import json
-from typing import Any
+from typing import TypedDict, Any
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
+
+class HelpData(TypedDict):
+    help: str
+    brief: str
+    usage: str
+    aliases: list[str]
+    extras: dict[Any, Any]
 
 with open("config.json") as file:
     config = json.load(file)
@@ -14,16 +21,24 @@ class Help(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(
-            name = "help",
-            aliases = ["h"],
-            help = (
+    Help: HelpData = {
+        "help": (
                 "Shows the help menu which gives a brief information about Commands."
                 "\nEnter a Command name for its full detail such as its application, usage, necessery permissions (if any) and etc. or don't, to get the help menu."
-            ),
-            brief = "Shows the help menu.",
-            usage = "<command_name*[optional]*>",
-            extras = {"Category": "Utility"}
+        ),
+        "brief": "Shows the help menu.",
+        "usage": "<command_name*[optional]*>",
+        "aliases": ["h"],
+        "extras": {"Category": "Utility"}
+    }
+
+    @commands.command(
+            name = "help",
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def help(self, ctx: commands.Context[commands.Bot], command: str | None = None):
         #help for specific command
@@ -110,8 +125,8 @@ class Help(commands.Cog):
     #help slash command
     @app_commands.command(
         name = "help",
-        description = "Shows the help menu.",
-        extras = {"Category": "Utility"}
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     @app_commands.describe(command = "The command to get information of.", hidden = "Whether the help menu should be visible only to you or not.")
     async def slashHelp(self, interaction: discord.Interaction, command: str | None = None, hidden: bool = False):

@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import aiosqlite
 from database import connection
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -11,15 +12,21 @@ class WarnList(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": "",
+        "brief": "Shows warnings of a member from the server.",
+        "usage": "<target (mention *or* ID *or* \"all\")[*optional*]>",
+        "aliases": ["wl", "warns"],
+        "extras": {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
+    }
+
     @commands.command(
             name = "warnlist",
-            aliases = ["wl", "warns"],
-            usage = "<target (mention *or* ID *or* \"all\")[*optional*]>",
-            brief = "Shows warnings of a member from the server.",
-            help = (
-                ""
-            ),
-            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def warnlist(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None = None):
         #if user runs the command in dm
@@ -141,8 +148,8 @@ class WarnList(commands.Cog):
     #warnlist slash command
     @app_commands.command(
         name = "warnlist",
-        description = "Shows warnings of a member from the server.",
-        extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target user to get warning list for.")

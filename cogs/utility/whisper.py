@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -9,15 +10,21 @@ class Whisper(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": "Whispers a message to a member. use this command to talk with a member privately inside a server.",
+        "brief": "Whispers something to a member.",
+        "usage": "<target> <message>",
+        "aliases": ["wh"],
+        "extras": {"Category": "Utility", "server-only": "Yes"}
+    }
+
     @commands.command(
             name = "whisper",
-            aliases = ["wh"],
-            extras = {"Category": "Utility", "server-only": "Yes"},
-            usage = "<target> <message>",
-            brief = "Whispers something to a member.",
-            help = (
-                "Whispers a message to a member. use this command to talk with a member privately inside a server."
-            )
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def whisper(self, ctx: commands.Context[commands.Bot], user: discord.User | str | None, *, message: str | None):
         #if user runs the command in dm
@@ -68,8 +75,8 @@ class Whisper(commands.Cog):
     #whisper slash command
     @app_commands.command(
         name = "whisper",
-        description = "Whispers something to a member.",
-        extras = {"Category": "Utility", "server-only": "Yes"}
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     @app_commands.guild_only()
     @app_commands.describe(target = "The Member to whisper.", message = "The message to be whispered.")

@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -9,16 +10,22 @@ class Ban(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": "",
+        "brief": "Bans a member from the server.",
+        "usage": "<target> <reason[*optional*]>",
+        "aliases": ["b"],
+        "extras": {"Category": "Moderation", "Permissions needed": "`Ban Members`", "server-only": "Yes"}
+    }
+
     @commands.command(
-                name = "ban",
-                aliases = ["b"],
-                usage = "<target> <reason[*optional*]>",
-                brief = "Bans a member from the server.",
-                help = (
-                    ""
-                ),
-                extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "server-only": "Yes"}
-        )
+            name = "ban",
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
+    )
     async def ban(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None, *, reason: str | None = None):
         #if user runs the command in dm
         if not ctx.guild or not isinstance(ctx.author, discord.Member):
@@ -95,8 +102,8 @@ class Ban(commands.Cog):
     #ban slash command
     @app_commands.command(
         name = "ban",
-        description = "Bans a member from the server.",
-        extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "server-only": "Yes"}
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target Member to ban from the server.", reason = "The reason you want to ban the target.")

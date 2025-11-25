@@ -1,5 +1,6 @@
 from discord.ext import commands
 import json
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -11,17 +12,26 @@ class StartUp(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": (
+            "A cog handling command made for developers of the bot."
+            "\nif \"reload\" subcommand is used, it takes an optional parameter <cog_name> for reloading that specific cog. if not specified, all cogs will be reloaded instead."
+            "\nif \"list\" subcommand is used, it prints the cog list into the bots console."
+        ),
+        "brief": "A cog moderation command made for developers of the bot.",
+        "usage": "<subcommand> <cog_name[*optional*]>",
+        "aliases": [],
+        "extras": {"Category": "Dev", "Subcommands": "\"reload\"[aliases: \"r\"] | \"list\"[aliases: \"show\"]"}
+    }
+
     @commands.command(
             name = "cog",
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
             hidden = True,
-            usage = "<subcommand> <cog_name[*optional*]>",
-            brief = "A cog moderation command made for developers of the bot.",
-            help = (
-                "A cog handling command made for developers of the bot."
-                "\nif \"reload\" subcommand is used, it takes an optional parameter <cog_name> for reloading that specific cog. if not specified, all cogs will be reloaded instead."
-                "\nif \"list\" subcommand is used, it prints the cog list into the bots console."
-            ),
-            extras = {"Category": "Dev", "Subcommands": "\"reload\"[aliases: \"r\"] | \"list\"[aliases: \"show\"]"}
+            extras = Help["extras"]
     )
     async def cog(self, ctx: commands.Context[commands.Bot], cmd: str | None, extension: str | None = None):
         inGuild = True if ctx.guild else False

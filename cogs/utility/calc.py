@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import sympy as sp
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -10,16 +11,24 @@ class Calc(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": (
+            "Calculates the given math expression."
+            "\nsupports trigonometric, logarithms and etc."
+        ),
+        "brief": "Calculates the given math expression.",
+        "usage": "<math_expression>",
+        "aliases": ["calculator", "calculate"],
+        "extras": {"Category": "Utility"}
+    }
+
     @commands.command(
             name = "calc",
-            aliases = ["calculator", "calculate"],
-            usage = "<math_expression>",
-            brief = "Calculates the given math expression.",
-            help = (
-                "Calculates the given math expression."
-                "\nsupports trigonometric, logarithms and etc."
-            ),
-            extras = {"Category": "Utility"}
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def calc(self, ctx: commands.Context[commands.Bot], *, expression: str | None = None):
         if not expression:
@@ -54,7 +63,8 @@ class Calc(commands.Cog):
     #calc slash command
     @app_commands.command(
         name = "calc",
-        description = "Calculates the given math expression."
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     @app_commands.describe(expression = "The expression to be calculated.", hidden = "Whether the result should be vsible only to you or not.")
     async def slashCalc(self, interaction: discord.Interaction, expression: str, hidden: bool = False):

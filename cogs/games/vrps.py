@@ -4,6 +4,7 @@ from discord import app_commands
 import random
 import asyncio
 from typing import TypedDict
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -40,21 +41,29 @@ class Vrps(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": (
+            "A game between two people. yet needed a whole class-"
+            "\nFirst, everyone in the class draws either a Rock, Paper or Scissors on a card. Then they drop those cards into the ballot box so players can't see them."
+            "\nPlayers both draw *three* cards from the box, choose just one, and play *Rock, Paper, Scissors !*."
+            "\nIf it's a stalemate, both players draw from the remaining two cards and play again. If it's a stalemate all three times, it's a draw."
+            "\nThat makes up one game."
+            "\nUnlike normal Rock-Paper-Scissors, players don't always show their entire hand. Trying to read each other under such unfair circumstances is the appeal."
+            "\nYou can only play with Amélie herself if you run this game in her dm."
+        ),
+        "brief": "Classic rock-paper-scissors, but played with predetermined drawings on cards.",
+        "usage": "<target[*optional*]>",
+        "aliases": ["voterps"],
+        "extras": {"Category": "Games"}
+    }
+
     @commands.command(
             name = "vrps",
-            aliases = ["voterps"],
-            usage = "<target[*optional*]>",
-            extras = {"Category": "Games"},
-            brief = "Classic rock-paper-scissors, but played with predetermined drawings on cards.",
-            help = (
-                "A game between two people. yet needed a whole class-"
-                "\nFirst, everyone in the class draws either a Rock, Paper or Scissors on a card. Then they drop those cards into the ballot box so players can't see them."
-                "\nPlayers both draw *three* cards from the box, choose just one, and play *Rock, Paper, Scissors !*."
-                "\nIf it's a stalemate, both players draw from the remaining two cards and play again. If it's a stalemate all three times, it's a draw."
-                "\nThat makes up one game."
-                "\nUnlike normal Rock-Paper-Scissors, players don't always show their entire hand. Trying to read each other under such unfair circumstances is the appeal."
-                "\nYou can only play with Amélie herself if you run this game in her dm."
-            )
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def vrps(self, ctx: commands.Context[commands.Bot], user: discord.User | str | None = None):
         #if user mentions an invalid user
@@ -102,8 +111,8 @@ class Vrps(commands.Cog):
     #vrps slash command
     @app_commands.command(
         name = "vrps",
-        description = "Classic rock-paper-scissors, but played with predetermined drawings on cards.",
-        extras = {"Category": "Games"}
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     @app_commands.describe(user = "The user you want to play vrps with.")
     async def slashVrps(self, interaction: discord.Interaction, user: discord.User | None = None):

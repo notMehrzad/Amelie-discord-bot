@@ -4,6 +4,7 @@ from discord import app_commands
 import re
 from urllib.parse import urlparse
 import datetime
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -148,17 +149,26 @@ class Embed(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": (
+            "This command can sends or edits an embed in the channel."
+            "\nYou can specify Embed attributes like `key: (value)` (title: (hi) for instance). Supports all kind of Embed attributes."
+        ),
+        "brief": "Sends an Embed in the channel.",
+        "usage": "<embed argument 1> <embed argument 2> <embed argument ..>",
+        "aliases": [],
+        "extras": {"Category": "Utility"}
+    }
+
     @commands.command(
             name = "embed",
-            usage = "<subcommand> <embed_arguments>",
-            help = (
-                "This command can sends or edits an embed in the channel."
-                "\nYou can specify Embed attributes like `key: (value)` (title: (hi) for instance). Supports all kind of Embed attributes."
-            ),
-            brief = "Sends an Embed in the channel.",
-            extras = {"Category": "Utility"}
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
-    async def embed(self, ctx: commands.Context[commands.Bot], cmd: str | None = None, *, args: str | None = None):
+    async def embed(self, ctx: commands.Context[commands.Bot], *, args: str | None = None):
         #if user doesn't enter the arguments
         if not args:
             return await ctx.reply("You must enter at least one argument to create the Embed.")
@@ -198,8 +208,8 @@ class Embed(commands.Cog):
     #embed slash command
     @app_commands.command(
         name = "embed",
-        description = "Sends an Embed in the channel.",
-        extras = {"Category": "Utility"}
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     async def slashEmbed(
         self,

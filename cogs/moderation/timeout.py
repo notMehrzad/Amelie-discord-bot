@@ -4,6 +4,7 @@ from discord import app_commands
 from datetime import timedelta, timezone
 import dateparser
 import re
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -27,15 +28,21 @@ class Timeout(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": "",
+        "brief": "Time outs a member from the server.",
+        "usage": "<target> <date *or* time> <reason[*optional*]>",
+        "aliases": ["to"],
+        "extras": {"Category": "Moderation", "Permissions needed": "`Timeout Members`", "server-only": "Yes"}
+    }
+
     @commands.command(
             name = "timeout",
-            aliases = ["to"],
-            usage = "<target> <date *or* time> <reason[*optional*]>",
-            brief = "Time outs a member from the server.",
-            help = (
-                ""
-            ),
-            extras = {"Category": "Moderation", "Permissions needed": "`Timeout Members`", "server-only": "Yes"}
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def timeout(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None, untilStr: str | None, *, reason: str | None = None):
         #if user runs the command in dm
@@ -144,8 +151,8 @@ class Timeout(commands.Cog):
     #timeout slash command
     @app_commands.command(
             name = "timeout",
-            description = "Time outs a member from the server.",
-            extras = {"Category": "Moderation", "Permissions needed": "`Timeout Members`", "server-only": "Yes"}
+            description = Help["brief"],
+            extras = Help["extras"]
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target member to time out.", until = "When the member's timeout should expire.", reason = "The reason to time out the target.")

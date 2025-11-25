@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import time
 import asyncio
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -13,14 +14,24 @@ class Ping(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": (
+            "Checks Amelies conenction speed by measuring WebSocket Latency (which is the delay between bots server and Discord Gateway) and Bot Latency"
+            "\n(which is the time it takes Amélie to send a message and recieve a response)."
+        ),
+        "brief": "Pings Amélie.",
+        "usage": "",
+        "aliases": [],
+        "extras": {"Category": "Utility"}
+    }
+
     @commands.command(
             name = "ping",
-            brief = "Pings Amélie.",
-            help = (
-                "Checks Amelies conenction speed by measuring WebSocket Latency (which is the delay between bots server and Discord Gateway) and Bot Latency"
-                " (which is the time it takes Amélie to send a message and recieve a response)."
-            ),
-            extras = {"Category": "Utility"}
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def ping(self, ctx: commands.Context[commands.Bot]):
         pings: list[float] | None = [] #stores pings results
@@ -89,8 +100,8 @@ class Ping(commands.Cog):
     #ping slash command
     @app_commands.command(
             name = "ping",
-            description = "Pings Amélie.",
-            extras = {"Category": "Utility"}
+            description = Help["brief"],
+            extras = Help["extras"]
     )
     @app_commands.describe(hidden = "Whether the result should be visible only to you or not.")
     async def slashPing(self, interaction: discord.Interaction, hidden: bool = False):

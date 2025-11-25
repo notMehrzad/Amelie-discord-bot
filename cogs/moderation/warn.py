@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from database import connection
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -12,15 +13,21 @@ class Warn(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": "",
+        "brief": "Warns a member from the server.",
+        "usage": "<target (mention *or* id)> <reason[*optional*]>",
+        "aliases": ["w"],
+        "extras": {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
+    }
+
     @commands.command(
             name = "warn",
-            aliases = ["w"],
-            usage = "<target (mention *or* id)> <reason[*optional*]>",
-            brief = "Warns a member from the server.",
-            help = (
-                ""
-            ),
-            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def warn(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None, *, reason: str | None = None):
         #if user runs the command in dm
@@ -128,8 +135,8 @@ class Warn(commands.Cog):
     #warn slash command
     @app_commands.command(
             name = "warn",
-            description = "Warns a member from the server.",
-            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
+            description = Help["brief"],
+            extras = Help["extras"]
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target member to warn.", reason = "The reason to warn the target.")

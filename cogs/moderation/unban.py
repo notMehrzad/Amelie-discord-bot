@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -9,15 +10,21 @@ class Unban(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": "",
+        "brief": "Unbans a user from the server.",
+        "usage": "<target_ID> <reason[*optional*]>",
+        "aliases": ["ub"],
+        "extras": {"Category": "Moderation", "Permissions needed": "`Ban Members`", "server-only": "Yes"}
+    }
+
     @commands.command(
             name = "unban",
-            aliases = ["ub"],
-            usage = "<target_ID> <reason[*optional*]>",
-            brief = "Unbans a user from the server.",
-            help = (
-                ""
-            ),
-            extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "server-only": "Yes"}
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def unban(self, ctx: commands.Context[commands.Bot], userId: int | str | None, *, reason: str | None = None):
         #if user runs the command in dm
@@ -76,8 +83,8 @@ class Unban(commands.Cog):
     #unban slash command
     @app_commands.command(
         name = "unban",
-        description = "Unbans a user from the server.",
-        extras = {"Category": "Moderation", "Permissions needed": "`Ban Members`", "server-only": "Yes"}
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     @app_commands.guild_only()
     @app_commands.describe(user_id = "The target user ID to unban.", reason = "The reason you want to unban the target.")

@@ -4,6 +4,7 @@ from discord import app_commands
 import aiosqlite
 from database import connection
 from typing import cast
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -12,12 +13,21 @@ class AnonReply(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": "",
+        "brief": "Replys to an anonymous message.",
+        "usage": "<private ID> <session ID> <message>",
+        "aliases": ["anonr"],
+        "extras": {"Category": "Anonymous", "dm-only": "Yes"}
+    }
+
     @commands.command(
-        name = "anonreply",
-        aliases = ["anonr"],
-        brief = "Replys to an anonymous message.",
-        help = "",
-        extras = {"Category": "Anonymous", "dm-only": "Yes"}
+            name = "anonreply",
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def anonreply(self, ctx: commands.Context[commands.Bot], privateId: str | None, sessionId: int | str | None, *, message: str | None):
         #if user runs teh command in a server
@@ -142,8 +152,8 @@ class AnonReply(commands.Cog):
     #anonreply slash command
     @app_commands.command(
         name = "anonreply",
-        description = "Replys to an anonymous message.",
-         extras = {"Category": "Anonymous", "dm-only": "Yes"}
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     @app_commands.dm_only()
     async def slashAnonreply(self, interaction: discord.Interaction, private_id: str, session_id: int, message: str):

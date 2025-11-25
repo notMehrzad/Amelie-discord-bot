@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from database import connection
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -10,15 +11,21 @@ class WarnClear(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": "",
+        "brief": "Clears warnings of a member from the server.",
+        "usage": "<target (mention *or* id)> <warn ID (*or* \"all\")[*optional*]> <reason[*optional*]>",
+        "aliases": ["wc", "warnremove", "wr"],
+        "extras": {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
+    }
+
     @commands.command(
             name = "warnclear",
-            aliases = ["wc", "warnremove", "wr"],
-            usage = "<target (mention *or* id)> <warn ID (*or* \"all\")[*optional*]> <reason[*optional*]>",
-            brief = "Clears warnings of a member from the server.",
-            help = (
-                ""
-            ),
-            extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def warnclear(self, ctx: commands.Context[commands.Bot], user: discord.User | int | str | None, warnId: int | str | None = None, *, reason: str | None = None):
         #if user runs the command in dm
@@ -138,8 +145,8 @@ class WarnClear(commands.Cog):
     #warnclear slash command
     @app_commands.command(
         name = "warnclear",
-        description = "Clears warnings of a member from the server.",
-        extras = {"Category": "Moderation", "Permissions needed": "`Kick, Approve and Reject Members`", "server-only": "Yes"}
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     @app_commands.guild_only()
     @app_commands.describe(user = "The target user to clear it's warning.", warn_id = "The ID of warning to clear.", reason = "The reason to clear warning.")

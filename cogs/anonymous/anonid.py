@@ -5,6 +5,7 @@ import aiosqlite
 from database import connection
 import secrets
 import string
+from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -15,7 +16,7 @@ def idGenerator(length: int):
     characters = string.ascii_letters + string.digits
     return "".join(secrets.choice(characters) for _ in range(length))
 
-async def publicId(conn: aiosqlite.Connection):
+async def publicIdGenerator(conn: aiosqlite.Connection):
     while True:
         publicId = idGenerator(publicIdLength)
         async with conn.execute("""
@@ -30,12 +31,21 @@ class AnonId(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    Help: HelpData = {
+        "help": "",
+        "brief": "Shows the anonymous ID for the user.",
+        "usage": "",
+        "aliases": ["anonymousid"],
+        "extras": {"Category": "Anonymous", "dm-only": "Yes"}
+    }
+
     @commands.command(
-        name = "anonid",
-        aliases = ["anonymousid"],
-        brief = "Shows the anonymous ID for the user.",
-        help = "",
-        extras = {"Category": "Anonymous", "dm-only": "Yes"}
+            name = "anonid",
+            help = Help["help"],
+            brief = Help["brief"],
+            usage = Help["usage"],
+            aliases = Help["aliases"],
+            extras = Help["extras"]
     )
     async def anonid(self, ctx: commands.Context[commands.Bot]):
         #if user runs teh command in a server
@@ -53,7 +63,7 @@ class AnonId(commands.Cog):
 
         #if user id doesn't exist
         if not row:
-            newId = await publicId(conn) #creates an id
+            newId = await publicIdGenerator(conn) #creates an id
             
             #inserts the new created id
             await conn.execute("""
@@ -62,11 +72,11 @@ class AnonId(commands.Cog):
             """, (newId, ctx.author.id, discord.utils.utcnow()))
             await conn.commit()
 
-            public_id = newId
+            publicId = newId
         
         #checks if id length is ok
         elif len(row[0]) != publicIdLength:
-            newId = await publicId(conn) #creates another id with updated length
+            newId = await publicIdGenerator(conn) #creates another id with updated length
 
             #updates the existing id
             await conn.execute("""
@@ -76,23 +86,24 @@ class AnonId(commands.Cog):
             """, (newId, ctx.author.id))
             await conn.commit()
 
-            public_id = newId
+            publicId = newId
 
         #public id exists
         else:
-            public_id: str = row[0]
+            publicId: str = row[0]
         
         await conn.close() #closes the connection
 
+        #sends the result
         resultEmbed = discord.Embed(
             title = "Anonymous ID",
             description = (
-                f"Your anonymous ID is: `{public_id}`"
+                f"Your anonymous ID is: `{publicId}`"
                 "\nShare this somewhere and people can message you anonymously using `anonsend` command."
             ),
             color = discord.Color.blurple()
         )
-        await ctx.reply(embed = resultEmbed) #sends the result
+        await ctx.reply(embed = resultEmbed)
 
     @anonid.error
     async def anonid_error(self, ctx: commands.Context[commands.Bot], error: Exception):
@@ -102,8 +113,8 @@ class AnonId(commands.Cog):
     #anonid slash command
     @app_commands.command(
         name = "anonid",
-        description = "Shows the anonymous ID for the user.",
-         extras = {"Category": "Anonymous", "dm-only": "Yes"}
+        description = Help["brief"],
+        extras = Help["extras"]
     )
     @app_commands.dm_only()
     async def slashAnonid(self, interaction: discord.Interaction):
@@ -120,7 +131,7 @@ class AnonId(commands.Cog):
 
         #if user id doesn't exist
         if not row:
-            newId = await publicId(conn) #creates an id
+            newId = await publicIdGenerator(conn) #creates an id
             
             #inserts the new created id
             await conn.execute("""
@@ -129,11 +140,11 @@ class AnonId(commands.Cog):
             """, (newId, interaction.user.id, discord.utils.utcnow()))
             await conn.commit()
 
-            public_id = newId
+            publicId = newId
         
         #checks if id length is ok
         elif len(row[0]) != publicIdLength:
-            newId = await publicId(conn) #creates another id with updated length
+            newId = await publicIdGenerator(conn) #creates another id with updated length
 
             #updates the existing id
             await conn.execute("""
@@ -143,18 +154,18 @@ class AnonId(commands.Cog):
             """, (newId, interaction.user.id))
             await conn.commit()
 
-            public_id = newId
+            publicId = newId
 
         #public id exists
         else:
-            public_id: str = row[0]
+            publicId: str = row[0]
         
         await conn.close() #closes the connection
 
         resultEmbed = discord.Embed(
             title = "Anonymous ID",
             description = (
-                f"Your anonymous ID is: `{public_id}`"
+                f"Your anonymous ID is: `{publicId}`"
                 "\nShare this somewhere and people can message you anonymously using `anonsend` command."
             ),
             color = discord.Color.blurple()
