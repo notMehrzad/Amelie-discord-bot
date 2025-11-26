@@ -30,18 +30,25 @@ class CommandSync(commands.Cog):
             extras = Help["extras"]
     )
     async def commandsync(self, ctx: commands.Context[commands.Bot]):
+        inGuild = True if ctx.guild else False
+
         #checks if the user is an admin to use the command
         if str(ctx.author.id) not in config["ADMINS"]:
-            await ctx.reply(content ="You can't use this command.", delete_after = 5)
-            await ctx.message.delete(delay = 5)
+            msg = await ctx.reply("You can't use this command.")
+            if inGuild:
+                await msg.delete(delay = 5)
+                await ctx.message.delete()
             return
         
         syncedCmds = await self.bot.tree.sync()
         syncedCmds = [("/" + cmd.name) for cmd in syncedCmds]
         print("\n--------------")
         print(f"{syncedCmds} commands have been synced. ✔️")
-        await ctx.reply("All slash commands have been synced.", delete_after = 5)
-        await ctx.message.delete(delay = 5)
+        msg = await ctx.reply("All slash commands have been synced.")
+        if inGuild:
+            await msg.delete(delay = 5)
+            await ctx.message.delete(delay = 5)
+            return
     
     @commandsync.error
     async def commandsync_error(self, ctx: commands.Context[commands.Bot], error: Exception):

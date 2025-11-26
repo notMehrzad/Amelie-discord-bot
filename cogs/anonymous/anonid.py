@@ -32,7 +32,11 @@ class AnonId(commands.Cog):
         self.bot = bot
 
     Help: HelpData = {
-        "help": "",
+        "help": (
+            "Shows the public anonymous ID for the user."
+            "\nIf user had no ID before, creates one for it."
+            "\nUser can share this public ID anywhere and people can start sending anonymous messages with it (try `/help anonsend` for more information)."
+        ),
         "brief": "Shows the anonymous ID for the user.",
         "usage": "",
         "aliases": ["anonymousid"],

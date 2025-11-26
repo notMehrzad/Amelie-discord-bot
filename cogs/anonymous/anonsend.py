@@ -3,26 +3,22 @@ from discord.ext import commands
 from discord import app_commands
 import aiosqlite
 from database import connection
-import secrets
-import string
 from typing import TypedDict
 from cogs.utility.help import HelpData
-from cogs.anonymous.anonid import publicIdLength
+from cogs.anonymous.anonid import idGenerator, publicIdLength
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 
-class sessionData(TypedDict):
-    messages: list[str]
-    reciever_id: int
+privateIdLength = 6 #the length of the private ids
 
-def idGenerator(length: int):
-    characters = string.ascii_letters + string.digits
-    return "".join(secrets.choice(characters) for _ in range(length))
+class sessionData(TypedDict):
+    messages: list[discord.Message]
+    reciever_id: int
 
 async def privateIdGenerator(conn: aiosqlite.Connection, publicId: str):
     while True:
-        privateId = idGenerator(6)
+        privateId = idGenerator(privateIdLength)
         async with conn.execute("""
         SELECT 1 FROM anonusercontact
         WHERE public_id = ? AND sender_anon_id = ?;
@@ -37,7 +33,9 @@ class AnonSend(commands.Cog):
         self.sessions: dict[int, sessionData] = {}
     
     Help: HelpData = {
-        "help": "",
+        "help": (
+            "Starts an anonymous messaging session, allowing the user to send as many messages as they want anonymously to the target who has shared their public ID."
+        ),
         "brief": "Sends an anonymous message to someone.",
         "usage": "<public ID>",
         "aliases": ["anons"],
@@ -67,7 +65,7 @@ class AnonSend(commands.Cog):
         
         #if user enters an invalid id
         if len(publicId) != publicIdLength:
-            return await ctx.reply("Enter a valid ID.")
+            return await ctx.reply("Enter a valid public ID.")
         
         conn = await connection() #makes a connection to the database
         conn.row_factory = aiosqlite.Row
@@ -199,7 +197,7 @@ class AnonSend(commands.Cog):
             return
         
         if msg.author.id in self.sessions:
-            self.sessions[msg.author.id]["messages"].append(msg.content)
+            self.sessions[msg.author.id]["messages"].append(msg)
 
 class AnonView(discord.ui.View):
     def __init__(self, ctx: commands.Context[commands.Bot] | discord.Interaction, conn: aiosqlite.Connection, recieverUser: discord.User, public_id: str, private_id: str, sessions: dict[int, sessionData]):
@@ -231,12 +229,10 @@ class AnonView(discord.ui.View):
         if not self.slash:
             self.msg = await self.ctx.reply(embed = initialEmbed, view = self)
             self.msgId = self.msg.id
-            self.msgChannelId = self.msg.channel.id
         else:
             await self.interaction.followup.send(embed = initialEmbed, view = self)
-            self.msgId = self.interaction.id
-            if isinstance(self.interaction.channel, discord.DMChannel):
-                self.msgChannelId = self.interaction.channel.id
+            msg = await self.interaction.original_response()
+            self.msgId = msg.id
         
     #done button
     @discord.ui.button(
@@ -282,9 +278,9 @@ class AnonView(discord.ui.View):
 
         #stores the session in the database
         await self.conn.execute("""
-        INSERT INTO anonsessions (session_id, reciever_id, sender_id, sender_message_channel_id, sender_message_collector_id, session_date)
-        VALUES (?, ?, ?, ?, ?, ?);
-        """, (sessionId, self.public_id, self.private_id, self.msgChannelId, self.msgId, now))
+        INSERT INTO anonsessions (session_id, reciever_id, sender_id, sender_message_collector_id, session_date)
+        VALUES (?, ?, ?, ?, ?);
+        """, (sessionId, self.public_id, self.private_id, self.msgId, now))
         await self.conn.commit()
 
         await self.conn.close()
@@ -302,7 +298,17 @@ class AnonView(discord.ui.View):
 
         #replys the collected messages
         for m in messages:
-            await msg.reply(m)
+            #if message is sticker
+            if m.stickers:
+                for s in m.stickers:
+                    await msg.reply(s.url)
+                break
+
+            #if message is text, file or embed or combinations of them
+            content = m.content
+            files = [await a.to_file() for a in m.attachments]
+
+            await msg.reply(content = content, files = files, embeds = m.embeds)
 
         #sends the succeed message to the user
         notifyEmbed = discord.Embed(

@@ -60,7 +60,6 @@ async def setup():
         session_id INTEGER NOT NULL,
         reciever_id TEXT NOT NULL,
         sender_id INTEGER NOT NULL,
-        sender_message_channel_id INTEGER NOT NULL,
         sender_message_collector_id INTEGER NOT NULL,
         session_date DATETIME DEFAULT CURRENT_TIMESTAMP,
         responded INTEGER DEFAULT 0,

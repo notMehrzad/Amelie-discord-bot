@@ -38,7 +38,7 @@ class StartUp(commands.Cog):
 
         #checks if the user is an admin to use the command
         if str(ctx.author.id) not in config["ADMINS"]:
-            msg = await ctx.reply(content ="You can't use this command.")
+            msg = await ctx.reply("You can't use this command.")
             if inGuild:
                 await msg.delete(delay = 5)
                 await ctx.message.delete()
@@ -46,7 +46,7 @@ class StartUp(commands.Cog):
         
         #if user entered no subcommand
         if not cmd:
-            msg = await ctx.reply(content ="You must enter a subcommand for this command.")
+            msg = await ctx.reply("You must enter a subcommand for this command.")
             if inGuild:
                 await msg.delete(delay = 5)
                 await ctx.message.delete(delay = 5)

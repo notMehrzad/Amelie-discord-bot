@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import aiosqlite
 from database import connection
-from typing import cast
+from cogs.anonymous.anonsend import privateIdLength
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
@@ -14,8 +14,11 @@ class AnonReply(commands.Cog):
         self.bot = bot
 
     Help: HelpData = {
-        "help": "",
-        "brief": "Replys to an anonymous message.",
+        "help": (
+            "Replys to an anonymous session created via the anonymous sender."
+            "\nThe anonymous sender will recieve the reply message and get notified who responded to their anonymous session."
+        ),
+        "brief": "Replys to an anonymous session.",
         "usage": "<private ID> <session ID> <message>",
         "aliases": ["anonr"],
         "extras": {"Category": "Anonymous", "dm-only": "Yes"}
@@ -52,6 +55,9 @@ class AnonReply(commands.Cog):
         if not privateId:
             return await ctx.reply("You must enter the private ID of the user you want to reply.")
         
+        if len(privateId) != privateIdLength:
+            return await ctx.reply("Enter a valid private ID.")
+        
         #checks if target private id is in users anon contact
         async with conn.execute("""
         SELECT sender_id FROM anonusercontact
@@ -73,7 +79,7 @@ class AnonReply(commands.Cog):
             """, (public_id, senderUserId))
             await conn.commit()
 
-            return await ctx.reply("The sender with this private ID dosn't exist anymore.")
+            return await ctx.reply("The sender with this private ID doesn't exist anymore.")
         
         #if user doesn't enter the session id
         if not sessionId:
@@ -84,7 +90,7 @@ class AnonReply(commands.Cog):
         
         #checks if session id with target private id exists in sessions
         async with conn.execute("""
-        SELECT sender_message_channel_id, sender_message_collector_id, responded FROM anonsessions
+        SELECT sender_message_collector_id, responded FROM anonsessions
         WHERE reciever_id = ? AND sender_id = ? AND session_id = ?;
         """, (public_id, privateId, sessionId)) as cursor:
             row = await cursor.fetchone()
@@ -94,12 +100,12 @@ class AnonReply(commands.Cog):
         if row["responded"] == 1:
             return await ctx.reply("You have already responded this session before.")
         
-        #fetches the channel and sent message from that channel of sender
+        channel = senderUser.dm_channel or await senderUser.create_dm() #fetches the dm channel
+        #fetches the message collecter message
         try:
-            channel = cast(discord.DMChannel, self.bot.get_channel(row["sender_message_channel_id"]) or await self.bot.fetch_channel(row["sender_message_channel_id"]))
             fetchedMessage = await channel.fetch_message(row["sender_message_collector_id"])
         except discord.NotFound:
-            channel = fetchedMessage = None
+            fetchedMessage = None
 
         #if user doesn't enter message
         if not message:
@@ -108,9 +114,9 @@ class AnonReply(commands.Cog):
         now = discord.utils.utcnow()
         
         desc = (
-            f"`{ctx.author.display_name}` has replied to [this]({fetchedMessage.jump_url}) session:"
+            f"`{ctx.author.display_name}` has replied to [this]({fetchedMessage.jump_url}) Session(Session ID: *{sessionId}*):"
             if fetchedMessage else
-            f"`{ctx.author.display_name}` has replied to the session with ID: *{sessionId}*:"
+            f"`{ctx.author.display_name}` has replied to the Session(Session ID: *{sessionId}*):"
         )
         sendingEmbed = discord.Embed(
             title = "Anonymous Message",
@@ -138,7 +144,7 @@ class AnonReply(commands.Cog):
 
         resultEmbed = discord.Embed(
             title = "Anonymous Message",
-            description = f"Your reply message for `{privateId}` with Session ID: *{sessionId}* has been sent.",
+            description = f"Your reply message for `{privateId}` with Session(Session ID: *{sessionId}*) has been sent.",
             color = discord.Color.green(),
             timestamp = now
         )
@@ -157,8 +163,6 @@ class AnonReply(commands.Cog):
     )
     @app_commands.dm_only()
     async def slashAnonreply(self, interaction: discord.Interaction, private_id: str, session_id: int, message: str):
-        await interaction.response.defer()
-
         conn = await connection() #makes a connection to the database
         conn.row_factory = aiosqlite.Row
 
@@ -172,6 +176,9 @@ class AnonReply(commands.Cog):
             return await interaction.response.send_message("You have no public ID so nobody has sent you anything.", ephemeral = True)
 
         public_id: str = row["public_id"]
+
+        if len(private_id) != privateIdLength:
+            return await interaction.response.send_message("Enter a valid private ID.", ephemeral = True)
         
         #checks if target private id is in users anon contact
         async with conn.execute("""
@@ -198,7 +205,7 @@ class AnonReply(commands.Cog):
 
         #checks if session id with target private id exists in sessions
         async with conn.execute("""
-        SELECT sender_message_channel_id, sender_message_collector_id, responded FROM anonsessions
+        SELECT sender_message_collector_id, responded FROM anonsessions
         WHERE reciever_id = ? AND sender_id = ? AND session_id = ?;
         """, (public_id, private_id, session_id)) as cursor:
             row = await cursor.fetchone()
@@ -208,19 +215,19 @@ class AnonReply(commands.Cog):
         if row["responded"] == 1:
             return await interaction.response.send_message("You have already responded this session before.", ephemeral = True)
         
-        #fetches the channel and sent message from that channel of sender
+        channel = senderUser.dm_channel or await senderUser.create_dm() #fetches the dm channel
+        #fetches the message collecter message
         try:
-            channel = cast(discord.DMChannel, self.bot.get_channel(row["sender_message_channel_id"]) or await self.bot.fetch_channel(row["sender_message_channel_id"]))
             fetchedMessage = await channel.fetch_message(row["sender_message_collector_id"])
         except discord.NotFound:
-            channel = fetchedMessage = None
+            fetchedMessage = None
         
         now = discord.utils.utcnow()
         
         desc = (
-            f"`{interaction.user.display_name}` has replied to [this]({fetchedMessage.jump_url}) session:"
+            f"`{interaction.user.display_name}` has replied to [this]({fetchedMessage.jump_url}) Session(Session ID: *{session_id}*):"
             if fetchedMessage else
-            f"`{interaction.user.display_name}` has replied to the session with ID: *{session_id}*:"
+            f"`{interaction.user.display_name}` has replied to the Session(Session ID: *{session_id}*):"
         )
         sendingEmbed = discord.Embed(
             title = "Anonymous Message",
@@ -248,11 +255,11 @@ class AnonReply(commands.Cog):
 
         resultEmbed = discord.Embed(
             title = "Anonymous Message",
-            description = f"Your reply message for `{private_id}` with Session ID: *{session_id}* has been sent.",
+            description = f"Your reply message for `{private_id}` with Session(Session ID: *{session_id}*) has been sent.",
             color = discord.Color.green(),
             timestamp = now
         )
-        await interaction.followup.send(embed = resultEmbed) #sends the succeed message for the user
+        await interaction.response.send_message(embed = resultEmbed) #sends the succeed message for the user
 
     @slashAnonreply.error
     async def slashAnonreply_error(self, interaction: discord.Interaction, error: Exception):

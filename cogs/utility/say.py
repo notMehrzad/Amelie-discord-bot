@@ -11,9 +11,13 @@ class Say(commands.Cog):
         self.bot = bot
 
     Help: HelpData = {
-        "help": "",
-        "brief": "Says something in the channel.",
-        "usage": "<message>",
+        "help": (
+            "Says the given message in the desired channel."
+            "But first, it checks if the user(and Amélie herself) have the propper permission to say or send something in the target channel."
+            "\nThis also works in DM and Group channels."
+        ),
+        "brief": "Says something in a channel.",
+        "usage": "<target channel *or* \"here\"> <message>",
         "aliases": ["echo"],
         "extras": {"Category": "Utility"}
     }
@@ -33,7 +37,7 @@ class Say(commands.Cog):
         
         #if user entes an invalid channel
         if isinstance(channel, str):
-            if channel.lower() == "here":
+            if channel.lower().strip() == "here":
                 targetChannel = ctx.channel
             else:
                 return await ctx.reply("Enter a valid channel.")
