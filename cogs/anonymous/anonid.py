@@ -52,7 +52,7 @@ class AnonId(commands.Cog):
             extras = Help["extras"]
     )
     async def anonid(self, ctx: commands.Context[commands.Bot]):
-        #if user runs teh command in a server
+        #if user runs the command in a server
         if ctx.guild:
             return await ctx.reply("This command can only be used in Amélie's dm.")
 

@@ -33,7 +33,7 @@ class AnonReply(commands.Cog):
             extras = Help["extras"]
     )
     async def anonreply(self, ctx: commands.Context[commands.Bot], privateId: str | None, sessionId: int | str | None, *, message: str | None):
-        #if user runs teh command in a server
+        #if user runs the command in a server
         if ctx.guild:
             return await ctx.reply("This command can only be used in Amélie's dm.")
         
@@ -60,12 +60,15 @@ class AnonReply(commands.Cog):
         
         #checks if target private id is in users anon contact
         async with conn.execute("""
-        SELECT sender_id FROM anonusercontact
+        SELECT sender_id, blocked FROM anonusercontact
         WHERE public_id = ? AND sender_anon_id = ?;
         """, (public_id, privateId)) as cursor:
             row = await cursor.fetchone()
         if not row:
             return await ctx.reply("User with given ID hasn't sent you anything.")
+        
+        if row["blocked"]:
+            return await ctx.reply("You have blocked this user and can't reply to them anymore.")
         
         senderUserId: int = row["sender_id"]
         try:
@@ -182,12 +185,15 @@ class AnonReply(commands.Cog):
         
         #checks if target private id is in users anon contact
         async with conn.execute("""
-        SELECT sender_id FROM anonusercontact
+        SELECT sender_id, blocked FROM anonusercontact
         WHERE public_id = ? AND sender_anon_id = ?;
         """, (public_id, private_id)) as cursor:
             row = await cursor.fetchone()
         if not row:
             return await interaction.response.send_message("User with given ID hasn't sent you anything.", ephemeral = True)
+        
+        if row["blocked"]:
+            return await interaction.response.send_message("You have blocked this user and can't reply to them anymore.", ephemeral = True)
         
         senderUserId: int = row["sender_id"]
         try:

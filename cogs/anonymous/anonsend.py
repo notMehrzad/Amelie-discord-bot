@@ -51,7 +51,7 @@ class AnonSend(commands.Cog):
             extras = Help["extras"]
     )
     async def anonsend(self, ctx: commands.Context[commands.Bot], publicId: str | None):
-        #if user runs teh command in a server
+        #if user runs the command in a server
         if ctx.guild:
             return await ctx.reply("This command can only be used in Amélie's dm.")
 
@@ -84,7 +84,7 @@ class AnonSend(commands.Cog):
         
         #if user contact doesn't exist
         async with conn.execute("""
-        SELECT sender_anon_id from anonusercontact
+        SELECT sender_anon_id, blocked from anonusercontact
         WHERE public_id = ? AND sender_id = ?;
         """, (publicId, ctx.author.id)) as cursor:
             row = await cursor.fetchone()
@@ -99,7 +99,10 @@ class AnonSend(commands.Cog):
             await conn.commit()
             privateId = newId
 
-        #user anon contact exists
+        #if user contact exists but is blocked
+        elif row["blocked"] == 1:
+            return await ctx.reply("You can't send anonymous messages to this user.")
+
         else:
             privateId: str = row["sender_anon_id"]
 
@@ -133,8 +136,6 @@ class AnonSend(commands.Cog):
         if len(public_id) != publicIdLength:
             return await interaction.response.send_message("Enter a valid ID.", ephemeral = True)
         
-        await interaction.response.defer()
-        
         conn = await connection() #makes a connection to the database
         conn.row_factory = aiosqlite.Row
 
@@ -146,13 +147,13 @@ class AnonSend(commands.Cog):
             row = await cursor.fetchone()
         #if user with given public id doesn't exist
         if not row:
-            return await interaction.followup.send("User with this ID doesn't exist.", ephemeral = True)
+            return await interaction.response.send_message("User with this ID doesn't exist.", ephemeral = True)
         
         recieverUser = self.bot.get_user(row["user_id"]) or await self.bot.fetch_user(row["user_id"]) #fetches the reciever user from found id
         
         #if user contact doesn't exist
         async with conn.execute("""
-        SELECT sender_anon_id from anonusercontact
+        SELECT sender_anon_id, blocked from anonusercontact
         WHERE public_id = ? AND sender_id = ?;
         """, (public_id, interaction.user.id)) as cursor:
             row = await cursor.fetchone()
@@ -167,7 +168,10 @@ class AnonSend(commands.Cog):
             await conn.commit()
             privateId = newId
 
-        #user anon contact exists
+        #if user contact exists but is blocked
+        elif row["blocked"] == 1:
+            return await interaction.response.send_message("You can't send anonymous messages to this user.", ephemeral = True)
+        
         else:
             privateId: str = row["sender_anon_id"]
 
@@ -230,7 +234,7 @@ class AnonView(discord.ui.View):
             self.msg = await self.ctx.reply(embed = initialEmbed, view = self)
             self.msgId = self.msg.id
         else:
-            await self.interaction.followup.send(embed = initialEmbed, view = self)
+            await self.interaction.response.send_message(embed = initialEmbed, view = self)
             msg = await self.interaction.original_response()
             self.msgId = msg.id
         

@@ -1,4 +1,15 @@
 import aiosqlite
+from typing import TypedDict
+
+class EconomyData(TypedDict):
+    name: str
+    icon: str
+
+#economy constant datas
+economyData: EconomyData = {
+    "name": "Cookie",
+    "icon": "<:1lvl:1027191671328354304>"
+}
 
 #connection helper function
 async def connection():
@@ -47,6 +58,7 @@ async def setup():
         public_id TEXT NOT NULL,
         sender_id INTEGER NOT NULL,
         sender_anon_id TEXT NOT NULL,
+        blocked INTEGER DEFAULT 0,
         FOREIGN KEY (public_id) REFERENCES anonpublicids(public_id),
         UNIQUE(public_id, sender_anon_id),
         UNIQUE(public_id, sender_id)
@@ -65,6 +77,16 @@ async def setup():
         responded INTEGER DEFAULT 0,
         FOREIGN KEY (reciever_id) REFERENCES anonpublicids(public_id),
         UNIQUE(reciever_id, sender_id, session_id)
+    );
+    """)
+
+    #user balance table
+    await conn.execute("""
+    CREATE TABLE IF NOT EXISTS userbalance (
+        user_id INTEGER PRIMARY KEY NOT NULL,
+        balance INTEGER NOT NULL,
+        last_daily_date DATETIME,
+        created_date DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)
 
