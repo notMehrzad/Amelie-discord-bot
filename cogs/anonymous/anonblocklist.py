@@ -8,7 +8,7 @@ from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 
-class Say(commands.Cog):
+class AnonBlockList(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
@@ -120,4 +120,4 @@ class Say(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(Say(bot))
+    await bot.add_cog(AnonBlockList(bot))
