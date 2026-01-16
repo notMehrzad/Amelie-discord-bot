@@ -64,7 +64,7 @@ class Say(commands.Cog):
         await targetChannel.send(message) #sends the message in the channel
 
     @say.error
-    async def say_error(self, ctx: commands.Context[commands.Bot], error: Exception):
+    async def say_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
         logger.exception(f"❌ something went wrong with say command:")
         await ctx.reply("something went wrong with **say**.")
 

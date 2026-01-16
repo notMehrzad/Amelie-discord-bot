@@ -34,7 +34,7 @@ class Rps(commands.Cog):
         ),
         "brief": "Traditional *Rock, Paper, Scissors* game.",
         "usage": "<target[*optional*]>",
-        "aliases": [],
+        "aliases": ["rockpaperscissors"],
         "extras": {"Category": "Games"}
     }
 
@@ -51,6 +51,10 @@ class Rps(commands.Cog):
         if user and not isinstance(user, discord.abc.User):
             raise commands.BadArgument
         
+        #if user mentions itself
+        if user and user.id == ctx.author.id:
+            return await ctx.reply("You can't play with yourself.")
+        
         #if the user runs this command in dm to play with another user
         if not ctx.guild and user and user.id != ctx.me.id:
             return await ctx.reply("You can only play this game with others in a server. (except me!)")
@@ -61,10 +65,6 @@ class Rps(commands.Cog):
                 return await ctx.reply(f"{user.mention} is not a member of this server.")
         else:
             target = None
-        
-        #if user wants to play with himself
-        if target and target.id == ctx.author.id:
-            return await ctx.reply("You can't play with yourself.")
         
         #if user wants to play with a bot except this bot
         if target and target.bot and target.id != ctx.me.id:
@@ -96,6 +96,10 @@ class Rps(commands.Cog):
     )
     @app_commands.describe(user = "The user you want to play rps with.")
     async def slashRps(self, interaction: discord.Interaction, user: discord.User | None = None):
+        #if user mentions itself
+        if user and user.id == interaction.user.id:
+            return await interaction.response.send_message("You can't play with yourself.", ephemeral = True)
+        
         #if the user runs this command in dm to play with another user
         if not interaction.guild and user and user.id != interaction.client.application_id:
             return await interaction.response.send_message("You can only play this game with others in a server. (except me!)", ephemeral = True)
@@ -106,10 +110,6 @@ class Rps(commands.Cog):
                 return await interaction.response.send_message(f"{user.mention} is not a member of this server.", ephemeral = True)
         else:
             target = None
-        
-        #if user wants to play with himself
-        if target and target.id == interaction.user.id:
-            return await interaction.response.send_message("You can't play with yourself.", ephemeral = True)
         
         #if user wants to play with a bot except this bot
         if target and target.bot and target.id != interaction.client.application_id:

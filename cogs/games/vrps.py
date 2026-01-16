@@ -53,7 +53,7 @@ class Vrps(commands.Cog):
         ),
         "brief": "Classic rock-paper-scissors, but played with predetermined drawings on cards.",
         "usage": "<target[*optional*]>",
-        "aliases": ["voterps"],
+        "aliases": ["voterps", "voterockpaperscissors"],
         "extras": {"Category": "Games"}
     }
 
