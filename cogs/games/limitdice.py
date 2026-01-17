@@ -467,7 +467,8 @@ class LimitDiceVeiw(discord.ui.View):
         toEmbed = discord.Embed(
             title = "Rock, Paper, Scissors !",
             description = f"⏰ The game has timed out! {guiltyStr}",
-            color = discord.Color.dark_gray()
+            color = discord.Color.dark_gray(),
+            timestamp = self.timestamp
         )
         try:
             #sends the timeout message
@@ -479,7 +480,7 @@ class LimitDiceVeiw(discord.ui.View):
         except discord.NotFound:
             pass
 
-        self.stop() #stops the interaction upon timeout
+        self.stop() #stops the view upon timeout
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
         logger.exception(f"❌ something went wrong with limitdice interaction - button: {getattr(item, 'label', 'unknown')}")
@@ -490,7 +491,7 @@ class LimitDiceVeiw(discord.ui.View):
         except Exception:
             pass
             
-        self.stop() #stops further interaction
+        self.stop() #stops the view upon error
 
 
 async def setup(bot: commands.Bot):
