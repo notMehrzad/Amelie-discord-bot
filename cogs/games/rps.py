@@ -189,7 +189,7 @@ class RpsView(discord.ui.View):
     def make_callback(self, choice: ChoiceInfo):
         async def callback(interaction: discord.Interaction):
             #checks if only the user and target can interact with buttons
-            if interaction.user.id not in [self.target.id, self.user.id]:
+            if interaction.user.id not in (self.target.id, self.user.id):
                 return await interaction.response.send_message("You can't play in this match.", ephemeral = True)
             
             #if user trys to play when it's target's turn
