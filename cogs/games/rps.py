@@ -18,8 +18,26 @@ choices: list[ChoiceInfo] = [
     {"name": "Scissors", "beats": "Paper", "emoji": "✂️"}
 ]
 
-def rpsResult(c1: tuple[discord.abc.User, ChoiceInfo], c2: tuple[discord.abc.User, ChoiceInfo]):
-    #tie
+def rpsResult(c1: tuple[discord.abc.User, ChoiceInfo], c2: tuple[discord.abc.User, ChoiceInfo]) -> discord.abc.User | None:
+    """
+    Checks the result of a Rock, Paper, Scissors match.
+
+    Parameters
+    ---------
+    c1: tuple[:class:`discord.abc.User`, :class:`ChoiceInfo`]
+        The first player's user instance and played option wrapped inside a tuple.
+    c2: tuple[:class:`discord.abc.User`, :class:`ChoiceInfo`]
+        The second player's user instance and played option wrapped inside a tuple.
+
+    Returns
+    -------
+    :class:`discord.abc.User`
+        The winner user instance.
+    ``None``
+        If the result is a draw.
+    """
+
+    #draw
     if c1[1]["name"] == c2[1]["name"]:
         return None
     #player 2 wins
@@ -35,7 +53,7 @@ class Rps(commands.Cog):
 
     Help: HelpData = {
         "help": (
-            "A game between two people. Both players display one of three symbols: Rock, Paper or Scissors."
+            "A game between two people. Both players play one of three options: Rock, Paper or Scissors."
             "\n A Rock beats Scissors, a Paper beats Rock, a Scissors beats Paper."
             "\nYou can only play with Amélie herself if you run this game in her dm."
         ),
@@ -158,7 +176,7 @@ class RpsView(discord.ui.View):
             "user": None,
             "target": None
         }
-        self.state = "targetchoose"
+        self.state = "target_choose"
     
         #creates buttons as many as given in choices list
         for choice in choices:
@@ -193,14 +211,14 @@ class RpsView(discord.ui.View):
                 return await interaction.response.send_message("You can't play in this match.", ephemeral = True)
             
             #if user trys to play when it's target's turn
-            if not self.botPlay and self.state == "targetchoose" and interaction.user.id != self.target.id:
+            if not self.botPlay and self.state == "target_choose" and interaction.user.id != self.target.id:
                 if not self.playersChoice["user"]:
                     return await interaction.response.send_message(f"It's currently {self.target.mention}'s turn to play.", ephemeral = True)
                 else:
                     return await interaction.response.send_message(f"You've already played your turn. ({self.playersChoice["user"]["emoji"]})", ephemeral = True)
             
             #if target trys to play when it's user's turn
-            if self.state == "userchoose" and interaction.user.id != self.user.id:
+            if self.state == "user_choose" and interaction.user.id != self.user.id:
                 if not self.playersChoice["target"]:
                     return await interaction.response.send_message(f"It's currently {self.user.mention}'s turn to play.", ephemeral = True)
                 else:
@@ -209,13 +227,12 @@ class RpsView(discord.ui.View):
             #if bot is the target
             if self.botPlay:
                 self.playersChoice["target"] = random.choice(choices) #saves the choice for the bot
-                self.state = "userchoose" #bot's turn's over, user's turn starts
+                self.state = "user_choose" #bot's turn's over, user's turn starts
 
             #target's turn
-            if self.state == "targetchoose":
+            if self.state == "target_choose":
                 self.playersChoice["target"] = choice #saves the choice for the target
-                self.state = "userchoose" #target's turn's over, user's turn starts
-
+                
                 await interaction.response.send_message(f"You played {choice["emoji"]}.", ephemeral = True)
 
                 userchooseEmbed = discord.Embed(
@@ -231,47 +248,51 @@ class RpsView(discord.ui.View):
                     await self.msg.edit(content = None, embed = userchooseEmbed)
                     await self.msg.reply(f"{self.user.mention}, It's your turn now !")
 
+                self.state = "user_choose" #target's turn's over, user's turn starts
+
             #user's turn
-            if self.state == "userchoose":
+            elif self.state == "user_choose":
                 self.playersChoice["user"] = choice #saves the choice for the user
-                self.state = "result"
 
-            #result
-            if self.state == "result" and self.playersChoice["target"] and self.playersChoice["user"]:
-                winner = rpsResult((self.target, self.playersChoice["target"]), (self.user, self.playersChoice["user"])) #gets the result
-
-                #tie
-                if not winner:
-                    desc = "**It was a Draw !**"
-                    cori = f"{self.user.mention} escaped this time." if self.botPlay else None
-                else:
-                    #target wins
-                    if winner.id == self.target.id:
-                        desc = f"**{winner.mention} has Won !**" if not self.botPlay else "**I have Won !**"
-                        cori = "huh. not even a single sweat-" if self.botPlay else None
-                    #user wins
-                    else:
-                        desc = f"**{winner.mention} has Won !**"
-                        cori = "-ahh. maybe another time." if self.botPlay else None
-
-                resultEmbed = discord.Embed(
-                        title = "Rock, Paper, Scissors ! ",
-                        description = desc,
-                        color = discord.Color.random(),
-                        timestamp = self.timestamp
-                    ).set_footer(text = cori)\
-                    .add_field(name = f"{self.user.display_name} Choice", value = f"{self.playersChoice["user"]["name"]} {self.playersChoice["user"]["emoji"]}", inline = True)\
-                    .add_field(name = f"{self.target.display_name} Choice", value = f"{self.playersChoice["target"]["name"]} {self.playersChoice["target"]["emoji"]}", inline = True)\
-                    .set_thumbnail(url = winner.display_avatar.url if winner else None)
-                #sends the result
-                if self.slash:
-                    await self.interaction.edit_original_response(embed = resultEmbed, view = None)
-                else:
-                    await self.msg.edit(embed = resultEmbed, view = None)
-
-                self.stop() #stops the view
+                self.state = "result" #result phase begins
+                await self.endMatch()
 
         return callback
+    
+    async def endMatch(self):
+        if self.playersChoice["target"] and self.playersChoice["user"]:
+            winner = rpsResult((self.target, self.playersChoice["target"]), (self.user, self.playersChoice["user"])) #gets the result
+
+            #draw
+            if not winner:
+                desc = "**It was a Draw !**"
+                cori = f"{self.user.mention} escaped this time." if self.botPlay else None
+            else:
+                #target wins
+                if winner.id == self.target.id:
+                    desc = f"**{winner.mention} has Won !**" if not self.botPlay else "**I have Won !**"
+                    cori = "huh. not even a single sweat-" if self.botPlay else None
+                #user wins
+                else:
+                    desc = f"**{winner.mention} has Won !**"
+                    cori = "-ahh. maybe another time." if self.botPlay else None
+
+            resultEmbed = discord.Embed(
+                    title = "Rock, Paper, Scissors ! ",
+                    description = desc,
+                    color = discord.Color.random(),
+                    timestamp = self.timestamp
+                ).set_footer(text = cori)\
+                .add_field(name = f"{self.user.display_name} Choice", value = f"{self.playersChoice["user"]["name"]} {self.playersChoice["user"]["emoji"]}", inline = True)\
+                .add_field(name = f"{self.target.display_name} Choice", value = f"{self.playersChoice["target"]["name"]} {self.playersChoice["target"]["emoji"]}", inline = True)\
+                .set_thumbnail(url = winner.display_avatar.url if winner else None)
+            #sends the result
+            if self.slash:
+                await self.interaction.edit_original_response(embed = resultEmbed, view = None)
+            else:
+                await self.msg.edit(embed = resultEmbed, view = None)
+
+            self.stop() #stops the view
     
     async def on_timeout(self):
         #disables buttons on timeout
@@ -281,7 +302,7 @@ class RpsView(discord.ui.View):
 
         if self.botPlay:
             guiltyStr = f"{self.user.mention} didn't make a move.\n*shame on you..*"
-        elif self.state == "targetchoose":
+        elif self.state == "target_choose":
             guiltyStr = f"{self.target.mention} didn't seem brave enough to accept the challenge."
         else:
             guiltyStr = f"{self.user.mention} seemed to have more important buisness to do."

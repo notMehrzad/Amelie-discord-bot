@@ -28,8 +28,8 @@ class CoinFlip(commands.Cog):
             extras = Help["extras"]
     )
     async def coinflip(self, ctx: commands.Context[commands.Bot]):
-        result = random.choice(["Heads", "Tails"]) #flips the coin
-        await ctx.reply(f"{result}.") #sends the result
+        result = random.choice(("Heads", "Tails")) #flips the coin
+        await ctx.reply(result + ".") #sends the result
 
     @coinflip.error
     async def coinflip_error(self, ctx: commands.Context[commands.Bot], error: Exception):
@@ -43,8 +43,8 @@ class CoinFlip(commands.Cog):
         extras = Help["extras"]
     )
     async def slashCoinflip(self, interaction: discord.Interaction):
-        result = random.choice(["Heads", "Tails"]) #flips the coin
-        await interaction.response.send_message(f"{result}.") #sends the result
+        result = random.choice(("Heads", "Tails")) #flips the coin
+        await interaction.response.send_message(result + ".") #sends the result
 
     @slashCoinflip.error
     async def slashCoinflip_error(self, interaction: discord.Interaction, error: Exception):

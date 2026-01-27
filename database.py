@@ -90,5 +90,16 @@ async def setup():
     );
     """)
 
+    #tickets table
+    await conn.execute("""
+    CREATE TABLE IF NOT EXISTS tickets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        message_collector_id INTEGER NOT NULL,
+        responded INTEGER DEFAULT 0,
+        created_date DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
     await conn.commit() #commits the changes
     await conn.close()

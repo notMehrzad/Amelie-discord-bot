@@ -41,8 +41,7 @@ class Ping(commands.Cog):
 
         ws = self.bot.latency * 1000 #getting websocket latency
         #starts pinging n times
-        for i in range(pingNumbers):
-            
+        for i in range(pingNumbers): 
             try:
                 start = time.perf_counter()
                 await msg.edit(content = f"ping {i + 1}..")
@@ -55,6 +54,7 @@ class Ping(commands.Cog):
             msg_latency = (end - start) * 1000
             pings.append(msg_latency) #stores the nth ping in a list
             await asyncio.sleep(0.1)
+
         if pings:
             avg = round(sum(pings) / pingNumbers, 2) #getting REST latency
             minping = round(min(pings), 2)
@@ -73,24 +73,20 @@ class Ping(commands.Cog):
             color = discord.Color.from_str("#ff3800") #red
 
         resultEmbed = discord.Embed(
-            color = color,
             title = "Pong! 🏓",
             description = (
-                f"📡 WebSocket: `{ws:.2f} ms`\n"
-                + (f"🌐 REST: `{avg:.2f} ms`\n\n" if avg else f"🌐 REST: Failed")
-                + (f"Min: `{minping:.2f} ms` | Max: `{maxping:.2f} ms`" if pings else "")
+                f"📡 WebSocket: `{ws:.2f} ms`"
+                + (f"\n🌐 REST: `{avg:.2f} ms`" if pings else f"🌐 REST: Failed")
+                + (f"\n\nMin: `{minping:.2f} ms` | Max: `{maxping:.2f} ms`" if pings else "")
             ),
+            color = color,
             timestamp = discord.utils.utcnow()
         ).set_footer(text = f"requested by {ctx.author.name}")
         try:
             await msg.edit(content = None, embed = resultEmbed) #sends the final results
         #if user deletes the pings message
         except discord.NotFound:
-            try:
-                await ctx.reply(content = None, embed = resultEmbed)
-            except discord.NotFound:
-                await ctx.send(content = None, embed = resultEmbed)
-        
+            await ctx.reply(content = None, embed = resultEmbed)
 
     @ping.error
     async def ping_error(self, ctx: commands.Context[commands.Bot], error: Exception):
@@ -142,13 +138,13 @@ class Ping(commands.Cog):
             color = discord.Color.from_str("#ff3800") #red
 
         resultEmbed = discord.Embed(
-            color = color,
             title = "Pong! 🏓",
             description = (
-                f"📡 WebSocket: `{ws:.2f} ms`\n"
-                + (f"🌐 REST: `{avg:.2f} ms`\n\n" if avg else f"🌐 REST: Failed")
-                + ((f"Min: `{minping:.2f} ms` | Max: `{maxping:.2f} ms`") if pings else "")
+                f"📡 WebSocket: `{ws:.2f} ms`"
+                + (f"\n🌐 REST: `{avg:.2f} ms`" if pings else f"🌐 REST: Failed")
+                + (f"\n\nMin: `{minping:.2f} ms` | Max: `{maxping:.2f} ms`" if pings else "")
             ),
+            color = color,
             timestamp = discord.utils.utcnow()
         ).set_footer(text = f"requested by {interaction.user.name}")
         try:

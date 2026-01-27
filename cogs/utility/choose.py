@@ -14,7 +14,7 @@ class Choose(commands.Cog):
     Help: HelpData = {
         "help": "",
         "brief": "Chooses one option between given choices",
-        "usage": "<choices (separated with \"|\")>",
+        "usage": "<count[*optional*]> <choices(separated with \"|\")>",
         "aliases": [],
         "extras": {"Category": "Utility"}
     }
@@ -27,7 +27,7 @@ class Choose(commands.Cog):
             aliases = Help["aliases"],
             extras = Help["extras"]
     )
-    async def choose(self, ctx: commands.Context[commands.Bot], *, choices: str | None):
+    async def choose(self, ctx: commands.Context[commands.Bot], count: int = 1, *, choices: str | None):
         #if user doesn't enter any options
         if not choices:
             return await ctx.reply("You must enter at least two choices separated with \"|\".")
@@ -38,8 +38,12 @@ class Choose(commands.Cog):
         if len(choicesList) < 2:
             return await ctx.reply("You must enter at least two choices separated with \"|\".")
         
-        choice = random.choice(choicesList) #makes a choice
-        await ctx.reply(f"I'd go with: {choice}") #sends the result
+        #if user wants to choose more than given options
+        if count >= len(choicesList):
+            return await ctx.reply("You can't choose greater than or equal to the number of choices.")
+        
+        choice = random.sample(choicesList, count) #makes a choice
+        await ctx.reply(f"I'd go with: {"and".join(choice)}") #sends the result
 
     @choose.error
     async def choose_error(self, ctx: commands.Context[commands.Bot], error: Exception):
@@ -52,16 +56,20 @@ class Choose(commands.Cog):
         description = Help["brief"],
         extras = Help["extras"]
     )
-    @app_commands.describe(choices = "The choices to choose from, separated with \"|\".")
-    async def slashChoose(self, interaction: discord.Interaction, choices: str):
+    @app_commands.describe(choices = "The choices to choose from, separated with \"|\".", count = "The number of choices to make.")
+    async def slashChoose(self, interaction: discord.Interaction, choices: str, count: int = 1):
         choicesList = [c.strip() for c in choices.split("|") if c.strip()] #fetches the options
 
         #if user doesn't enter at least two options to choose
         if len(choicesList) < 2:
             return await interaction.response.send_message("You must enter at least two choices separated with \"|\".", ephemeral = True)
         
-        choice = random.choice(choicesList) #makes a choice
-        await interaction.response.send_message(f"I'd go with: {choice}") #sends the result
+        #if user wants to choose more than given options
+        if count >= len(choicesList):
+            return await interaction.response.send_message("You can't choose greater than or equal to the number of choices.", ephemeral = True)
+        
+        choice = random.sample(choicesList, count) #makes a choice
+        await interaction.response.send_message(f"I'd go with: {"and".join(choice)}") #sends the result
 
     @slashChoose.error
     async def slashChoose_error(self, interaction: discord.Interaction, error: Exception):

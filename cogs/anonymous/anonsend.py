@@ -182,7 +182,7 @@ class AnonSend(commands.Cog):
         }
         
         view = AnonView(interaction, conn, recieverUser, public_id, privateId, self.sessions) #initializes the Anon View
-        await view.start()
+        await view.start() #starts the view
 
     @slashAnonsend.error
     async def slashAnonsend_error(self, interaction: discord.Interaction, error: Exception):

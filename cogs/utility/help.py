@@ -23,8 +23,8 @@ class Help(commands.Cog):
 
     Help: HelpData = {
         "help": (
-                "Shows the help menu which gives a brief information about Commands."
-                "\nEnter a Command name for its full detail such as its application, usage, necessery permissions (if any) and etc. or don't, to get the help menu."
+            "Shows the help menu which gives a brief information about Commands."
+            "\nEnter a Command name for its full detail such as its application, usage, necessery permissions (if any) and etc. or don't, to get the help menu."
         ),
         "brief": "Shows the help menu.",
         "usage": "<command_name*[optional]*>",
@@ -42,7 +42,7 @@ class Help(commands.Cog):
     )
     async def help(self, ctx: commands.Context[commands.Bot], command: str | None = None):
         #help for specific command
-        if command and command.lower() not in ["all", "list", "menu"]:
+        if command and command.lower() not in ("all", "list", "menu"):
             cmd = self.bot.get_command(command.lower()) #fetches the command, None if not found
 
             #if user doesn't enter a valid command name

@@ -17,7 +17,7 @@ class DeckInfo(TypedDict):
     shown: bool
     match: int
 
-people = 40 #number of peaople who will vote in the ballotbox
+people = 40 #number of people to vote in the ballotbox
 
 class Vrps(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -191,9 +191,14 @@ class ReadyView(discord.ui.View):
             botPlay = self.botPlay,
             embedColor = self.embedColor,
             timestamp = self.timestamp
-        ) 
+        )
 
-        self.stop() #stops the intraction once both players are ready
+        if self.slash:
+            await self.interaction.followup.send(f"{self.user.mention}, {self.target.display_name} has accepted your challenge !")
+        else:
+            await self.msg.reply(f"{self.user.mention}, {self.target.display_name} has accepted your challenge !")
+
+        self.stop() #stops the ready view once the target is ready
 
         await view.start() #starts the vrps view
 
@@ -249,10 +254,7 @@ class VrpsView(discord.ui.View):
             "user": None,
             "target": None
         }
-        #creating the ballotbox
-        self.ballotbox: list[ChoiceInfo] = []
-        for i in range(people):
-            self.ballotbox.append(random.choice(choices))
+        self.ballotbox: list[ChoiceInfo] = [random.choice(choices) for _ in range(people)] #creates the ballot box
         random.shuffle(self.ballotbox) #shuffles the ballotbox
 
         #distributing cards
@@ -262,8 +264,12 @@ class VrpsView(discord.ui.View):
         #[
         #   {
         #       "card": {"name": "Paper", "beats": "Rock", "emoji": "📃"},
-        #       "shown": False
-        #   },.....
+        #       "shown": False,
+        #        "match": 0
+        #   },
+        #   {
+        #       ...
+        #   }, ...
         #]
 
         #defining card buttons
@@ -284,7 +290,7 @@ class VrpsView(discord.ui.View):
         else:
             await self.interaction.edit_original_response(content = None, embed = votingPhaseEmbed, view = None)
 
-        await asyncio.sleep(5) #a 5 second delay for making it more realistic
+        await asyncio.sleep(3) #adds a short delay
 
         if self.botPlay:
             desc = (
@@ -296,7 +302,7 @@ class VrpsView(discord.ui.View):
             desc = (
                 "Everyone has dropped their votes in the ballot box."
                 "\n**Three** cards have been drawn from the Box for each of you."
-                "\n*And now.. It's SHOWTIME!!* choose one card and play *Rock, Paper, Scissors !*"
+                "\n\n*And now.. It's SHOWTIME!!* choose one card and play *Rock, Paper, Scissors !*"
             )
 
         matchEmbed = discord.Embed(
