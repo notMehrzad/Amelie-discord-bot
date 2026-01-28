@@ -96,8 +96,10 @@ async def setup():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         message_collector_id INTEGER NOT NULL,
-        responded INTEGER DEFAULT 0,
-        created_date DATETIME DEFAULT CURRENT_TIMESTAMP
+        subject TEXT NOT NULL,
+        state TEXT NOT NULL DEFAULT "open",
+        closed_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)
 

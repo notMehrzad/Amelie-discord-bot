@@ -158,15 +158,15 @@ class LimitDiceVeiw(discord.ui.View):
             desc = f"It's currently {self.target.mention}'s turn to roll the dice."
 
         startEmbed = discord.Embed(
-            title = "Limit Dice",
+            title = "Limit Dice 🎲",
             description = desc,
             color = self.embedColor,
             timestamp = self.timestamp
         )
-        if not self.slash:
-            self.msg = await self.ctx.send(content = content, embed = startEmbed, view = self)
-        else:
+        if self.slash:
             await self.interaction.response.send_message(content = content, embed = startEmbed, view = self)
+        else:
+            self.msg = await self.ctx.send(content = content, embed = startEmbed, view = self)
 
     #defines roll button
     @discord.ui.button(label = "roll" , style = discord.ButtonStyle.green, row = 0)
@@ -185,7 +185,7 @@ class LimitDiceVeiw(discord.ui.View):
         
         #if bot is the target
         if self.botPlay:
-            botDie = random.randint(1, 6) if 6 not in self.playersScore["targetRecord"] else None #rolls a die for the bot if 6 is not rolled yet
+            botDie = random.randint(1, 6) if not self.playersScore["targetBusted"] else None #rolls a die for the bot if 6 is not rolled yet
             if botDie:
                 self.playersScore["targetRecord"].append(botDie) #saves for the record
 
@@ -202,7 +202,7 @@ class LimitDiceVeiw(discord.ui.View):
         
         #target's turn
         if self.state == "target_roll":
-            targetDie = random.randint(1, 6) if 6 not in self.playersScore["targetRecord"] else None #rolls a die for the target if 6 is not rolled yet
+            targetDie = random.randint(1, 6) if not self.playersScore["targetBusted"] else None #rolls a die for the target if 6 is not rolled yet
             if targetDie:
                 self.playersScore["targetRecord"].append(targetDie) #saves for the record
 
@@ -224,7 +224,7 @@ class LimitDiceVeiw(discord.ui.View):
                 await interaction.followup.send(f"{self.user.mention}, It's your turn now !") #notifys the user that the target accepted the game
 
             userRollEmbed = discord.Embed(
-                title = "Limit Dice",
+                title = "Limit Dice 🎲",
                 description = (
                     f"{self.target.mention} has rolled their die."
                     f"\n\nIt's currently {self.user.mention}'s turn to roll the die."
@@ -233,7 +233,7 @@ class LimitDiceVeiw(discord.ui.View):
                 timestamp = self.timestamp
             )
             if self.slash:
-                await self.interaction.response.edit_message(content = None, embed = userRollEmbed)
+                await self.interaction.edit_original_response(content = None, embed = userRollEmbed)
             else:
                 await self.msg.edit(content = None, embed = userRollEmbed)
 
@@ -280,7 +280,7 @@ class LimitDiceVeiw(discord.ui.View):
                     f"\n\nIt's currently {self.target.mention}'s turn to decide."
                 )
             targetDecideEmbed = discord.Embed(
-                title = "Limit Dice",
+                title = "Limit Dice 🎲",
                 description = desc,
                 color = self.embedColor,
                 timestamp = self.timestamp
@@ -318,7 +318,7 @@ class LimitDiceVeiw(discord.ui.View):
         #target's turn
         if self.state == "target_decide":
             userDecideEmbed = discord.Embed(
-                title = "Limit Dice",
+                title = "Limit Dice 🎲",
                 description = (
                     f"{self.target.mention} will **Proceed**. 🔄️"
                     f"\n\nIt's currently {self.user.mention}'s turn to decide."
@@ -340,7 +340,7 @@ class LimitDiceVeiw(discord.ui.View):
 
             nextmatchstr = f"\n\nIt's currently {self.target.mention}'s turn to roll the die." if not self.botPlay else "I've rolled my die already."
             decisionResultEmbed = discord.Embed(
-                title = "Limit Dice",
+                title = "Limit Dice 🎲",
                 description = (
                     f"{self.target.mention if not self.botPlay else "I"} will **Proceed**. 🔄️"
                     f"\n{self.user.mention} will **Proceed**. 🔄️"
@@ -438,7 +438,7 @@ class LimitDiceVeiw(discord.ui.View):
 
             rematchStr = "Another match has begun to determine the winner." + (f"\nIt's currently {self.target.mention}'s turn to roll the die." if not self.botPlay else "I've rolled my die already.") #rematch string
             resultEmbed = discord.Embed(
-                title = "Limit Dice",
+                title = "Limit Dice 🎲",
                 description = standStr + matchLimitStr + winnerStr + bustedStr + rematchStr,
                 color = self.embedColor,
                 timestamp = self.timestamp,
@@ -455,7 +455,7 @@ class LimitDiceVeiw(discord.ui.View):
         #results
         else:
             resultEmbed = discord.Embed(
-                title = "Limit Dice",
+                title = "Limit Dice 🎲",
                 description = standStr + matchLimitStr + winnerStr + bustedStr,
                 color = self.embedColor,
                 timestamp = self.timestamp,
@@ -488,7 +488,7 @@ class LimitDiceVeiw(discord.ui.View):
             guiltyStr = f"{self.user.mention} couldn't decide a simple decision."
 
         toEmbed = discord.Embed(
-            title = "Rock, Paper, Scissors !",
+            title = "Limit Dice 🎲",
             description = f"⏰ The game has timed out! {guiltyStr}",
             color = discord.Color.dark_gray(),
             timestamp = self.timestamp

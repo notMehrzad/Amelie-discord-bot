@@ -125,7 +125,7 @@ class Warn(commands.Cog):
         
     @warn.error
     async def warn_error(self, ctx: commands.Context[commands.Bot], error: commands.CommandError):
-        #if user entered an invalid user
+        #if user entered an invalid argument
         if isinstance(error, commands.BadArgument):
             await ctx.reply("Member not found. Please mention a valid member.")
         else:

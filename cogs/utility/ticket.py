@@ -1,13 +1,16 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+import json
 from database import connection
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 
-TicketPlaceId = 583331735882956850 #where tickets should be sent, either admins' dm or a channel
+with open("config.json") as file:
+    config = json.load(file)
+TicketPlaceId = config["ADMINS"][0] #where tickets should be sent, either admins' dm or a channel
 
 sessions: dict[int, list[discord.Message]] = {}
 
@@ -16,11 +19,18 @@ class Ticket(commands.Cog):
         self.bot = bot
 
     Help: HelpData = {
-        "help": "",
-        "brief": "",
+        "help": (
+            "Opens a ticketing session to contact the staff."
+            "\n\nPlease try to include a short subject, a clear description of the issue,"
+            " when it happened, and any relevant screenshots or files."
+            "\nYou may send multiple messages during the session."
+            " Press **done** when finished to submit the ticket."
+            "\n\nYour username and user ID will be included automatically for follow-up."
+        ),
+        "brief": "Opens a support ticket.",
         "usage": "",
         "aliases": [],
-        "extras": {"Category": "Utility"}
+        "extras": {"Category": "Utility", "dm-only": "Yes"}
     }
 
     @commands.command(
@@ -31,7 +41,7 @@ class Ticket(commands.Cog):
             aliases = Help["aliases"],
             extras = Help["extras"]
     )
-    async def ticket(self, ctx: commands.Context[commands.Bot], channel: discord.abc.GuildChannel | discord.Thread | discord.abc.PrivateChannel | str | None, *, message: str | None):
+    async def ticket(self, ctx: commands.Context[commands.Bot], subject: str | None):
         #if user runs the command in a server
         if ctx.guild:
             return await ctx.reply("This command can only be used in Amélie's dm.")
@@ -40,11 +50,15 @@ class Ticket(commands.Cog):
         if ctx.author.id in sessions:
             return await ctx.reply("You already have an open Ticketing session, try closing that one and try again.")
         
+        #if user doesn't enter the ticket subject
+        if not subject:
+            return await ctx.reply("You must enter a subject to open the Ticket.")
+        
         sessions[ctx.author.id] = [] #creates a session for the user
 
         admin = self.bot.get_user(TicketPlaceId) or await self.bot.fetch_user(TicketPlaceId) #fetches the admin user to send the message to
 
-        view = TicketView(ctx, admin) #initializes the Ticket View
+        view = TicketView(ctx, subject, admin) #initializes the Ticket View
         await view.start() #starts the view
 
     @ticket.error
@@ -59,7 +73,7 @@ class Ticket(commands.Cog):
         extras = Help["extras"]
     )
     @app_commands.dm_only()
-    async def slashTicket(self, interaction: discord.Interaction, message: str, channel: discord.abc.GuildChannel | discord.Thread | None = None, visible_slash_command: bool = True):
+    async def slashTicket(self, interaction: discord.Interaction, subject: str):
         #if user already has an active session
         if interaction.user.id in sessions:
             return await interaction.response.send_message("You already have an open Ticketing session, try closing that one and try again.", ephemeral = True)
@@ -68,7 +82,7 @@ class Ticket(commands.Cog):
 
         admin = self.bot.get_user(TicketPlaceId) or await self.bot.fetch_user(TicketPlaceId) #fetches the admin user to send the message to
 
-        view = TicketView(interaction, admin) #initializes the Ticket View
+        view = TicketView(interaction, subject, admin) #initializes the Ticket View
         await view.start() #starts the view
 
     @slashTicket.error
@@ -91,7 +105,7 @@ class Ticket(commands.Cog):
             sessions[msg.author.id].append(msg)
 
 class TicketView(discord.ui.View):
-    def __init__(self, ctx: commands.Context[commands.Bot] | discord.Interaction, admin: discord.User):
+    def __init__(self, ctx: commands.Context[commands.Bot] | discord.Interaction, subject: str, admin: discord.User):
         super().__init__(timeout = 300)
         if isinstance(ctx, discord.Interaction):
             self.slash = True
@@ -101,6 +115,7 @@ class TicketView(discord.ui.View):
             self.slash = False
             self.ctx = ctx
             self.user = ctx.author
+        self.subject = subject
         self.admin = admin
         self.timestamp = discord.utils.utcnow()
 
@@ -155,9 +170,9 @@ class TicketView(discord.ui.View):
 
         #creates a ticket in the database for later response
         cursor = await conn.execute("""
-        INSERT INTO tickets (user_id, message_collector_id, created_date)
-        VALUES (?, ?, ?);
-        """, (self.user.id, self.collectorId, self.timestamp))
+        INSERT INTO tickets (user_id, message_collector_id, subject, created_date)
+        VALUES (?, ?, ?, ?);
+        """, (self.user.id, self.collectorId, self.subject, self.timestamp))
         await conn.commit()
         ticketId = cursor.lastrowid #fetches the created ticket id
         await conn.close()
