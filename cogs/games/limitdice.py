@@ -10,10 +10,10 @@ logger = loggerSetup(__name__)
 
 class ScoreBoard(TypedDict):
     user: int
-    userRecord: list[int]
+    userRecord: list[int | str]
     userBusted: None | int
     target: int
-    targetRecord: list[int]
+    targetRecord: list[int | str]
     targetBusted: None | int
 
 class LimitDice(commands.Cog):
@@ -21,8 +21,20 @@ class LimitDice(commands.Cog):
         self.bot = bot
 
     Help: HelpData = {
-        "help": "",
-        "brief": "",
+        "help": (
+            "A game between two players; All about luck and will."
+            "\nBoth players take turns rolling their die. and they can't see each other's hand."
+            "\nAny roll from **one to five** worths **1 point**."
+            "\nThey can then keep rolling to increase their score."
+            "\n**If anyone rolls a six, their final score is 0** and they can't gain any more points at that time."
+            "\nIf anyone feels they'll roll a six, they can declare \"Stop.\" and so their score is frozen in place."
+            "\nIf both players stop or roll a six, the top scorer wins."
+            "\n\nHowever, rolling a six doesn't mean an instant loss! you can keep rolling that die."
+            "\nYou won't gain any more points but your opponent will think you're still racking them up."
+            "\n\nIf your opponent keep rolling their die, never stopping.., it'll make you wonder if they rolled a six or not."
+            "\nShould you stop or not? You'll need to think about that, all the way to your Limits, in this **test of Willpower!**"
+        ),
+        "brief": "A two-player dice game of luck, bluffing, and willpower where rolling a six can change everything.",
         "usage": "<target[*optional*]>",
         "aliases": ["lm"],
         "extras": {"Category": "Games"}
@@ -152,6 +164,8 @@ class LimitDiceVeiw(discord.ui.View):
         if self.botPlay:
             content = None
             desc = "*limit dice..\nI love this game. shall we start?*\nI already rolled my die."
+
+            await self.botRoll()
         
         else:
             content = f"{self.target.mention}, You're challenged to a game of *Limit Dice* by {self.user.mention}." #notifies the target
@@ -168,26 +182,32 @@ class LimitDiceVeiw(discord.ui.View):
         else:
             self.msg = await self.ctx.send(content = content, embed = startEmbed, view = self)
 
-    #defines roll button
-    @discord.ui.button(label = "roll" , style = discord.ButtonStyle.green, row = 0)
-    async def roll(self, interaction: discord.Interaction, button: discord.ui.Button[discord.ui.View]):
-        #checks if only the user and target can interact with buttons
-        if interaction.user.id not in (self.target.id, self.user.id):
-            return await interaction.response.send_message("You can't play in this match.", ephemeral = True)
-        
-        #if user trys to roll when it's target's turn
-        if not self.botPlay and self.state == "target_roll" and interaction.user.id != self.target.id:
-            return await interaction.response.send_message(f"It's {self.target.mention}'s turn to roll the die.", ephemeral = True)
-        
-        #if target trys to roll when it's user's turn
-        if self.state == "user_roll" and interaction.user.id != self.user.id:
-            return await interaction.response.send_message(f"It's {self.user.mention}'s turn to roll the die.", ephemeral = True)
-        
-        #if bot is the target
+    async def botRoll(self):
+        #bot's turn, if bot is the target
         if self.botPlay:
-            botDie = random.randint(1, 6) if not self.playersScore["targetBusted"] else None #rolls a die for the bot if 6 is not rolled yet
-            if botDie:
-                self.playersScore["targetRecord"].append(botDie) #saves for the record
+            if self.state == "target_roll":
+                #if not busted yet
+                if not self.playersScore["targetBusted"]:
+                    botDie = random.randint(1, 6) #rolls a die for the bot
+                    self.playersScore["targetRecord"].append(botDie) #saves the die for the record
+
+                    #if rolls a 6, busted
+                    if botDie == 6:
+                        self.playersScore["target"] = 0
+                        self.playersScore["targetBusted"] = len(self.playersScore["targetRecord"])
+
+                        #if the user is busted too, match ends
+                        if self.playersScore["userBusted"]:
+                            return await self.endMatch(bothBusted = True)
+
+                    #adds the score otherwise
+                    else:
+                        self.playersScore["target"] += 1
+                    
+                self.state = "user_roll" #ends bots's roll turn, user's roll turn begins
+            elif self.state == "target_last_roll":
+                botDie = random.randint(1, 6) #rolls a die for the bot for the last time
+                self.playersScore["targetRecord"].append(botDie) #saves the die for the record
 
                 #if rolls a 6, busted
                 if botDie == 6:
@@ -197,29 +217,59 @@ class LimitDiceVeiw(discord.ui.View):
                 #adds the score otherwise
                 else:
                     self.playersScore["target"] += 1
-            
-            self.state = "user_roll" #ends bots's roll turn, user's roll turn begins
+
+                await self.endMatch() #ends the match
+
+    #defines roll button
+    @discord.ui.button(label = "roll" , style = discord.ButtonStyle.green, row = 0)
+    async def roll(self, interaction: discord.Interaction, button: discord.ui.Button[discord.ui.View]):
+        #checks if only the user and target can interact with buttons
+        if interaction.user.id not in (self.target.id, self.user.id):
+            return await interaction.response.send_message("You can't play in this match.", ephemeral = True)
         
+        #if user trys to roll when it's target's turn
+        if self.state == "target_roll" and interaction.user.id != self.target.id:
+            return await interaction.response.send_message(f"It's {self.target.mention}'s turn to roll the die.", ephemeral = True)
+        
+        #if target trys to roll when it's user's turn
+        if self.state == "user_roll" and interaction.user.id != self.user.id:
+            return await interaction.response.send_message(f"It's {self.user.mention}'s turn to roll the die.", ephemeral = True)
+        
+        #if user trys to roll when it's target's last roll phase
+        if self.state == "target_last_roll" and interaction.user.id != self.target.id:
+            return await interaction.response.send_message(f"You stopped before and your score is frozen in place.\nIt's currently {self.target.mention}'s turn to roll for the last time.", ephemeral = True)
+
+        #if target trys to roll when it's user's last roll phase
+        if self.state == "user_last_roll" and interaction.user.id != self.user.id:
+            return await interaction.response.send_message(f"You stopped before and your score is frozen in place.\nIt's currently {self.user.mention}'s turn to roll for the last time.", ephemeral = True)
+
         #target's turn
         if self.state == "target_roll":
-            targetDie = random.randint(1, 6) if not self.playersScore["targetBusted"] else None #rolls a die for the target if 6 is not rolled yet
-            if targetDie:
-                self.playersScore["targetRecord"].append(targetDie) #saves for the record
+            #if not busted yet
+            if not self.playersScore["targetBusted"]:
+                targetDie = random.randint(1, 6) #rolls a die for the target
+                self.playersScore["targetRecord"].append(targetDie) #saves the die for the record
 
                 #if rolls a 6, busted
                 if targetDie == 6:
                     self.playersScore["target"] = 0
                     self.playersScore["targetBusted"] = len(self.playersScore["targetRecord"])
-                    rollStatus = f"You rolled a **{targetDie}!**\nYou got busted and your score has been reset to 0."
+
+                    #if the user is busted too, match ends
+                    if self.playersScore["userBusted"]:
+                        return await self.endMatch(bothBusted = True)
+                    else:
+                        rollStatus = f"You rolled a **{targetDie}!**\nYour score is reset to 0 and you gain no more point from now on."
 
                 #adds the score otherwise
                 else:
                     self.playersScore["target"] += 1
                     rollStatus = f"You rolled a **{targetDie}**.\nYour current score: {self.playersScore["target"]}"
             else:
-                rollStatus = "You gain no more score due to being busted."
+                rollStatus = "You gain no more points."
             
-            await interaction.response.send_message(rollStatus, ephemeral = True) #notifys the target of the result
+            await interaction.response.send_message(rollStatus, ephemeral = True) #sends the roll result to the target
+
             if self.match == 1:
                 await interaction.followup.send(f"{self.user.mention}, It's your turn now !") #notifys the user that the target accepted the game
 
@@ -227,7 +277,7 @@ class LimitDiceVeiw(discord.ui.View):
                 title = "Limit Dice 🎲",
                 description = (
                     f"{self.target.mention} has rolled their die."
-                    f"\n\nIt's currently {self.user.mention}'s turn to roll the die."
+                    f"\n\nIt's currently {self.user.mention}'s turn to roll."
                 ),
                 color = self.embedColor,
                 timestamp = self.timestamp
@@ -243,40 +293,42 @@ class LimitDiceVeiw(discord.ui.View):
         elif self.state == "user_roll":
             self.roll.disabled = True #disables roll button
 
-            userDie = random.randint(1, 6) if not self.playersScore["userBusted"] else None #rolls a die for the user if 6 is not rolled yet
-            if userDie:
-                self.playersScore["userRecord"].append(userDie) #saves for the record
+            #if not busted yet
+            if not self.playersScore["userBusted"]:
+                userDie = random.randint(1, 6) #rolls a die for the user
+                self.playersScore["userRecord"].append(userDie) #saves the die for the record
 
                 #if rolls a 6, busted
                 if userDie == 6:
                     self.playersScore["user"] = 0
                     self.playersScore["userBusted"] = len(self.playersScore["userRecord"])
-                    rollStatus = f"You rolled a **{userDie}!**\nYou got busted and your score has been reset to 0."
+
+                    #if the target is busted too, match ends
+                    if self.playersScore["targetBusted"]:
+                        return await self.endMatch(bothBusted = True)
+                    else:
+                        rollStatus = f"You rolled a **{userDie}!**\nYour score is reset to 0 and you gain no more point from now on."
 
                 #adds the score otherwise
                 else:
                     self.playersScore["user"] += 1
                     rollStatus = f"You rolled a **{userDie}**.\nYour current score: {self.playersScore["target"]}"
             else:
-                rollStatus = "You gain no more score due to being busted."
+                rollStatus = "You gain no more points."
 
-            await interaction.response.send_message(rollStatus, ephemeral = True) #notifys the user of the result
-
-            #ends the game if more than 10 matches are played
-            if self.match == 10:
-                return await self.endMatch(tenMatchLimit = True)
+            await interaction.response.send_message(rollStatus, ephemeral = True) #sends the roll result to the user
             
             if self.botPlay:
                 desc = (
                     "Amazing. The decision phase begins now."
-                    "\nWe must now decide either to **proceed** and bring even more fun to this game, or **stand** and SHOWDOWN our scores !"
-                    "\nI made my choice already."
+                    "\nWe must now decide either to **Roll** again and bring even more fun to this game, or **Stop** and freeze our score !"
+                    "\n\nI made my choice already."
                 )
             else:
                 desc = (
                     "Now that both sides rolled their die, the decision phase begins."
-                    "\nYou must decide either to **proceed** or **stand**."
-                    "\nIf any of you decides to stand, scores will be locked and showdown phase begins after."
+                    "\nYou must decide either to **Roll** or **Stop**."
+                    "\nIf both of you stop, showdown phase begins."
                     f"\n\nIt's currently {self.target.mention}'s turn to decide."
                 )
             targetDecideEmbed = discord.Embed(
@@ -290,9 +342,53 @@ class LimitDiceVeiw(discord.ui.View):
             else:
                 await self.msg.edit(embed = targetDecideEmbed)
 
-            self.proceed.disabled = self.stand.disabled = False #enables decision buttons, decision phase begins
+            self.proceed.disabled = self.stopbtn.disabled = False #enables decision buttons, decision phase begins
 
             self.state = "target_decide" #ends user's roll turn, target's decide turn begins
+        
+        #target's last roll turn
+        elif self.state == "target_last_roll":
+            self.roll.disabled = True #disables roll button
+
+            targetDie = random.randint(1, 6) #rolls a die for the target for the last time
+            self.playersScore["userRecord"].append(targetDie) #saves for the record
+
+            #if rolls a 6, busted
+            if targetDie == 6:
+                self.playersScore["user"] = 0
+                self.playersScore["userBusted"] = len(self.playersScore["userRecord"])
+                rollStatus = f"You rolled a **{targetDie}!**\nYour score is reset to 0."
+
+            #adds the score otherwise
+            else:
+                self.playersScore["user"] += 1
+                rollStatus = f"You rolled a **{targetDie}**.\nYour current score: {self.playersScore["target"]}"
+
+            await interaction.response.send_message(rollStatus, ephemeral = True) #notifys the user of the result
+
+            await self.endMatch()
+
+        #user's last roll turn
+        elif self.state == "user_last_roll":
+            self.roll.disabled = True #disables roll button
+
+            userDie = random.randint(1, 6) #rolls a die for the user for the last time
+            self.playersScore["userRecord"].append(userDie) #saves for the record
+
+            #if rolls a 6, busted
+            if userDie == 6:
+                self.playersScore["user"] = 0
+                self.playersScore["userBusted"] = len(self.playersScore["userRecord"])
+                rollStatus = f"You rolled a **{userDie}!**\nYour score is reset to 0."
+
+            #adds the score otherwise
+            else:
+                self.playersScore["user"] += 1
+                rollStatus = f"You rolled a **{userDie}**.\nYour current score: {self.playersScore["target"]}"
+
+            await interaction.response.send_message(rollStatus, ephemeral = True) #notifys the user of the result
+
+            await self.endMatch()
 
     #defines proceed button
     @discord.ui.button(label = "proceed" , style = discord.ButtonStyle.blurple, row = 1, disabled = True)
@@ -309,8 +405,8 @@ class LimitDiceVeiw(discord.ui.View):
         if self.state == "user_decide" and interaction.user.id != self.user.id:
             return await interaction.response.send_message(f"It's {self.user.mention}'s turn to decide.", ephemeral = True)
         
-        #if bot is the target
-        if self.botPlay:
+        #bot's turn, if bot is the target
+        if self.state == "target_decide" and self.botPlay:
             pass
 
             self.state = "user_decide" #ends bot's decide turn, user's decide turn begins
@@ -335,32 +431,63 @@ class LimitDiceVeiw(discord.ui.View):
 
         #user's turn
         elif self.state == "user_decide":
-            self.proceed.disabled = self.stand.disabled = True #disables decision buttons
-            self.match += 1 #increase the match number
+            self.proceed.disabled = self.stopbtn.disabled = True #disables decision buttons
 
-            nextmatchstr = f"\n\nIt's currently {self.target.mention}'s turn to roll the die." if not self.botPlay else "I've rolled my die already."
-            decisionResultEmbed = discord.Embed(
-                title = "Limit Dice 🎲",
-                description = (
-                    f"{self.target.mention if not self.botPlay else "I"} will **Proceed**. 🔄️"
-                    f"\n{self.user.mention} will **Proceed**. 🔄️"
-                    f"\nRound {self.match} begins."
-                ) + nextmatchstr,
-                color = self.embedColor,
-                timestamp = self.timestamp
-            )
-            if self.slash:
-                await self.interaction.edit_original_response(embed = decisionResultEmbed)
+            #if target stopped, user last roll phase begins
+            if "stop" in self.playersScore["targetRecord"]:
+                if not self.playersScore["userBusted"]:
+                    userProceedEmbed = discord.Embed(
+                        title = "Limit Dice 🎲",
+                        description = (
+                            f"{self.target.mention if not self.botPlay else "I"} {"Stops" if not self.botPlay else "Stop"} !🤚"
+                            f"\n{self.user.mention} Proceeds !🔄️"
+                            f"\n\n{self.user.mention} hasn't rolled a six yet so it's their turn to roll for the last time."
+                        ),
+                        color = self.embedColor,
+                        timestamp = self.timestamp
+                    )
+                    if self.slash:
+                        await self.interaction.edit_original_response(embed = userProceedEmbed)
+                    else:
+                        await self.msg.edit(embed = userProceedEmbed)
+
+                #if user is busted, match ends
+                else:
+                    return await self.endMatch()
+
+                self.roll.disabled = False #enables roll button for the last time
+
+                self.state = "user_last_roll" #ends user's decide turn, user's last roll turn begins
+
+            #if target proceeded, another match begins
             else:
-                await self.msg.edit(embed = decisionResultEmbed)
+                self.match += 1 #increase the match number
 
-            self.roll.disabled = False #enables roll button for a new match
+                bothProceedEmbed = discord.Embed(
+                    title = "Limit Dice 🎲",
+                    description = (
+                        f"{self.target.mention if not self.botPlay else "I"} {"Proceeds" if not self.botPlay else "Proceed"} !🔄️"
+                        f"\n{self.user.mention} Proceeds !🔄️"
+                        f"\nRound {self.match} begins."
+                        f"\n\nIt's currently {self.target.mention}'s turn to roll their die." if not self.botPlay else "I've rolled my die already."
+                    ),
+                    color = self.embedColor,
+                    timestamp = self.timestamp
+                )
+                if self.slash:
+                    await self.interaction.edit_original_response(embed = bothProceedEmbed)
+                else:
+                    await self.msg.edit(embed = bothProceedEmbed)
 
-            self.state = "target_roll" #ends user's decide turn, match continues with target's roll turn
+                self.roll.disabled = False #enables roll button for a new match
+
+                self.state = "target_roll" #ends user's decide turn, another match with target's roll turn begins
+                if self.botPlay:
+                    await self.botRoll()
 
     #defines stand button
-    @discord.ui.button(label = "stand" , style = discord.ButtonStyle.gray, row = 2, disabled = True)
-    async def stand(self, interaction: discord.Interaction, button: discord.ui.Button[discord.ui.View]):
+    @discord.ui.button(label = "stop" , style = discord.ButtonStyle.gray, row = 2, disabled = True)
+    async def stopbtn(self, interaction: discord.Interaction, button: discord.ui.Button[discord.ui.View]):
         #checks if only the user and target can interact with buttons
         if interaction.user.id not in (self.target.id, self.user.id):
             return await interaction.response.send_message("You can't play in this match.", ephemeral = True)
@@ -373,18 +500,71 @@ class LimitDiceVeiw(discord.ui.View):
         if self.state == "user_decide" and interaction.user.id != self.user.id:
             return await interaction.response.send_message(f"It's {self.user.mention}'s turn to decide.", ephemeral = True)
         
-        #if bot is the target
-        if self.botPlay:
-            pass
+        #bot's turn, if bot is the target
+        if self.state == "target_decide" and self.botPlay:
+            self.playersScore["targetRecord"].append("stop")
 
             self.state = "user_decide" #ends bot's decide turn, user's decide turn begins
-        
-        self.stand.disabled = self.proceed.disabled = True #disables stand and proceed button
 
-        self.state = "result" #decision phase ends, showdown phase begins
-        await self.endMatch(stand = interaction.user)
+        #target's turn
+        if self.state == "target_decide":
+            self.playersScore["targetRecord"].append("stop")
 
-    async def endMatch(self, stand: discord.abc.User | None = None, tenMatchLimit: bool = False):
+            targetStopEmbed = discord.Embed(
+                title = "Limit Dice 🎲",
+                description = (
+                    f"{self.target.mention} Stops !🤚"
+                    f"\n\nIt's currently {self.user.mention}'s turn to decide."
+                ),
+                color = self.embedColor,
+                timestamp = self.timestamp
+            )
+            if self.slash:
+                await self.interaction.edit_original_response(embed = targetStopEmbed)
+            else:
+                await self.msg.edit(embed = targetStopEmbed)
+
+            self.state = "user_decide" #ends target's decide turn, user's decide turn begins
+
+        #users's turn
+        elif self.state == "user_decide":
+            self.stopbtn.disabled = self.proceed.disabled = True #disables decision buttons
+
+            self.playersScore["userRecord"].append("stop")
+
+            #if target stopped, match ends
+            if "stop" in self.playersScore["targetRecord"]:
+                return await self.endMatch(bothStopped = True)
+
+            #if target proceeded, target last roll phase begins
+            else:
+                if not self.playersScore["targetBusted"]:
+                    userStopEmbed = discord.Embed(
+                        title = "Limit Dice 🎲",
+                        description = (
+                            f"{self.target.mention if not self.botPlay else "I"} {"Proceeds" if not self.botPlay else "Proceed"} !🔄️"
+                            f"\n{self.user.mention} Stops !🤚"
+                            f"\n\n{self.target.mention} hasn't rolled a six yet so it's their turn to roll for the last time."
+                        ),
+                        color = self.embedColor,
+                        timestamp = self.timestamp
+                    )
+                    if self.slash:
+                        await self.interaction.edit_original_response(embed = userStopEmbed)
+                    else:
+                        await self.msg.edit(embed = userStopEmbed)
+
+                #if target is busted, match ends
+                else:
+                    return await self.endMatch()
+                
+                self.roll.disabled = False #enables roll button for the last time
+
+                self.state = "target_last_roll" #ends user's decide turn, target's last roll turn begins
+                if self.botPlay:
+                    await self.botRoll()
+            
+    async def endMatch(self, bothBusted: bool = False, bothStopped: bool = False):
         #draw
         if self.playersScore["target"] == self.playersScore["user"]:
             winner = None
@@ -395,76 +575,68 @@ class LimitDiceVeiw(discord.ui.View):
         else:
             winner = self.user
 
-        #stand string
-        standStr = (
-            f"{stand.mention} **Stands**. 🔒"
-            "\nScores are locked and it's time to SHOWDOWN !"
-        ) if stand else ""
-
-        #10 match limit string
-        matchLimitStr = (
-            "10 matches have been played."
-            "\nScores are locked and it's time to SHOWDOWN !"
-        ) if tenMatchLimit else ""
+        if bothBusted:
+            bothBustedStr = "Both players rolled 6 !\n\n" if not self.botPlay else "We both rolled 6 !\n\n"
+        else:
+            bothBustedStr = ""
+        if bothStopped:
+            bothStoppedStr = "Both players stopped ! and..\n\n" if not self.botPlay else "We both stopped ! and..\n\n"
+        else:
+            bothStoppedStr = ""
 
         #winner string
         if winner:
             winnerStr = (
-                f"\n\n**{winner.mention} has WON !!**"
+                f"**{winner.mention} has WON !!**"
                 f"\nWith a result of `{max(self.playersScore["target"], self.playersScore["user"])} > {min(self.playersScore["target"], self.playersScore["user"])}`"
             )
+
+            rematchStr = ""
         else:
             winnerStr = (
-                f"\n\nIt's a DRAW !!"
+                f"It's a DRAW !!"
                 f"\nWith a result of `{self.playersScore["target"]} = {self.playersScore["user"]}`"
             )
 
+            rematchStr = (
+                    "\n\nAnother match has begun to determine the winner."
+                    f"\nIt's currently {self.target.mention}'s turn to roll the die." if not self.botPlay else "\nI rolled my die already."
+                ) #rematch string
+        
         #busted string
         if self.playersScore["targetBusted"] and self.playersScore["userBusted"]:
-            bustedStr = f"\n\nBoth {self.target.mention} and {self.user.mention} were busted from match {self.playersScore["targetBusted"]} and {self.playersScore["userBusted"]} actually."
+            bustedStr = f"\n\nBoth {self.target.mention if not self.botPlay else "I"} and {self.user.mention} were busted from match {self.playersScore["targetBusted"]} and {self.playersScore["userBusted"]} actually."
         elif self.playersScore["targetBusted"]:
-            bustedStr = f"\n\n{self.target.mention} was busted from match {self.playersScore["targetBusted"]} actually."
+            bustedStr = f"\n\n{self.target.mention if not self.botPlay else "I"} was busted from match {self.playersScore["targetBusted"]} actually."
         elif self.playersScore["userBusted"]:
             bustedStr = f"\n\n{self.user.mention} was busted from match {self.playersScore["userBusted"]} actually."
         else:
             bustedStr = ""
 
-        #if draw, a rematch begins
+        resultEmbed = discord.Embed(
+            title = "Limit Dice 🎲",
+            description = bothBustedStr + bothStoppedStr + winnerStr + rematchStr + bustedStr,
+            color = self.embedColor,
+            timestamp = self.timestamp,
+        )
+        if self.slash:
+            await self.interaction.edit_original_response(embed = resultEmbed)
+        else:
+            await self.msg.edit(embed = resultEmbed)
+
+        #if draw, rematch
         if not winner:
             #resets stats for a rematch
             self.playersScore["target"] = self.playersScore["user"] = 0
             self.playersScore["targetRecord"] = self.playersScore["userRecord"] = []
             self.playersScore["targetBusted"] = self.playersScore["userBusted"] = None
 
-            rematchStr = "Another match has begun to determine the winner." + (f"\nIt's currently {self.target.mention}'s turn to roll the die." if not self.botPlay else "I've rolled my die already.") #rematch string
-            resultEmbed = discord.Embed(
-                title = "Limit Dice 🎲",
-                description = standStr + matchLimitStr + winnerStr + bustedStr + rematchStr,
-                color = self.embedColor,
-                timestamp = self.timestamp,
-            )
-            if self.slash:
-                await self.interaction.edit_original_response(embed = resultEmbed)
-            else:
-                await self.msg.edit(embed = resultEmbed)
-            
             self.roll.disabled = False #enables roll button
 
-            self.state = "target_roll"
-            
-        #results
+            self.state = "target_roll" #a new match begins with target's roll turn
+            if self.botPlay:
+                await self.botRoll()
         else:
-            resultEmbed = discord.Embed(
-                title = "Limit Dice 🎲",
-                description = standStr + matchLimitStr + winnerStr + bustedStr,
-                color = self.embedColor,
-                timestamp = self.timestamp,
-            ).set_thumbnail(url = winner.display_avatar.url)
-            if self.slash:
-                await self.interaction.edit_original_response(embed = resultEmbed, view = None)
-            else:
-                await self.msg.edit(embed = resultEmbed, view = None)
-
             self.stop() #stops the view
 
     async def on_timeout(self):

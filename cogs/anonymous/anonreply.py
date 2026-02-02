@@ -103,12 +103,12 @@ class AnonReply(commands.Cog):
         if row["responded"] == 1:
             return await ctx.reply("You have already responded this session before.")
         
-        channel = senderUser.dm_channel or await senderUser.create_dm() #fetches the dm channel
+        channel = senderUser.dm_channel #fetches the dm channel
         #fetches the message collecter message
         try:
-            fetchedMessage = await channel.fetch_message(row["sender_message_collector_id"])
+            messageCollector = await channel.fetch_message(row["sender_message_collector_id"]) if channel else None
         except discord.NotFound:
-            fetchedMessage = None
+            messageCollector = None
 
         #if user doesn't enter message
         if not message:
@@ -117,8 +117,8 @@ class AnonReply(commands.Cog):
         now = discord.utils.utcnow()
         
         desc = (
-            f"`{ctx.author.display_name}` has replied to [this]({fetchedMessage.jump_url}) Session(Session ID: *{sessionId}*):"
-            if fetchedMessage else
+            f"`{ctx.author.display_name}` has replied to [this]({messageCollector.jump_url}) Session(Session ID: *{sessionId}*):"
+            if messageCollector else
             f"`{ctx.author.display_name}` has replied to the Session(Session ID: *{sessionId}*):"
         )
         sendingEmbed = discord.Embed(
@@ -128,8 +128,8 @@ class AnonReply(commands.Cog):
             timestamp = now
         )
         #sends and then replys to the initial notification message
-        if fetchedMessage:
-            msg = await fetchedMessage.reply(embed = sendingEmbed)
+        if messageCollector:
+            msg = await messageCollector.reply(embed = sendingEmbed)
             await msg.reply(message)
         else:
             msg = await senderUser.send(embed = sendingEmbed)
@@ -221,18 +221,18 @@ class AnonReply(commands.Cog):
         if row["responded"] == 1:
             return await interaction.response.send_message("You have already responded this session before.", ephemeral = True)
         
-        channel = senderUser.dm_channel or await senderUser.create_dm() #fetches the dm channel
-        #fetches the message collecter message
+        channel = senderUser.dm_channel #fetches the dm channel
+        #fetches the message collector message
         try:
-            fetchedMessage = await channel.fetch_message(row["sender_message_collector_id"])
+            messageCollector = await channel.fetch_message(row["sender_message_collector_id"]) if channel else None
         except discord.NotFound:
-            fetchedMessage = None
+            messageCollector = None
         
         now = discord.utils.utcnow()
         
         desc = (
-            f"`{interaction.user.display_name}` has replied to [this]({fetchedMessage.jump_url}) Session(Session ID: *{session_id}*):"
-            if fetchedMessage else
+            f"`{interaction.user.display_name}` has replied to [this]({messageCollector.jump_url}) Session(Session ID: *{session_id}*):"
+            if messageCollector else
             f"`{interaction.user.display_name}` has replied to the Session(Session ID: *{session_id}*):"
         )
         sendingEmbed = discord.Embed(
@@ -242,8 +242,8 @@ class AnonReply(commands.Cog):
             timestamp = now
         )
         #sends and then replys to the initial notification message
-        if fetchedMessage:
-            msg = await fetchedMessage.reply(embed = sendingEmbed)
+        if messageCollector:
+            msg = await messageCollector.reply(embed = sendingEmbed)
             await msg.reply(message)
         else:
             msg = await senderUser.send(embed = sendingEmbed)

@@ -15,6 +15,7 @@ privateIdLength = 6 #the length of the private ids
 class sessionData(TypedDict):
     messages: list[discord.Message]
     reciever_id: int
+sessions: dict[int, sessionData] = {}
 
 async def privateIdGenerator(conn: aiosqlite.Connection, publicId: str):
     while True:
@@ -30,7 +31,6 @@ async def privateIdGenerator(conn: aiosqlite.Connection, publicId: str):
 class AnonSend(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.sessions: dict[int, sessionData] = {}
     
     Help: HelpData = {
         "help": (
@@ -56,12 +56,12 @@ class AnonSend(commands.Cog):
             return await ctx.reply("This command can only be used in Amélie's dm.")
 
         #if user already has an active session
-        if ctx.author.id in self.sessions:
+        if ctx.author.id in sessions:
             return await ctx.reply("You are already in a messaging session, close the open one and try again.")
         
         #if user doesn't enter any id
         if not publicId:
-            return await ctx.reply("You must enter the user ID you want to send anonymous message to.")
+            return await ctx.reply("You must enter the user's Public ID to send anonymous message to.")
         
         #if user enters an invalid id
         if len(publicId) != publicIdLength:
@@ -107,12 +107,12 @@ class AnonSend(commands.Cog):
             privateId: str = row["sender_anon_id"]
 
         #opens a session
-        self.sessions[ctx.author.id] = {
+        sessions[ctx.author.id] = {
             "messages": [],
             "reciever_id" : recieverUser.id
         }
         
-        view = AnonView(ctx, conn, recieverUser, publicId, privateId, self.sessions) #initializes the Anon View
+        view = AnonView(ctx, conn, recieverUser, publicId, privateId, sessions) #initializes the Anon View
         await view.start()
 
     @anonsend.error
@@ -129,7 +129,7 @@ class AnonSend(commands.Cog):
     @app_commands.dm_only()
     async def slashAnonsend(self, interaction: discord.Interaction, public_id: str):
         #if user already has an active session
-        if interaction.user.id in self.sessions:
+        if interaction.user.id in sessions:
             return await interaction.response.send_message("You are already in a messaging session, close the open one and try again.", ephemeral = True)
         
         #if user enters an invalid id
@@ -176,12 +176,12 @@ class AnonSend(commands.Cog):
             privateId: str = row["sender_anon_id"]
 
         #opens a session
-        self.sessions[interaction.user.id] = {
+        sessions[interaction.user.id] = {
             "messages": [],
             "reciever_id" : recieverUser.id
         }
         
-        view = AnonView(interaction, conn, recieverUser, public_id, privateId, self.sessions) #initializes the Anon View
+        view = AnonView(interaction, conn, recieverUser, public_id, privateId, sessions) #initializes the Anon View
         await view.start() #starts the view
 
     @slashAnonsend.error
@@ -200,8 +200,8 @@ class AnonSend(commands.Cog):
         if msg.guild:
             return
         
-        if msg.author.id in self.sessions:
-            self.sessions[msg.author.id]["messages"].append(msg)
+        if msg.author.id in sessions:
+            sessions[msg.author.id]["messages"].append(msg)
 
 class AnonView(discord.ui.View):
     def __init__(self, ctx: commands.Context[commands.Bot] | discord.Interaction, conn: aiosqlite.Connection, recieverUser: discord.User, public_id: str, private_id: str, sessions: dict[int, sessionData]):
@@ -259,7 +259,7 @@ class AnonView(discord.ui.View):
         if not messages:
             endEmbed = discord.Embed(
                 title = "Anonymous Message",
-                description = "You sent no messages, session ended.",
+                description = "You sent no message, session ended.",
                 color = discord.Color.dark_gray(),
                 timestamp = now
             )

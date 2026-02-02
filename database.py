@@ -93,13 +93,13 @@ async def setup():
     #tickets table
     await conn.execute("""
     CREATE TABLE IF NOT EXISTS tickets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ticket_id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         message_collector_id INTEGER NOT NULL,
         subject TEXT NOT NULL,
         state TEXT NOT NULL DEFAULT "open",
-        closed_at DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        closed_at DATETIME
     );
     """)
 

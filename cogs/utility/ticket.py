@@ -48,7 +48,7 @@ class Ticket(commands.Cog):
         
         #if user already has an active session
         if ctx.author.id in sessions:
-            return await ctx.reply("You already have an open Ticketing session, try closing that one and try again.")
+            return await ctx.reply("You already have an open Ticketing session, try closing it and try again.")
         
         #if user doesn't enter the ticket subject
         if not subject:
@@ -56,7 +56,7 @@ class Ticket(commands.Cog):
         
         sessions[ctx.author.id] = [] #creates a session for the user
 
-        admin = self.bot.get_user(TicketPlaceId) or await self.bot.fetch_user(TicketPlaceId) #fetches the admin user to send the message to
+        admin = self.bot.get_user(TicketPlaceId) or await self.bot.fetch_user(TicketPlaceId) or self.bot.get_channel(TicketPlaceId) or await self.bot.fetch_channel(TicketPlaceId) #fetches the admin user or channel to send the message to
 
         view = TicketView(ctx, subject, admin) #initializes the Ticket View
         await view.start() #starts the view
@@ -76,11 +76,11 @@ class Ticket(commands.Cog):
     async def slashTicket(self, interaction: discord.Interaction, subject: str):
         #if user already has an active session
         if interaction.user.id in sessions:
-            return await interaction.response.send_message("You already have an open Ticketing session, try closing that one and try again.", ephemeral = True)
+            return await interaction.response.send_message("You already have an open Ticketing session, try closing it and try again.", ephemeral = True)
         
         sessions[interaction.user.id] = [] #creates a session for the user
 
-        admin = self.bot.get_user(TicketPlaceId) or await self.bot.fetch_user(TicketPlaceId) #fetches the admin user to send the message to
+        admin = self.bot.get_user(TicketPlaceId) or await self.bot.fetch_user(TicketPlaceId) or self.bot.get_channel(TicketPlaceId) or await self.bot.fetch_channel(TicketPlaceId) #fetches the admin user or channel to send the message to
 
         view = TicketView(interaction, subject, admin) #initializes the Ticket View
         await view.start() #starts the view
@@ -117,7 +117,6 @@ class TicketView(discord.ui.View):
             self.user = ctx.author
         self.subject = subject
         self.admin = admin
-        self.timestamp = discord.utils.utcnow()
 
     async def start(self):
         initialEmbed = discord.Embed(
@@ -128,7 +127,7 @@ class TicketView(discord.ui.View):
                 "\n\n**note: Your *username* and *ID* will be included in the Ticket for more contact.**"
             ),
             color = discord.Color.blurple(),
-            timestamp = self.timestamp
+            timestamp = discord.utils.utcnow()
         )
         if self.slash:
             await self.interaction.response.send_message(embed = initialEmbed, view = self)
@@ -148,15 +147,17 @@ class TicketView(discord.ui.View):
         if interaction.user.id != self.user.id:
             return await interaction.response.send_message("You can't control this session.", ephemeral = True)
         
+        timestamp = discord.utils.utcnow()
+        
         messages = sessions.pop(self.user.id) #ends the user session and collects the sent messages
 
         #if no message is sent, session gets canceled
         if not messages:
             endEmbed = discord.Embed(
                 title = "Ticket 🎫",
-                description = "You sent no messages, session ended.",
+                description = "You sent no message, session ended.",
                 color = discord.Color.dark_gray(),
-                timestamp = self.timestamp
+                timestamp = timestamp
             )
             if self.slash:
                 await self.interaction.edit_original_response(embed = endEmbed, view = None)
@@ -172,7 +173,7 @@ class TicketView(discord.ui.View):
         cursor = await conn.execute("""
         INSERT INTO tickets (user_id, message_collector_id, subject, created_date)
         VALUES (?, ?, ?, ?);
-        """, (self.user.id, self.collectorId, self.subject, self.timestamp))
+        """, (self.user.id, self.collectorId, self.subject, timestamp))
         await conn.commit()
         ticketId = cursor.lastrowid #fetches the created ticket id
         await conn.close()
@@ -184,8 +185,8 @@ class TicketView(discord.ui.View):
                 f"{self.user.mention} with ID {self.user.id} has sent a Ticket."
             ),
             color = discord.Color.blurple(),
-            timestamp = self.timestamp
-        ).set_footer(text = f"Ticket No. {ticketId}")
+            timestamp = timestamp
+        ).set_footer(text = f"Ticket ID {ticketId}")
         msg = await self.admin.send(embed = sendingEmbed) #sends an initial message to the reciever
 
         #replys the collected messages to the initial message
@@ -207,7 +208,7 @@ class TicketView(discord.ui.View):
             title = "Ticket 🎫",
             description = f"Your Ticket has been sent succesfully.",
             color = discord.Color.green(),
-            timestamp = self.timestamp
+            timestamp = timestamp
         )
         if self.slash:
             await self.interaction.edit_original_response(embed = notifyEmbed, view = None)
@@ -226,6 +227,8 @@ class TicketView(discord.ui.View):
         if interaction.user.id != self.user.id:
             return await interaction.response.send_message("You can't control this session.", ephemeral = True)
         
+        timestamp = discord.utils.utcnow()
+
         sessions.pop(self.user.id, None) #ends the session
 
         #sends the cancel message to the user
@@ -233,7 +236,7 @@ class TicketView(discord.ui.View):
             title = "Ticket 🎫",
             description = "You canceled the session.",
             color = discord.Color.dark_gray(),
-            timestamp = self.timestamp
+            timestamp = timestamp
         )
         if self.slash:
             await self.interaction.edit_original_response(embed = endEmbed, view = None)
@@ -255,7 +258,7 @@ class TicketView(discord.ui.View):
             title = "Ticket 🎫",
             description = f"⏰ Ticket session timeout.",
             color = discord.Color.dark_gray(),
-            timestamp = self.timestamp
+            timestamp = discord.utils.utcnow()
         )
         try:
             if self.slash:
