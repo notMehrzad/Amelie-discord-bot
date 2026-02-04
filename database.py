@@ -98,7 +98,7 @@ async def setup():
         message_collector_id INTEGER NOT NULL,
         subject TEXT NOT NULL,
         state TEXT NOT NULL DEFAULT "open",
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         closed_at DATETIME
     );
     """)
