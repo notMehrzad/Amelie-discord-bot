@@ -1,8 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import aiosqlite
-from database import connection, economyData
+from database import db, economyData
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
@@ -29,28 +28,21 @@ class Balance(commands.Cog):
             extras = Help["extras"]
     )
     async def balance(self, ctx: commands.Context[commands.Bot]):
-        conn = await connection() #makes a connection to the database
-        conn.row_factory = aiosqlite.Row
-
         #checks if the user has an account already
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT balance FROM userbalance
         WHERE user_id = ?;
-        """, (ctx.author.id,)) as cursor:
-            row = await cursor.fetchone()
-        
+        """, (ctx.author.id,))
         now = discord.utils.utcnow()
         #if user has no account, creates one
         if not row:
-            await conn.execute("""
+            await db.execute("""
             INSERT INTO userbalance (user_id, balance, created_date)
             VALUES (?, ?, ?);
             """, (ctx.author.id, 0, now))
             balance = 0
-            await conn.commit()
         else:
             balance = row["balance"]
-        await conn.close()
 
         #sends the result
         resultEmbed = discord.Embed(
@@ -73,28 +65,21 @@ class Balance(commands.Cog):
     )
     @app_commands.describe(hidden = "Whether the result should be visible only to you or not.")
     async def slashBalance(self, interaction: discord.Interaction, hidden: bool = False):
-        conn = await connection() #makes a connection to the database
-        conn.row_factory = aiosqlite.Row
-
         #checks if the user has an account already
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT balance FROM userbalance
         WHERE user_id = ?;
-        """, (interaction.user.id,)) as cursor:
-            row = await cursor.fetchone()
-        
+        """, (interaction.user.id,))
         now = discord.utils.utcnow()
         #if user has no account, creates one
         if not row:
-            await conn.execute("""
+            await db.execute("""
             INSERT INTO userbalance (user_id, balance, created_date)
             VALUES (?, ?, ?);
             """, (interaction.user.id, 0, now))
             balance = 0
-            await conn.commit()
         else:
             balance = row["balance"]
-        await conn.close()
 
         #sends the result
         resultEmbed = discord.Embed(

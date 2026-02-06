@@ -4,11 +4,11 @@ import json
 import asyncio
 import os
 from itertools import cycle
-from database import setup
+from database import db
 from logHandler import loggerSetup
 
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix = '.', intents = intents, case_insensitive = True, help_command = None) #defines bot object
+bot = commands.Bot(command_prefix = ".", intents = intents, case_insensitive = True, help_command = None) #defines bot object
 
 #cogloader function
 async def cogsload():
@@ -74,8 +74,8 @@ async def main():
     global logger
     logger = loggerSetup(__name__)
 
-    await setup() #sets up the database
-    print("💾 Database has been connected.")
+    await db.tableInitialize() #initializes the tables if needed
+    print("💾 Database works fine.")
 
     async with bot:
         await cogsload() #loads the cogs

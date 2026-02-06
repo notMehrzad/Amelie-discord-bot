@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from database import connection
+from database import db
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
@@ -84,33 +84,26 @@ class Warn(commands.Cog):
             return await ctx.reply("I can't warn a Member with *higher or equal* role position as me.")
         
         #warns the target
-        conn = await connection() #makes a connection to the database
-
         #creates the warn ID based on the last warn id
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT COALESCE(MAX(user_warn_id), 0) + 1
         FROM warns
         WHERE server_id = ? AND user_id = ?;
-        """, (ctx.guild.id, target.id)) as cursor:
-            result = await cursor.fetchone()
-        warnID: int = result[0] if result else 1
+        """, (ctx.guild.id, target.id))
+        warnID: int = row[0] if row else 1
             
         #inserts a new warn for given target
-        await conn.execute("""
+        await db.execute("""
         INSERT INTO warns (server_id, user_warn_id, mod_id, user_id, reason, timestamp)
         VALUES (?, ?, ?, ?, ?, ?);
         """, (ctx.guild.id, warnID, ctx.author.id, target.id, reason, discord.utils.utcnow()))
-        await conn.commit() #commits and saves the changes
 
         #counts the number of warns the target has
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT COUNT(*) FROM warns
         WHERE server_id = ? AND user_id = ?;
-        """, (ctx.guild.id, target.id)) as cursor:
-            result = await cursor.fetchone()
-        warnCount: int = result[0] if result else 0
-
-        await conn.close()
+        """, (ctx.guild.id, target.id))
+        warnCount: int = row[0] if row else 0
 
         await ctx.reply(f"{target.mention} has been warned." + (f"\nreason: {reason}" if reason else ""))
 
@@ -178,33 +171,26 @@ class Warn(commands.Cog):
             return await interaction.response.send_message("I can't warn a Member with *higher or equal* role position as me.", ephemeral = True)
         
         #warns the target
-        conn = await connection() #makes a connection to the database
-
         #creates the warn ID based on the last warn id
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT COALESCE(MAX(user_warn_id), 0) + 1
         FROM warns
         WHERE server_id = ? AND user_id = ?;
-        """, (interaction.guild.id, user.id)) as cursor:
-            result = await cursor.fetchone()
-        warnID: int = result[0] if result else 1
+        """, (interaction.guild.id, user.id))
+        warnID: int = row[0] if row else 1
             
         #inserts a new warn for given target
-        await conn.execute("""
+        await db.execute("""
         INSERT INTO warns (server_id, user_warn_id, mod_id, user_id, reason, timestamp)
         VALUES (?, ?, ?, ?, ?, ?);
         """, (interaction.guild.id, warnID, interaction.user.id, user.id, reason, discord.utils.utcnow()))
-        await conn.commit() #commits and saves the changes
 
         #counts the number of warns the target has
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT COUNT(*) FROM warns
         WHERE server_id = ? AND user_id = ?;
-        """, (interaction.guild.id, user.id)) as cursor:
-            result = await cursor.fetchone()
-        warnCount: int = result[0] if result else 0
-
-        await conn.close()
+        """, (interaction.guild.id, user.id))
+        warnCount: int = row[0] if row else 0
 
         await interaction.response.send_message(f"{user.mention} has been warned." + (f"\nreason: {reason}" if reason else ""))
 
@@ -276,30 +262,23 @@ class Warn(commands.Cog):
         if target.top_role >= msg.guild.me.top_role:
             return await msg.reply("نمی توانم عضوی با رول *بالاتر یا برابر* از خودم را گزارش کنم.")
         
-        conn = await connection()
-
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT COALESCE(MAX(user_warn_id), 0) + 1
         FROM warns
         WHERE server_id = ? AND user_id = ?;
-        """, (msg.guild.id, target.id)) as cursor:
-            result = await cursor.fetchone()
-        warnID: int = result[0] if result else 1
-            
-        await conn.execute("""
+        """, (msg.guild.id, target.id))
+        warnID: int = row[0] if row else 1
+        
+        await db.execute("""
         INSERT INTO warns (server_id, user_warn_id, mod_id, user_id, reason, timestamp)
         VALUES (?, ?, ?, ?, ?, ?);
         """, (msg.guild.id, warnID, msg.author.id, target.id, reason, discord.utils.utcnow()))
-        await conn.commit()
 
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT COUNT(*) FROM warns
         WHERE server_id = ? AND user_id = ?;
-        """, (msg.guild.id, target.id)) as cursor:
-            result = await cursor.fetchone()
-        warnCount: int = result[0] if result else 0
-
-        await conn.close()
+        """, (msg.guild.id, target.id))
+        warnCount: int = row[0] if row else 0
 
         await msg.reply(f"\u202b{target.mention} گزارش داده شد.\u202c" + (f"\n\u202bدلیل: {reason}\u202c" if reason else ""))
 

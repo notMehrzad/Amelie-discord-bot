@@ -1,8 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import aiosqlite
-from database import connection
+from database import db
 from cogs.anonymous.anonsend import privateIdLength
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
@@ -34,15 +33,11 @@ class AnonBlock(commands.Cog):
         if ctx.guild:
             return await ctx.reply("This command can only be used in Amélie's dm.")
 
-        conn = await connection() #makes a connection to the database
-        conn.row_factory = aiosqlite.Row
-
         #checks if the user has a public id
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT public_id FROM anonpublicids
         WHERE user_id = ?;
-        """, (ctx.author.id,)) as cursor:
-            row = await cursor.fetchone()
+        """, (ctx.author.id,))
         if not row:
             return await ctx.reply("You have no public ID so nobody has messaged you to block or unblock now.")
         
@@ -57,11 +52,10 @@ class AnonBlock(commands.Cog):
             return await ctx.reply("Enter a valid private ID.")
         
         #checks if the user with given private id exists in user contact
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT blocked from anonusercontact
         WHERE public_id = ? AND sender_anon_id = ?;
-        """, (public_id, private_id)) as cursor:
-            row = await cursor.fetchone()
+        """, (public_id, private_id))
         if not row:
             return await ctx.reply("No user with given private ID has messaged you ever.")
         
@@ -81,14 +75,11 @@ class AnonBlock(commands.Cog):
             return await ctx.reply("This anonymous user is Unblocked already.")
         
         #blocks or unblocks the target user
-        await conn.execute("""
+        await db.execute("""
         UPDATE anonusercontact
         SET blocked = ?
         WHERE public_id = ? AND sender_anon_id = ?;
         """, (1 if not unblock else 0, public_id, private_id))
-        await conn.commit()
-
-        await conn.close()
 
         #sends the result
         resultEmbed = discord.Embed(
@@ -112,15 +103,11 @@ class AnonBlock(commands.Cog):
     @app_commands.dm_only()
     @app_commands.describe(private_id = "The private ID of anonymous sender to block.", unblock = "Whether you want to block or unblock the user. (default is False=Block)")
     async def slashAnonblock(self, interaction: discord.Interaction, private_id: str, unblock: bool = False):
-        conn = await connection() #makes a connection to the database
-        conn.row_factory = aiosqlite.Row
-
         #checks if the user has a public id
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT public_id FROM anonpublicids
         WHERE user_id = ?;
-        """, (interaction.user.id,)) as cursor:
-            row = await cursor.fetchone()
+        """, (interaction.user.id,))
         if not row:
             return await interaction.response.send_message("You have no public ID so nobody has messaged you to block or unblock now.")
         
@@ -131,11 +118,10 @@ class AnonBlock(commands.Cog):
             return await interaction.response.send_message("Enter a valid private ID.")
         
         #checks if the user with given private id exists in user contact
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT blocked from anonusercontact
         WHERE public_id = ? AND sender_anon_id = ?;
-        """, (public_id, private_id)) as cursor:
-            row = await cursor.fetchone()
+        """, (public_id, private_id))
         if not row:
             return await interaction.response.send_message("No user with given private ID has messaged you ever.")
         
@@ -148,14 +134,11 @@ class AnonBlock(commands.Cog):
             return await interaction.response.send_message("This anonymous user is Unblocked already.")
         
         #blocks or unblocks the target user
-        await conn.execute("""
+        await db.execute("""
         UPDATE anonusercontact
         SET blocked = ?
         WHERE public_id = ? AND sender_anon_id = ?;
         """, (1 if not unblock else 0, public_id, private_id))
-        await conn.commit()
-
-        await conn.close()
 
         #sends the result
         resultEmbed = discord.Embed(

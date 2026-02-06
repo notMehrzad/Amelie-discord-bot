@@ -1,8 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import aiosqlite
-from database import connection
+from database import db
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
@@ -32,27 +31,22 @@ class AnonBlockList(commands.Cog):
         #if user runs the command in a server
         if ctx.guild:
             return await ctx.reply("This command can only be used in Amélie's dm.")
-
-        conn = await connection() #makes a connection to the database
-        conn.row_factory = aiosqlite.Row
-
+        
         #checks if the user has a public id
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT public_id FROM anonpublicids
         WHERE user_id = ?;
-        """, (ctx.author.id,)) as cursor:
-            row = await cursor.fetchone()
+        """, (ctx.author.id,))
         if not row:
             return await ctx.reply("You have no public ID which means you have no block list either.")
         
         public_id: str = row["public_id"]
 
         #fetches all blocked users
-        async with conn.execute("""
+        row = await db.fetchall("""
         SELECT sender_anon_id FROM anonusercontact
         WHERE public_id = ? AND blocked = ?;
-        """, (public_id, 1)) as cursor:
-            row = await cursor.fetchall()
+        """, (public_id, 1))
         #if no user was blocked, notifies the user
         if not row:
             return await ctx.reply("Your block list is empty.")
@@ -78,26 +72,21 @@ class AnonBlockList(commands.Cog):
     )
     @app_commands.dm_only()
     async def slashAnonblocklist(self, interaction: discord.Interaction):
-        conn = await connection() #makes a connection to the database
-        conn.row_factory = aiosqlite.Row
-
         #checks if the user has a public id
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT public_id FROM anonpublicids
         WHERE user_id = ?;
-        """, (interaction.user.id,)) as cursor:
-            row = await cursor.fetchone()
+        """, (interaction.user.id,))
         if not row:
             return await interaction.response.send_message("You have no public ID which means you have no block list either.", ephemeral = True)
         
         public_id: str = row["public_id"]
 
         #fetches all blocked users
-        async with conn.execute("""
+        row = await db.fetchall("""
         SELECT sender_anon_id FROM anonusercontact
         WHERE public_id = ? AND blocked = ?;
-        """, (public_id, 1)) as cursor:
-            row = await cursor.fetchall()
+        """, (public_id, 1))
         #if no user was blocked, notifies the user
         if not row:
             return await interaction.response.send_message("Your block list is empty.", ephemeral = True)

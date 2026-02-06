@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from database import connection
+from database import db
 import random
 import asyncio
 from cogs.utility.help import HelpData
@@ -123,18 +123,16 @@ class Blackjack(commands.Cog):
             elif bet > 300:
                 return await ctx.reply("The maximum bet limit for this game is **300**.")
             
-            conn = await connection() #makes a connection to the database
             #trys to fetch user's balance
-            async with conn.execute("""
+            row = await db.fetchone("""
             SELECT balance from userbalance
             WHERE user_id = ?;
-            """, (ctx.author.id,)) as cursor:
-                row = await cursor.fetchone()
+            """, (ctx.author.id,))
             #if user doesn't have an account
             if not row:
                 return await ctx.reply("You have no balance account ! Try `/daily` to claim your first daily reward and get your balance account.")
             
-            if bet > row[0]:
+            if bet > row["balance"]:
                 return await ctx.reply(f"Your desired bet is higher than your current balance. Try `balance` to see your balance.")
 
         sessions.append(ctx.author.id)
@@ -167,18 +165,16 @@ class Blackjack(commands.Cog):
             elif bet > 300:
                 return await interaction.response.send_message("The maximum bet limit for this game is **300**.", ephemeral = True)
             
-            conn = await connection() #makes a connection to the database
             #trys to fetch user's balance
-            async with conn.execute("""
+            row = await db.fetchone("""
             SELECT balance from userbalance
             WHERE user_id = ?;
-            """, (interaction.user.id,)) as cursor:
-                row = await cursor.fetchone()
+            """, (interaction.user.id,))
             #if user doesn't have an account
             if not row:
                 return await interaction.response.send_message("You have no balance account ! Try `/daily` to claim your first daily reward and get your balance account.", ephemeral = True)
             
-            if bet > row[0]:
+            if bet > row["balance"]:
                 return await interaction.response.send_message(f"Your desired bet is higher than your current balance. Try `balance` to see your balance.", ephemeral = True)
 
         sessions.append(interaction.user.id)
@@ -214,29 +210,25 @@ class blackjackView(discord.ui.View):
 
     async def setBet(self, bet: int, firstBet: bool = False):
         if bet != 0:
-            conn = await connection() #makes a connection to the database
-            async with conn.execute("""
+            row = await db.fetchone("""
             SELECT balance FROM userbalance
             WHERE user_id = ?;
-            """, (self.user.id,)) as cursor:
-                row = await cursor.fetchone()
+            """, (self.user.id,))
             if row:
                 if firstBet:
-                    await conn.execute("""
+                    await db.execute("""
                     UPDATE userbalance
                     SET balance = ?
                     WHERE user_id = ?;
-                    """, (row[0] - bet, self.user.id))
+                    """, (row["balance"] - bet, self.user.id))
                 else:
-                    await conn.execute("""
+                    await db.execute("""
                     UPDATE userbalance
                     SET balance = ?
                     WHERE user_id = ?;
-                    """, (row[0] - (bet - self.bet), self.user.id))
+                    """, (row["balance"] - (bet - self.bet), self.user.id))
                     
-                self.bet = bet
-                await conn.commit()
-                await conn.close()    
+                self.bet = bet  
 
     @property
     def insuranceStr(self):
@@ -639,22 +631,18 @@ class blackjackView(discord.ui.View):
         sessions.pop(self.user.id) #ends the session
 
         if self.outcome != 0:
-            conn = await connection() #makes a connection to the database
             #fetches user's balance
-            async with conn.execute("""
+            row = await db.fetchone("""
             SELECT balance from userbalance
             WHERE user_id = ?;
-            """, (self.user.id,)) as cursor:
-                row = await cursor.fetchone()
+            """, (self.user.id,))
             if row:
                 #updates user balance based on the outcome and returns the bet
-                await conn.execute("""
+                await db.execute("""
                 UPDATE userbalance
                 SET balance = ?
                 WHERE user_id = ?;
-                """, (row[0] + self.bet + self.outcome, self.user.id))
-                await conn.commit()
-                await conn.close()
+                """, (row["balance"] + self.bet + self.outcome, self.user.id))
 
     async def on_timeout(self):
         self.outcome -= (self.bet / 2)
@@ -686,22 +674,18 @@ class blackjackView(discord.ui.View):
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
         sessions.pop(self.user.id) #ends the session
 
-        conn = await connection() #makes a connection to the database
         #fetches user's balance
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT balance FROM userbalance
         WHERE user_id = ?;
-        """, (self.user.id,)) as cursor:
-            row= await cursor.fetchone()
+        """, (self.user.id,))
         if row:
             #returns back the bet
-            await conn.execute("""
+            await db.execute("""
             UPDATE userbalance
             SET balance = ?
             WHERE user_id = ?;
-            """, (row[0] + self.bet,))
-            await conn.commit()
-            await conn.close()
+            """, (row["balance"] + self.bet,))
 
         logger.exception(f"❌ something went wrong with blackjack interaction - button: {getattr(item, 'label', 'unknown')}")
         try:

@@ -1,8 +1,7 @@
 import discord
 from discord.ext import commands
-import aiosqlite
 import json
-from database import connection
+from database import db
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
@@ -77,16 +76,12 @@ class TicketHandle(commands.Cog):
                 await ctx.message.delete()
                 await msg.delete(delay = 5)
             return
-        
-        conn = await connection() #makes a connection to the database
-        conn.row_factory = aiosqlite.Row
 
         #fetches the ticket data
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT * FROM tickets
         WHERE ticket_id = ?;
-        """, (ticketId,)) as cursor:
-            row = await cursor.fetchone()
+        """, (ticketId,))
         #if ticket with given id doesn't exist
         if not row:
             msg = await ctx.reply("Ticket with given ID doesn't exist.")
@@ -106,15 +101,11 @@ class TicketHandle(commands.Cog):
                 await msg.delete(delay = 5)
             
             #deletes the ticket
-            await conn.execute("""
+            await db.execute("""
             DELETE FROM tickets
             WHERE ticket_id = ?;
             """, (ticketId,))
-            await conn.commit()
-
-            await conn.close()
             return
-        await conn.close()
         
         channel = ticketUser.dm_channel
         #fetches the message collector message
@@ -135,14 +126,11 @@ class TicketHandle(commands.Cog):
         #close subcommand
         elif cmd == "close":
             #updates the ticket state
-            conn = await connection()
-            await conn.execute("""
+            await db.execute("""
             UPDATE tickets
             set state = ?, closed_at = ?
             WHERE ticket_id = ?;
             """, ("closed", discord.utils.utcnow(), ticketId))
-            await conn.commit()
-            await conn.close()
 
             closedEmbed = discord.Embed(
                 title = "Ticket Closed 🎫📪",
@@ -242,14 +230,11 @@ class TicketRespondView(discord.ui.View):
             await msg.reply(content = content, files = files, embeds = m.embeds)
 
         #updates the state of the ticket
-        conn = await connection()
-        await conn.execute("""
+        await db.execute("""
         UPDATE tickets
         SET state = ?, closed_at = ?
         WHERE ticket_id = ?;
         """, ("closed", self.timestamp, self.ticketId))
-        await conn.commit()
-        await conn.close()
 
         #sends the succeed message to the admin
         notifyEmbed = discord.Embed(

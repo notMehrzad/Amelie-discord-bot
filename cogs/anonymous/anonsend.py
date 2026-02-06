@@ -1,8 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import aiosqlite
-from database import connection
+from database import db
 from typing import TypedDict
 from cogs.utility.help import HelpData
 from cogs.anonymous.anonid import idGenerator, publicIdLength
@@ -17,15 +16,14 @@ class sessionData(TypedDict):
     reciever_id: int
 sessions: dict[int, sessionData] = {}
 
-async def privateIdGenerator(conn: aiosqlite.Connection, publicId: str):
+async def privateIdGenerator(publicId: str):
     while True:
         privateId = idGenerator(privateIdLength)
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT 1 FROM anonusercontact
         WHERE public_id = ? AND sender_anon_id = ?;
-        """, (publicId, privateId)) as cursor:
-            found = await cursor.fetchone()
-        if not found:
+        """, (publicId, privateId))
+        if not row:
             return privateId
 
 class AnonSend(commands.Cog):
@@ -66,16 +64,12 @@ class AnonSend(commands.Cog):
         #if user enters an invalid id
         if len(publicId) != publicIdLength:
             return await ctx.reply("Enter a valid public ID.")
-        
-        conn = await connection() #makes a connection to the database
-        conn.row_factory = aiosqlite.Row
 
         #checks if a user with given public id exists
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT user_id FROM anonpublicids
         WHERE public_id = ?;
-        """, (publicId,)) as cursor:
-            row = await cursor.fetchone()
+        """, (publicId,))
         #if user with given public id doesn't exist
         if not row:
             return await ctx.reply("User with this ID doesn't exist.")
@@ -83,20 +77,17 @@ class AnonSend(commands.Cog):
         recieverUser = self.bot.get_user(row["user_id"]) or await self.bot.fetch_user(row["user_id"]) #fetches the reciever user from found id
         
         #if user contact doesn't exist
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT sender_anon_id, blocked from anonusercontact
         WHERE public_id = ? AND sender_id = ?;
-        """, (publicId, ctx.author.id)) as cursor:
-            row = await cursor.fetchone()
-
+        """, (publicId, ctx.author.id))
         #if user is not in target user anon contact, creates the contact
         if not row:
-            newId = await privateIdGenerator(conn, publicId)
-            await conn.execute("""
+            newId = await privateIdGenerator(publicId)
+            await db.execute("""
             INSERT INTO anonusercontact (public_id, sender_id, sender_anon_id)
             VALUES (?, ?, ?);
             """, (publicId, ctx.author.id, newId))
-            await conn.commit()
             privateId = newId
 
         #if user contact exists but is blocked
@@ -112,7 +103,7 @@ class AnonSend(commands.Cog):
             "reciever_id" : recieverUser.id
         }
         
-        view = AnonView(ctx, conn, recieverUser, publicId, privateId, sessions) #initializes the Anon View
+        view = AnonView(ctx, recieverUser, publicId, privateId, sessions) #initializes the Anon View
         await view.start()
 
     @anonsend.error
@@ -136,15 +127,11 @@ class AnonSend(commands.Cog):
         if len(public_id) != publicIdLength:
             return await interaction.response.send_message("Enter a valid ID.", ephemeral = True)
         
-        conn = await connection() #makes a connection to the database
-        conn.row_factory = aiosqlite.Row
-
         #checks if a user with given public id exists
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT user_id FROM anonpublicids
         WHERE public_id = ?;
-        """, (public_id,)) as cursor:
-            row = await cursor.fetchone()
+        """, (public_id,))
         #if user with given public id doesn't exist
         if not row:
             return await interaction.response.send_message("User with this ID doesn't exist.", ephemeral = True)
@@ -152,20 +139,17 @@ class AnonSend(commands.Cog):
         recieverUser = self.bot.get_user(row["user_id"]) or await self.bot.fetch_user(row["user_id"]) #fetches the reciever user from found id
         
         #if user contact doesn't exist
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT sender_anon_id, blocked from anonusercontact
         WHERE public_id = ? AND sender_id = ?;
-        """, (public_id, interaction.user.id)) as cursor:
-            row = await cursor.fetchone()
-
+        """, (public_id, interaction.user.id))
         #if user is not in target user anon contact, creates the contact
         if not row:
-            newId = await privateIdGenerator(conn, public_id)
-            await conn.execute("""
+            newId = await privateIdGenerator(public_id)
+            await db.execute("""
             INSERT INTO anonusercontact (public_id, sender_id, sender_anon_id)
             VALUES (?, ?, ?);
             """, (public_id, interaction.user.id, newId))
-            await conn.commit()
             privateId = newId
 
         #if user contact exists but is blocked
@@ -181,7 +165,7 @@ class AnonSend(commands.Cog):
             "reciever_id" : recieverUser.id
         }
         
-        view = AnonView(interaction, conn, recieverUser, public_id, privateId, sessions) #initializes the Anon View
+        view = AnonView(interaction, recieverUser, public_id, privateId, sessions) #initializes the Anon View
         await view.start() #starts the view
 
     @slashAnonsend.error
@@ -204,7 +188,7 @@ class AnonSend(commands.Cog):
             sessions[msg.author.id]["messages"].append(msg)
 
 class AnonView(discord.ui.View):
-    def __init__(self, ctx: commands.Context[commands.Bot] | discord.Interaction, conn: aiosqlite.Connection, recieverUser: discord.User, public_id: str, private_id: str, sessions: dict[int, sessionData]):
+    def __init__(self, ctx: commands.Context[commands.Bot] | discord.Interaction, recieverUser: discord.User, public_id: str, private_id: str, sessions: dict[int, sessionData]):
         super().__init__(timeout = 300)
         if isinstance(ctx, discord.Interaction):
             self.slash = True
@@ -214,7 +198,6 @@ class AnonView(discord.ui.View):
             self.slash = False
             self.ctx = ctx
             self.user = ctx.author
-        self.conn = conn
         self.recieverUser = recieverUser
         self.public_id = public_id
         self.private_id = private_id
@@ -272,22 +255,18 @@ class AnonView(discord.ui.View):
             return
 
         #creates the session id
-        async with self.conn.execute("""
+        row = await db.fetchone("""
         SELECT COALESCE(MAX(session_id), 0) + 1
         FROM anonsessions
         WHERE reciever_id = ? AND sender_id = ?;
-        """, (self.public_id, self.private_id)) as cursor:
-            row = await cursor.fetchone()
+        """, (self.public_id, self.private_id))
         sessionId: int = row[0] if row else 1
 
         #stores the session in the database
-        await self.conn.execute("""
+        await db.execute("""
         INSERT INTO anonsessions (session_id, reciever_id, sender_id, sender_message_collector_id, session_date)
         VALUES (?, ?, ?, ?, ?);
         """, (sessionId, self.public_id, self.private_id, self.msgId, now))
-        await self.conn.commit()
-
-        await self.conn.close()
 
         #send the messages to the target
         sendingEmbed = discord.Embed(

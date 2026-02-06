@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import json
-from database import connection
+from database import db
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
@@ -54,12 +54,8 @@ class ModWarnDelete(commands.Cog):
 
         #deletes all warns table data
         if cmd == "all":
-            conn = await connection() #makes a connection to the database
-
-            await conn.execute("DELETE FROM warns;")
-            await conn.execute("DELETE FROM sqlite_sequence WHERE name='warns';")
-            await conn.commit()
-            await conn.close()
+            await db.execute("DELETE FROM warns;")
+            await db.execute("DELETE FROM sqlite_sequence WHERE name='warns';")
 
             await ctx.reply("All warnings have been cleared.", delete_after = 5)
             await ctx.message.delete(delay = 5)
@@ -87,14 +83,10 @@ class ModWarnDelete(commands.Cog):
                 await ctx.message.delete(delay = 5)
                 return
             
-            conn = await connection() #makes a connection to the database
-
-            await conn.execute("""
+            await db.execute("""
             DELETE FROM warns
             WHERE server_id = ?
             """, (server.id,))
-            await conn.commit()
-            await conn.close()
 
             await ctx.reply(f"All warnings from {server.name} have been cleared.", delete_after = 5)
             await ctx.message.delete(delay = 5)
@@ -121,15 +113,11 @@ class ModWarnDelete(commands.Cog):
                 await ctx.reply("Enter a valid User ID.", delete_after = 5)
                 await ctx.message.delete(delay = 5)
                 return
-            
-            conn = await connection()#makes a connection to the database
 
-            await conn.execute("""
+            await db.execute("""
             DELETE FROM warns
             WHERE user_id = ?
             """, (target.id,))
-            await conn.commit()
-            await conn.close()
 
             await ctx.reply(f"All warnings from {target.display_name} have been cleared.", delete_after = 5)
             await ctx.message.delete(delay = 5)

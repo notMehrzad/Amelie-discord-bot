@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from database import connection
+from database import db
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
@@ -84,52 +84,42 @@ class WarnClear(commands.Cog):
         #if user doesn't enter a valid warn id
         if isinstance(warnId, str) and warnId.lower() != "all":
             return await ctx.reply("You must enter a valid warn ID (or \"all\"). you can see warn IDs of a user with `warnlist` command.")
-        
-        conn = await connection() #makes a connection to the database
 
         #clears the warn with given id
         if warnId and isinstance(warnId, int):
             #trys to find if target user has the warn with given id or not
-            async with conn.execute("""
+            row = await db.fetchone("""
             SELECT * FROM warns
             WHERE server_id = ? AND user_id = ? AND user_warn_id = ?;
-            """, (ctx.guild.id, target.id, warnId)) as cursor:
-                result = await cursor.fetchone()
+            """, (ctx.guild.id, target.id, warnId))
             #if no warn with given id is found, notifys the user
-            if not result:
-                await conn.close()
+            if not row:
                 return await ctx.reply(f"{target.display_name} has no warning with that ID.")
             
             #deletes the warn with given id
-            await conn.execute("""
+            await db.execute("""
             DELETE FROM warns
             WHERE server_id = ? AND user_id = ? AND user_warn_id = ?;
             """, (ctx.guild.id, target.id, warnId))
-            await conn.commit()
-            await conn.close()
         
             await ctx.reply(f"{target.mention}'s warning with ID {warnId} has been cleared." + (f"\nreason: {reason}" if reason else ""))
         
         #clears all warns of the target
         else:
             #trys to find if target user has any warn or not
-            async with conn.execute("""
+            row = await db.fetchall("""
             SELECT * FROM warns
             WHERE server_id = ? AND user_id = ?;
-            """, (ctx.guild.id, target.id)) as cursor:
-                result = await cursor.fetchall()
+            """, (ctx.guild.id, target.id))
             #if the target has no warn, notifys the user
-            if not result:
-                await conn.close()
+            if not row:
                 return await ctx.reply(f"{target.display_name} has no warning.")
             
             #deletes all warns
-            await conn.execute("""
+            await db.execute("""
             DELETE FROM warns
             WHERE server_id = ? AND user_id = ?;
             """, (ctx.guild.id, target.id))
-            await conn.commit()
-            await conn.close()
         
             await ctx.reply(f"{target.mention}'s warnings have been cleared." + (f"\nreason: {reason}" if reason else ""))
 
@@ -187,51 +177,41 @@ class WarnClear(commands.Cog):
         if user.top_role >= interaction.guild.me.top_role:
             return await interaction.response.send_message("I can't clear warn of a Member with *higher or equal* role position as me.", ephemeral = True)
         
-        conn = await connection() #makes a connection to the database
-
         #clears the warn with given id
         if warn_id:
             #trys to find if target user has the warn with given id or not
-            async with conn.execute("""
+            row = await db.fetchone("""
             SELECT * FROM warns
             WHERE server_id = ? AND user_id = ? AND user_warn_id = ?;
-            """, (interaction.guild.id, user.id, warn_id)) as cursor:
-                result = await cursor.fetchone()
+            """, (interaction.guild.id, user.id, warn_id))
             #if no warn with given id is found, notifys the user
-            if not result:
-                await conn.close()
+            if not row:
                 return await interaction.response.send_message(f"{user.display_name} has no warning with that ID.", ephemeral = True)
             
             #deletes the warn with given id
-            await conn.execute("""
+            await db.execute("""
             DELETE FROM warns
             WHERE server_id = ? AND user_id = ? AND user_warn_id = ?;
             """, (interaction.guild.id, user.id, warn_id))
-            await conn.commit()
-            await conn.close()
         
             await interaction.response.send_message(f"{user.mention}'s warning with ID {warn_id} has been cleared." + (f"\nreason: {reason}" if reason else ""))
         
         #clears all warns of the target
         else:
             #trys to find if target user has any warn or not
-            async with conn.execute("""
+            row = await db.fetchone("""
             SELECT * FROM warns
             WHERE server_id = ? AND user_id = ?;
-            """, (interaction.guild.id, user.id)) as cursor:
-                result = await cursor.fetchall()
+            """, (interaction.guild.id, user.id))
             #if the target has no warn, notifys the user
-            if not result:
-                await conn.close()
+            if not row:
                 return await interaction.response.send_message(f"{user.display_name} has no warning.", ephemeral = True)
             
             #deletes all warns
-            await conn.execute("""
+            await db.execute("""
             DELETE FROM warns
             WHERE server_id = ? AND user_id = ?;
             """, (interaction.guild.id, user.id))
-            await conn.commit()
-            await conn.close()
         
             await interaction.response.send_message(f"{user.mention}'s warnings have been cleared." + (f"\nreason: {reason}" if reason else ""))
 

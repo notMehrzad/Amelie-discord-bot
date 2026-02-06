@@ -1,8 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import aiosqlite
-from database import connection
+from database import db
 import secrets
 import string
 from cogs.utility.help import HelpData
@@ -16,15 +15,14 @@ def idGenerator(length: int):
     characters = string.ascii_letters + string.digits
     return "".join(secrets.choice(characters) for _ in range(length))
 
-async def publicIdGenerator(conn: aiosqlite.Connection):
+async def publicIdGenerator():
     while True:
         publicId = idGenerator(publicIdLength)
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT 1 FROM anonpublicids
         WHERE public_id = ?
-        """, (publicId,)) as cursor:
-            found = await cursor.fetchone()
-        if not found:
+        """, (publicId,))
+        if not row:
             return publicId
 
 class AnonId(commands.Cog):
@@ -56,47 +54,39 @@ class AnonId(commands.Cog):
         if ctx.guild:
             return await ctx.reply("This command can only be used in Amélie's dm.")
 
-        conn = await connection() #makes a connection to the database
-
         #checks if the user id exists or not
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT public_id FROM anonpublicids
         WHERE user_id = ?;
-        """, (ctx.author.id,)) as cursor:
-            row = await cursor.fetchone()
-
+        """, (ctx.author.id,))
         #if user id doesn't exist
         if not row:
-            newId = await publicIdGenerator(conn) #creates an id
+            newId = await publicIdGenerator() #creates an id
             
             #inserts the new created id
-            await conn.execute("""
+            await db.execute("""
             INSERT INTO anonpublicids (public_id, user_id, created_date)
             VALUES (?, ?, ?)
             """, (newId, ctx.author.id, discord.utils.utcnow()))
-            await conn.commit()
 
             publicId = newId
         
         #checks if id length is ok
-        elif len(row[0]) != publicIdLength:
-            newId = await publicIdGenerator(conn) #creates another id with updated length
+        elif len(row["public_id"]) != publicIdLength:
+            newId = await publicIdGenerator() #creates another id with updated length
 
             #updates the existing id
-            await conn.execute("""
+            await db.execute("""
             UPDATE anonpublicids
             SET public_id = ?
             WHERE user_id = ?;
             """, (newId, ctx.author.id))
-            await conn.commit()
 
             publicId = newId
 
         #public id exists
         else:
-            publicId: str = row[0]
-        
-        await conn.close() #closes the connection
+            publicId: str = row["public_id"]
 
         #sends the result
         resultEmbed = discord.Embed(
@@ -123,48 +113,39 @@ class AnonId(commands.Cog):
     @app_commands.dm_only()
     async def slashAnonid(self, interaction: discord.Interaction):
         await interaction.response.defer()
-
-        conn = await connection() #makes a connection to the database
-
         #checks if the user id exists or not
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT public_id FROM anonpublicids
         WHERE user_id = ?;
-        """, (interaction.user.id,)) as cursor:
-            row = await cursor.fetchone()
-
+        """, (interaction.user.id,))
         #if user id doesn't exist
         if not row:
-            newId = await publicIdGenerator(conn) #creates an id
+            newId = await publicIdGenerator() #creates an id
             
             #inserts the new created id
-            await conn.execute("""
+            await db.execute("""
             INSERT INTO anonpublicids (public_id, user_id, created_date)
             VALUES (?, ?, ?)
             """, (newId, interaction.user.id, discord.utils.utcnow()))
-            await conn.commit()
 
             publicId = newId
         
         #checks if id length is ok
-        elif len(row[0]) != publicIdLength:
-            newId = await publicIdGenerator(conn) #creates another id with updated length
+        elif len(row["public_id"]) != publicIdLength:
+            newId = await publicIdGenerator() #creates another id with updated length
 
             #updates the existing id
-            await conn.execute("""
+            await db.execute("""
             UPDATE anonpublicids
             SET public_id = ?
             WHERE user_id = ?;
             """, (newId, interaction.user.id))
-            await conn.commit()
 
             publicId = newId
 
         #public id exists
         else:
-            publicId: str = row[0]
-        
-        await conn.close() #closes the connection
+            publicId: str = row["public_id"]
 
         resultEmbed = discord.Embed(
             title = "Anonymous ID",

@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import json
-from database import connection
+from database import db
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
@@ -167,16 +167,12 @@ class TicketView(discord.ui.View):
             self.stop()
             return
         
-        conn = await connection() #makes a connection to the database
-
         #creates a ticket in the database for later response
-        cursor = await conn.execute("""
+        cursor = await db.execute("""
         INSERT INTO tickets (user_id, message_collector_id, subject, created_date)
         VALUES (?, ?, ?, ?);
         """, (self.user.id, self.collectorId, self.subject, timestamp))
-        await conn.commit()
         ticketId = cursor.lastrowid #fetches the created ticket id
-        await conn.close()
         
         #sends the ticket
         sendingEmbed = discord.Embed(

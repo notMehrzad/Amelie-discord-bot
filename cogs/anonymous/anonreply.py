@@ -1,8 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import aiosqlite
-from database import connection
+from database import db
 from cogs.anonymous.anonsend import privateIdLength
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
@@ -36,16 +35,12 @@ class AnonReply(commands.Cog):
         #if user runs the command in a server
         if ctx.guild:
             return await ctx.reply("This command can only be used in Amélie's dm.")
-        
-        conn = await connection() #makes a connection to the database
-        conn.row_factory = aiosqlite.Row
 
         #checks if user has a public id
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT public_id FROM anonpublicids
         WHERE user_id = ?;
-        """, (ctx.author.id,)) as cursor:
-            row = await cursor.fetchone()
+        """, (ctx.author.id,))
         if not row:
             return await ctx.reply("You have no public ID so nobody has sent you anything.")
 
@@ -59,11 +54,10 @@ class AnonReply(commands.Cog):
             return await ctx.reply("Enter a valid private ID.")
         
         #checks if target private id is in users anon contact
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT sender_id, blocked FROM anonusercontact
         WHERE public_id = ? AND sender_anon_id = ?;
-        """, (public_id, privateId)) as cursor:
-            row = await cursor.fetchone()
+        """, (public_id, privateId))
         if not row:
             return await ctx.reply("User with given ID hasn't sent you anything.")
         
@@ -76,11 +70,10 @@ class AnonReply(commands.Cog):
 
         #if user doesn't exist anymore, deletes the contact
         except discord.NotFound:
-            await conn.execute("""
+            await db.execute("""
             DELETE FROM anonusercontact
             WHERE public_id = ? AND sender_id = ?;
             """, (public_id, senderUserId))
-            await conn.commit()
 
             return await ctx.reply("The sender with this private ID doesn't exist anymore.")
         
@@ -92,11 +85,10 @@ class AnonReply(commands.Cog):
             return await ctx.reply("Enter a valid session ID.")
         
         #checks if session id with target private id exists in sessions
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT sender_message_collector_id, responded FROM anonsessions
         WHERE reciever_id = ? AND sender_id = ? AND session_id = ?;
-        """, (public_id, privateId, sessionId)) as cursor:
-            row = await cursor.fetchone()
+        """, (public_id, privateId, sessionId))
         if not row:
             return await ctx.reply("User with given ID had no such session with you.")
         
@@ -136,14 +128,11 @@ class AnonReply(commands.Cog):
             await msg.reply(message)
         
         #updates session status to responded
-        await conn.execute("""
+        await db.execute("""
         UPDATE anonsessions
         SET responded = ?
         WHERE reciever_id = ? AND sender_id = ? AND session_id = ?;
         """, (1, public_id, privateId, sessionId))
-        await conn.commit()
-
-        await conn.close()
 
         resultEmbed = discord.Embed(
             title = "Anonymous Message",
@@ -166,15 +155,11 @@ class AnonReply(commands.Cog):
     )
     @app_commands.dm_only()
     async def slashAnonreply(self, interaction: discord.Interaction, private_id: str, session_id: int, message: str):
-        conn = await connection() #makes a connection to the database
-        conn.row_factory = aiosqlite.Row
-
         #checks if user has a public id
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT public_id FROM anonpublicids
         WHERE user_id = ?;
-        """, (interaction.user.id,)) as cursor:
-            row = await cursor.fetchone()
+        """, (interaction.user.id,))
         if not row:
             return await interaction.response.send_message("You have no public ID so nobody has sent you anything.", ephemeral = True)
 
@@ -184,11 +169,10 @@ class AnonReply(commands.Cog):
             return await interaction.response.send_message("Enter a valid private ID.", ephemeral = True)
         
         #checks if target private id is in users anon contact
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT sender_id, blocked FROM anonusercontact
         WHERE public_id = ? AND sender_anon_id = ?;
-        """, (public_id, private_id)) as cursor:
-            row = await cursor.fetchone()
+        """, (public_id, private_id))
         if not row:
             return await interaction.response.send_message("User with given ID hasn't sent you anything.", ephemeral = True)
         
@@ -201,20 +185,18 @@ class AnonReply(commands.Cog):
 
         #if user doesn't exist anymore, deletes the contact
         except discord.NotFound:
-            await conn.execute("""
+            await db.execute("""
             DELETE FROM anonusercontact
             WHERE public_id = ? AND sender_id = ?;
             """, (public_id, senderUserId))
-            await conn.commit()
 
             return await interaction.response.send_message("The sender with this private ID dosn't exist anymore.", ephemeral = True)
 
         #checks if session id with target private id exists in sessions
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT sender_message_collector_id, responded FROM anonsessions
         WHERE reciever_id = ? AND sender_id = ? AND session_id = ?;
-        """, (public_id, private_id, session_id)) as cursor:
-            row = await cursor.fetchone()
+        """, (public_id, private_id, session_id))
         if not row:
             return await interaction.response.send_message("User with given ID had no such session with you.", ephemeral = True)
         
@@ -250,14 +232,11 @@ class AnonReply(commands.Cog):
             await msg.reply(message)
 
         #updates session status to responded
-        await conn.execute("""
+        await db.execute("""
         UPDATE anonsessions
         SET responded = ?
         WHERE reciever_id = ? AND sender_id = ? AND session_id = ?;
         """, (1, public_id, private_id, session_id))
-        await conn.commit()
-
-        await conn.close()
 
         resultEmbed = discord.Embed(
             title = "Anonymous Message",

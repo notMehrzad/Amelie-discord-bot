@@ -1,8 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import aiosqlite
-from database import connection
+from database import db
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
@@ -63,21 +62,17 @@ class WarnList(commands.Cog):
             #if user wants to see bots warnings
             if target.bot:
                 return await ctx.reply("Bots have no warning for you to see.")
-                
-            conn = await connection() #creates a connection to the database
-            conn.row_factory = aiosqlite.Row
 
             #searchs database with given arguments
-            async with conn.execute(
-                "SELECT * FROM warns WHERE server_id = ? AND user_id = ? ORDER BY timestamp;",
-                (ctx.guild.id, target.id)
-                ) as cursor:
-                result = await cursor.fetchall()
-            await conn.close()
+            row = await db.fetchall("""
+            SELECT * FROM warns
+            WHERE server_id = ? AND user_id = ?
+            ORDER BY timestamp;
+            """, (ctx.guild.id, target.id))
 
             warns: list[str] = [] #a list to store warnings
-            if result:
-                for number, warn in enumerate(result, start = 1):
+            if row:
+                for number, warn in enumerate(row, start = 1):
                     #trys to find moderator name
                     try:
                         moderatorUser = (self.bot.get_user(warn["mod_id"]) or await self.bot.fetch_user(warn["mod_id"])) if warn["mod_id"] else None
@@ -96,28 +91,25 @@ class WarnList(commands.Cog):
             
         #shows all warn list
         else:
-            conn = await connection() #creates a connection to the database
-            conn.row_factory = aiosqlite.Row
-
             #searchs database with given arguments
-            async with conn.execute(
-                "SELECT * FROM warns WHERE server_id = ? ORDER BY timestamp;",
-                (ctx.guild.id,)
-                ) as cursor:
-                result = await cursor.fetchall()
-            await conn.close()
+            row = await db.fetchall("""
+            SELECT * FROM warns
+            WHERE server_id = ?
+            ORDER BY timestamp;
+            """, (ctx.guild.id,))
 
             warns: list[str] = [] #a list to store all server warns
-            if result:
-                for number, warn in enumerate(result, start = 1):
+            if row:
+                for number, warn in enumerate(row, start = 1):
                     #trys to find the target
                     try:
                         target = self.bot.get_user(warn["user_id"]) or await self.bot.fetch_user(warn["user_id"])
                     except discord.NotFound:
                         #if fetched target user doesn't exist, deletes the warning
-                        await conn.execute("DELETE FROM warns WHERE warn_id = ?;", (warn['warn_id'],))
-                        await conn.commit()
-                        await conn.close()
+                        await db.execute("""
+                        DELETE FROM warns
+                        WHERE warn_id = ?;
+                        """, (warn["warn_id"],))
                         continue
 
                     #trys to find moderators name
@@ -179,28 +171,24 @@ class WarnList(commands.Cog):
             #if user wants to see bots warnings
             if user.bot:
                 return await interaction.response.send_message("Bots have no warning for you to see.", ephemeral = True)
-                
-            conn = await connection() #creates a connection to the database
-            conn.row_factory = aiosqlite.Row
 
             #searchs database with given arguments
-            async with conn.execute(
-                "SELECT * FROM warns WHERE server_id = ? AND user_id = ? ORDER BY timestamp;",
-                (interaction.guild.id, user.id)
-                ) as cursor:
-                result = await cursor.fetchall()
-            await conn.close()
+            row = await db.fetchall("""
+            SELECT * FROM warns
+            WHERE server_id = ? AND user_id = ?
+            ORDER BY timestamp;
+            """, (interaction.guild.id, user.id))
 
             warns: list[str] = [] #a list to store warnings
-            if result:
-                for number, warn in enumerate(result, start = 1):
+            if row:
+                for number, warn in enumerate(row, start = 1):
                     #trys to find moderator name
                     try:
                         moderatorUser = (self.bot.get_user(warn["mod_id"]) or await self.bot.fetch_user(warn["mod_id"])) if warn["mod_id"] else None
                     except Exception:
                         moderatorUser = None
                     moderatorName = moderatorUser.mention if moderatorUser else "*unknown*"
-                    desc = f"{number}. Warn ID: {warn['user_warn_id']} | Reason: {warn['reason'] if warn['reason'] else "*no reason provided*"} | Moderator: {moderatorName} | Date: {warn['timestamp']}"
+                    desc = f"{number}. Warn ID: {warn['user_warn_id']} | Reason: {warn['reason'] if warn['reason'] else "*no reason provided*"} | Moderator: {moderatorName} | Date: {warn["timestamp"]}"
                     warns.append(desc)
 
             resultEmbed = discord.Embed(
@@ -212,28 +200,24 @@ class WarnList(commands.Cog):
             
         #shows all warn list
         else:
-            conn = await connection() #creates a connection to the database
-            conn.row_factory = aiosqlite.Row
-
             #searchs database with given arguments
-            async with conn.execute(
-                "SELECT * FROM warns WHERE server_id = ? ORDER BY timestamp;",
-                (interaction.guild.id,)
-                ) as cursor:
-                result = await cursor.fetchall()
-            await conn.close()
+            row = await db.fetchall("""
+                SELECT * FROM warns
+                WHERE server_id = ?
+                ORDER BY timestamp;
+                """, (interaction.guild.id,))
 
             warns: list[str] = [] #a list to store all server warns
-            if result:
-                for number, warn in enumerate(result, start = 1):
+            if row:
+                for number, warn in enumerate(row, start = 1):
                     #trys to find the target
                     try:
                         target = self.bot.get_user(warn["user_id"]) or await self.bot.fetch_user(warn["user_id"])
                     except discord.NotFound:
                         #if fetched target user doesn't exist, deletes the warning
-                        await conn.execute("DELETE FROM warns WHERE warn_id = ?;", (warn['warn_id'],))
-                        await conn.commit()
-                        await conn.close()
+                        await db.execute("""
+                        DELETE FROM warns WHERE warn_id = ?;
+                        """, (warn['warn_id'],))
                         continue
 
                     #trys to find moderators name

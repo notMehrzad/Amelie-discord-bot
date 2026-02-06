@@ -1,9 +1,8 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from database import connection, economyData
+from database import db, economyData
 from datetime import timedelta, datetime
-import aiosqlite
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
@@ -45,23 +44,17 @@ class Daily(commands.Cog):
     async def daily(self, ctx: commands.Context[commands.Bot]):
         now = discord.utils.utcnow()
 
-        conn = await connection() #makes a connection to the database
-        conn.row_factory = aiosqlite.Row
-
         #checks the balance and the last daily date of the user
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT balance, last_daily_date FROM userbalance
         WHERE user_id = ?;
-        """, (ctx.author.id,)) as cursor:
-            row = await cursor.fetchone()
+        """, (ctx.author.id,))
         #if user has no economy account, creates one
         if not row:
-            await conn.execute("""
+            await db.execute("""
             INSERT INTO userbalance (user_id, balance, last_daily_date, created_date)
             VALUES (?, ?, ?, ?);
             """, (ctx.author.id, dailyAmount, now, now))
-            await conn.commit()
-            await conn.close()
 
             newBalance = dailyAmount
         
@@ -71,20 +64,17 @@ class Daily(commands.Cog):
 
             #if user trys to claim 2 dailies within a day
             if dailyDate and dailyDate + timedelta(days = 1) >= now:
-                await conn.close()
                 await ctx.reply(f"You must wait `{tdFormatter(dailyDate + timedelta(days = 1) - now)}` to claim your next Daily Rreward.")
                 return
             
             newBalance: int = row["balance"] + dailyAmount
             
             #updates the user balance
-            await conn.execute("""
+            await db.execute("""
             UPDATE userbalance
             SET balance = ?, last_daily_date = ?
             WHERE user_id = ?;
             """, (newBalance, now, ctx.author.id))
-            await conn.commit()
-            await conn.close()
 
         #sends the result
         resultEmbed = discord.Embed(
@@ -109,23 +99,17 @@ class Daily(commands.Cog):
     async def slashDaily(self, interaction: discord.Interaction):
         now = discord.utils.utcnow()
 
-        conn = await connection() #makes a connection to the database
-        conn.row_factory = aiosqlite.Row
-
         #checks the balance and the last daily date of the user
-        async with conn.execute("""
+        row = await db.fetchone("""
         SELECT balance, last_daily_date FROM userbalance
         WHERE user_id = ?;
-        """, (interaction.user.id,)) as cursor:
-            row = await cursor.fetchone()
+        """, (interaction.user.id,))
         #if user has no economy account, creates one
         if not row:
-            await conn.execute("""
+            await db.execute("""
             INSERT INTO userbalance (user_id, balance, last_daily_date, created_date)
             VALUES (?, ?, ?, ?);
             """, (interaction.user.id, dailyAmount, now, now))
-            await conn.commit()
-            await conn.close()
 
             newBalance = dailyAmount
         
@@ -135,20 +119,17 @@ class Daily(commands.Cog):
 
             #if user trys to claim 2 dailies within a day
             if dailyDate and dailyDate + timedelta(days = 1) >= now:
-                await conn.close()
                 await interaction.response.send_message(f"You must wait `{tdFormatter(dailyDate + timedelta(days = 1) - now)}` to claim your next Daily Rreward.", ephemeral = True)
                 return
             
             newBalance: int = row["balance"] + dailyAmount
             
             #updates the user balance
-            await conn.execute("""
+            await db.execute("""
             UPDATE userbalance
             SET balance = ?, last_daily_date = ?
             WHERE user_id = ?;
             """, (newBalance, now, interaction.user.id))
-            await conn.commit()
-            await conn.close()
 
         #sends the result
         resultEmbed = discord.Embed(
