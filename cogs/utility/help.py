@@ -7,6 +7,7 @@ from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 
+
 class HelpData(TypedDict):
     help: str
     brief: str
@@ -14,8 +15,10 @@ class HelpData(TypedDict):
     aliases: list[str]
     extras: dict[Any, Any]
 
+
 with open("config.json") as file:
     config = json.load(file)
+
 
 class Help(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -29,194 +32,257 @@ class Help(commands.Cog):
         "brief": "Shows the help menu.",
         "usage": "<command_name*[optional]*>",
         "aliases": ["h"],
-        "extras": {"Category": "Utility"}
+        "extras": {"Category": "Utility"},
     }
 
     @commands.command(
-            name = "help",
-            help = Help["help"],
-            brief = Help["brief"],
-            usage = Help["usage"],
-            aliases = Help["aliases"],
-            extras = Help["extras"]
+        name="help",
+        help=Help["help"],
+        brief=Help["brief"],
+        usage=Help["usage"],
+        aliases=Help["aliases"],
+        extras=Help["extras"],
     )
-    async def help(self, ctx: commands.Context[commands.Bot], command: str | None = None):
-        #help for specific command
+    async def help(
+        self, ctx: commands.Context[commands.Bot], command: str | None = None
+    ):
+        # help for specific command
         if command and command.lower() not in ("all", "list", "menu"):
-            cmd = self.bot.get_command(command.lower()) #fetches the command, None if not found
+            cmd = self.bot.get_command(
+                command.lower()
+            )  # fetches the command, None if not found
 
-            #if user doesn't enter a valid command name
+            # if user doesn't enter a valid command name
             if not cmd:
-                return await ctx.reply(f"*{command}* doesn't exist. enter a valid command.")
-            
-            #if command is hidden, checks if the user is an admin or not
+                return await ctx.reply(
+                    f"*{command}* doesn't exist. enter a valid command."
+                )
+
+            # if command is hidden, checks if the user is an admin or not
             if cmd.hidden and str(ctx.author.id) not in config["ADMINS"]:
                 return await ctx.reply(f"Help menu for this command is not avaiable.")
-                
-            cmdEmbed = discord.Embed(
-                title = "." + cmd.name,
-                description = cmd.help or cmd.brief or "*no description*",
-                color = discord.Color.blurple()
-            ).set_author(name = "Help")
-            #if command has aliases
-            if cmd.aliases:
-                cmdEmbed.add_field(name = "Aliases", value = ", ".join(cmd.aliases))
-            
-            if cmd.usage:
-                cmdEmbed.add_field(name = "Usage", value = f".{cmd.name} {cmd.usage}")
 
-            #if command has extra information
+            cmdEmbed = discord.Embed(
+                title="." + cmd.name,
+                description=cmd.help or cmd.brief or "*no description*",
+                color=discord.Color.blurple(),
+            ).set_author(name="Help")
+            # if command has aliases
+            if cmd.aliases:
+                cmdEmbed.add_field(name="Aliases", value=", ".join(cmd.aliases))
+
+            if cmd.usage:
+                cmdEmbed.add_field(name="Usage", value=f".{cmd.name} {cmd.usage}")
+
+            # if command has extra information
             for key, value in cmd.extras.items():
                 if key == "Category":
                     continue
-                cmdEmbed.add_field(name = key, value = value) #add extra information to fields
+                cmdEmbed.add_field(
+                    name=key, value=value
+                )  # add extra information to fields
 
-            await ctx.reply(embed = cmdEmbed)
-        
-        #shows the help menu
+            await ctx.reply(embed=cmdEmbed)
+
+        # shows the help menu
         else:
-            categorized: dict[str, list[commands.Command[Any, Any, Any]]] = {} #a dictionary to list categories and commands
-            #example:
-            #{
+            categorized: dict[str, list[commands.Command[Any, Any, Any]]] = (
+                {}
+            )  # a dictionary to list categories and commands
+            # example:
+            # {
             #   "Moderation": ["ban", "kick"],
             #   "Utils": ["ping", "help"]
-            #}
+            # }
 
-            #fetches all registered commadns
+            # fetches all registered commadns
             for cmd in self.bot.commands:
                 if cmd.hidden:
                     continue
 
-                category = cmd.extras.get("Category", "etc.") #fetches each commands category
-                categorized.setdefault(category, []).append(cmd) #adds the command and its category to categorized
-            
-            #sorts command list for every category in categorized dictionary
+                category = cmd.extras.get(
+                    "Category", "etc."
+                )  # fetches each commands category
+                categorized.setdefault(category, []).append(
+                    cmd
+                )  # adds the command and its category to categorized
+
+            # sorts command list for every category in categorized dictionary
             for category in categorized:
-                categorized[category].sort(key = lambda cmd: cmd.name)
+                categorized[category].sort(key=lambda cmd: cmd.name)
 
-            categorized = dict(sorted(categorized.items(), key=lambda item: item[0].lower())) #rebuilds the dictionary but sorted keys this time
+            categorized = dict(
+                sorted(categorized.items(), key=lambda item: item[0].lower())
+            )  # rebuilds the dictionary but sorted keys this time
 
-            categoryEmbeds: list[discord.Embed] = [] #a list to store embeds for each category
+            categoryEmbeds: list[discord.Embed] = (
+                []
+            )  # a list to store embeds for each category
 
-            #fetches categorized data
+            # fetches categorized data
             for category, cmdList in categorized.items():
                 embed = discord.Embed(
-                    title = f"{category}",
-                    color = discord.Color.blurple()
-                ).set_author(name = "Help Menu")
+                    title=f"{category}", color=discord.Color.blurple()
+                ).set_author(name="Help Menu")
                 for cmd in cmdList:
-                    embed.add_field(name = "." + cmd.name, value = cmd.brief or "*no description*", inline = False) #create fields based on fetched commands
+                    embed.add_field(
+                        name="." + cmd.name,
+                        value=cmd.brief or "*no description*",
+                        inline=False,
+                    )  # create fields based on fetched commands
 
-                categoryEmbeds.append(embed) #appends the created embed
-            
-            #if there is only one category, no buttons needed
+                categoryEmbeds.append(embed)  # appends the created embed
+
+            # if there is only one category, no buttons needed
             if len(categoryEmbeds) == 1:
-                await ctx.reply(embed = categoryEmbeds[0]) #send the help menu
-            
+                await ctx.reply(embed=categoryEmbeds[0])  # send the help menu
+
             else:
-                view = HelpView(ctx, ctx.author, categoryEmbeds) #initializes the help view
+                view = HelpView(
+                    ctx, ctx.author, categoryEmbeds
+                )  # initializes the help view
                 await view.start()
-    
+
     @help.error
     async def help_error(self, ctx: commands.Context[commands.Bot], error: Exception):
         logger.exception(f"❌ something went wrong with help command:")
         await ctx.reply("something went wrong with **help**.")
 
-    #help slash command
-    @app_commands.command(
-        name = "help",
-        description = Help["brief"],
-        extras = Help["extras"]
+    # help slash command
+    @app_commands.command(name="help", description=Help["brief"], extras=Help["extras"])
+    @app_commands.describe(
+        command="The command to get information of.",
+        hidden="Whether the help menu should be visible only to you or not.",
     )
-    @app_commands.describe(command = "The command to get information of.", hidden = "Whether the help menu should be visible only to you or not.")
-    async def slashHelp(self, interaction: discord.Interaction, command: str | None = None, hidden: bool = False):
-        #help for specific command
+    async def slashHelp(
+        self,
+        interaction: discord.Interaction,
+        command: str | None = None,
+        hidden: bool = False,
+    ):
+        # help for specific command
         if command:
-            cmd = self.bot.get_command(command.lower()) #fetches the command, None if not found
+            cmd = self.bot.get_command(
+                command.lower()
+            )  # fetches the command, None if not found
 
-            #if the cmd is not found
+            # if the cmd is not found
             if not cmd:
-                return await interaction.response.send_message(f"*{command}* doesn't exist. enter a valid command.", ephemeral = True)
-            
-            #if command is hidden, checks if the user is an admin or not
-            if cmd.hidden and str(interaction.user.id) not in config["ADMINS"]:
-                return await interaction.response.send_message(f"Help menu for this command is not avaiable.")
-            
-            cmdEmbed = discord.Embed(
-                title = "." + cmd.name,
-                description = cmd.help or cmd.brief or "*no description*",
-                color = discord.Color.blurple()
-            ).set_author(name = "Help")
-            #if command has aliases
-            if cmd.aliases:
-                cmdEmbed.add_field(name = "Aliases", value = ", ".join(cmd.aliases))
-            
-            if cmd.usage:
-                cmdEmbed.add_field(name = "Usage", value = f".{cmd.name} {cmd.usage}")
+                return await interaction.response.send_message(
+                    f"*{command}* doesn't exist. enter a valid command.", ephemeral=True
+                )
 
-            #if command has extra information
+            # if command is hidden, checks if the user is an admin or not
+            if cmd.hidden and str(interaction.user.id) not in config["ADMINS"]:
+                return await interaction.response.send_message(
+                    f"Help menu for this command is not avaiable."
+                )
+
+            cmdEmbed = discord.Embed(
+                title="." + cmd.name,
+                description=cmd.help or cmd.brief or "*no description*",
+                color=discord.Color.blurple(),
+            ).set_author(name="Help")
+            # if command has aliases
+            if cmd.aliases:
+                cmdEmbed.add_field(name="Aliases", value=", ".join(cmd.aliases))
+
+            if cmd.usage:
+                cmdEmbed.add_field(name="Usage", value=f".{cmd.name} {cmd.usage}")
+
+            # if command has extra information
             for key, value in cmd.extras.items():
                 if key == "Category":
                     continue
-                cmdEmbed.add_field(name = key, value = value) #add extra information to fields
+                cmdEmbed.add_field(
+                    name=key, value=value
+                )  # add extra information to fields
 
-            await interaction.response.send_message(embed = cmdEmbed, ephemeral = hidden)
-        
-        #shows the help menu
+            await interaction.response.send_message(embed=cmdEmbed, ephemeral=hidden)
+
+        # shows the help menu
         else:
-            categorized: dict[str, list[commands.Command[Any, Any, Any]]] = {} #a dictionary to list categories and commands
-            #example:
-            #{
+            categorized: dict[str, list[commands.Command[Any, Any, Any]]] = (
+                {}
+            )  # a dictionary to list categories and commands
+            # example:
+            # {
             #   "Moderation": ["ban", "kick"],
             #   "Utils": ["ping", "help"]
-            #}
+            # }
 
-            #fetches all registered commadns
+            # fetches all registered commadns
             for cmd in self.bot.commands:
                 if cmd.hidden:
                     continue
 
-                category = cmd.extras.get("Category", "etc.") #fetches each commands category
-                categorized.setdefault(category, []).append(cmd) #adds the command and its category to categorized
-            
-            #sorts command list for every category in categorized dictionary
+                category = cmd.extras.get(
+                    "Category", "etc."
+                )  # fetches each commands category
+                categorized.setdefault(category, []).append(
+                    cmd
+                )  # adds the command and its category to categorized
+
+            # sorts command list for every category in categorized dictionary
             for category in categorized:
-                categorized[category].sort(key = lambda cmd: cmd.name)
+                categorized[category].sort(key=lambda cmd: cmd.name)
 
-            categorized = dict(sorted(categorized.items(), key=lambda item: item[0].lower())) #rebuilds the dictionary but sorted keys this time
+            categorized = dict(
+                sorted(categorized.items(), key=lambda item: item[0].lower())
+            )  # rebuilds the dictionary but sorted keys this time
 
-            categoryEmbeds: list[discord.Embed] = [] #a list to store embeds for each category
+            categoryEmbeds: list[discord.Embed] = (
+                []
+            )  # a list to store embeds for each category
 
-            #fetches categorized data
+            # fetches categorized data
             for category, cmdList in categorized.items():
                 embed = discord.Embed(
-                    title = f"{category}",
-                    color = discord.Color.blurple()
-                ).set_author(name = "Help Menu")
+                    title=f"{category}", color=discord.Color.blurple()
+                ).set_author(name="Help Menu")
                 for cmd in cmdList:
-                    embed.add_field(name = "." + cmd.name, value = cmd.brief or "*no description*", inline = False) #create fields based on fetched commands
+                    embed.add_field(
+                        name="." + cmd.name,
+                        value=cmd.brief or "*no description*",
+                        inline=False,
+                    )  # create fields based on fetched commands
 
-                categoryEmbeds.append(embed) #appends the created embed
-            
-            #if there is only one category, no buttons needed
+                categoryEmbeds.append(embed)  # appends the created embed
+
+            # if there is only one category, no buttons needed
             if len(categoryEmbeds) == 1:
-                await interaction.response.send_message(embed = categoryEmbeds[0], ephemeral = hidden) #send the help menu
-            
+                await interaction.response.send_message(
+                    embed=categoryEmbeds[0], ephemeral=hidden
+                )  # send the help menu
+
             else:
-                view = HelpView(interaction, interaction.user, categoryEmbeds, hidden) #initializes the help view
+                view = HelpView(
+                    interaction, interaction.user, categoryEmbeds, hidden
+                )  # initializes the help view
                 await view.start()
 
     @slashHelp.error
     async def slashHelp_error(self, interaction: discord.Interaction, error: Exception):
         logger.exception(f"❌ something went wrong with /help command:")
         try:
-            await interaction.response.send_message("something went wrong with **help**.", ephemeral = True)
+            await interaction.response.send_message(
+                "something went wrong with **help**.", ephemeral=True
+            )
         except discord.InteractionResponded:
-            await interaction.followup.send("something went wrong with **help**.", ephemeral = True)
+            await interaction.followup.send(
+                "something went wrong with **help**.", ephemeral=True
+            )
+
 
 class HelpView(discord.ui.View):
-    def __init__(self, ctx: commands.Context[commands.Bot] | discord.Interaction, user: discord.abc.User, categoryEmbeds: list[discord.Embed], hidden: bool = False):
-        super().__init__(timeout = 90)
+    def __init__(
+        self,
+        ctx: commands.Context[commands.Bot] | discord.Interaction,
+        user: discord.abc.User,
+        categoryEmbeds: list[discord.Embed],
+        hidden: bool = False,
+    ):
+        super().__init__(timeout=90)
         if isinstance(ctx, discord.Interaction):
             self.slash = True
             self.interaction = ctx
@@ -229,78 +295,116 @@ class HelpView(discord.ui.View):
         self.hidden = hidden
 
     async def start(self):
-        #sends the help menu from the first category
+        # sends the help menu from the first category
         if not self.slash:
-            self.msg = await self.ctx.reply(embed = self.categoryEmbeds[0], view = self)
+            self.msg = await self.ctx.reply(embed=self.categoryEmbeds[0], view=self)
         else:
-            await self.interaction.response.send_message(embed = self.categoryEmbeds[0], view = self, ephemeral = self.hidden)
+            await self.interaction.response.send_message(
+                embed=self.categoryEmbeds[0], view=self, ephemeral=self.hidden
+            )
 
-    #close button
-    @discord.ui.button(label = "Close", style = discord.ButtonStyle.red, row = 0)
-    async def close(self, interaction: discord.Interaction, button: discord.ui.Button[discord.ui.View]):
+    # close button
+    @discord.ui.button(label="Close", style=discord.ButtonStyle.red, row=0)
+    async def close(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button[discord.ui.View],
+    ):
         if interaction.user.id != self.user.id:
-            return await interaction.response.send_message("You can't control this help menu. try help command yourself.", ephemeral = True)
-        
-        #deletes the menu
+            return await interaction.response.send_message(
+                "You can't control this help menu. try help command yourself.",
+                ephemeral=True,
+            )
+
+        # deletes the menu
         if not self.slash:
             await self.msg.delete()
         else:
             await self.interaction.delete_original_response()
         self.stop()
 
-    #previous button
-    @discord.ui.button(emoji = "◀️", style = discord.ButtonStyle.grey, row = 0)
-    async def previous(self, interaction: discord.Interaction, button: discord.ui.Button[discord.ui.View]):
+    # previous button
+    @discord.ui.button(emoji="◀️", style=discord.ButtonStyle.grey, row=0)
+    async def previous(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button[discord.ui.View],
+    ):
         if interaction.user.id != self.user.id:
-            return await interaction.response.send_message("You can't control this help menu. try help command yourself.", ephemeral = True)
-        
-        await interaction.response.defer(ephemeral = self.hidden)
-        
-        self.EmbedIndex = (self.EmbedIndex - 1) % len(self.categoryEmbeds) #previous embed
-        if not self.slash:
-            await self.msg.edit(embed = self.categoryEmbeds[self.EmbedIndex])
-        else:
-            await self.interaction.edit_original_response(embed = self.categoryEmbeds[self.EmbedIndex])
+            return await interaction.response.send_message(
+                "You can't control this help menu. try help command yourself.",
+                ephemeral=True,
+            )
 
-    #next button
-    @discord.ui.button(emoji = "▶️", style = discord.ButtonStyle.grey, row = 0)
-    async def next(self, interaction: discord.Interaction, button: discord.ui.Button[discord.ui.View]):
-        if interaction.user.id != self.user.id:
-            return await interaction.response.send_message("You can't control this help menu. try help command yourself.", ephemeral = True)
-        
-        await interaction.response.defer()
-        
-        self.EmbedIndex = (self.EmbedIndex + 1) % len(self.categoryEmbeds) #next embed
+        await interaction.response.defer(ephemeral=self.hidden)
+
+        self.EmbedIndex = (self.EmbedIndex - 1) % len(
+            self.categoryEmbeds
+        )  # previous embed
         if not self.slash:
-            await self.msg.edit(embed = self.categoryEmbeds[self.EmbedIndex])
+            await self.msg.edit(embed=self.categoryEmbeds[self.EmbedIndex])
         else:
-            await self.interaction.edit_original_response(embed = self.categoryEmbeds[self.EmbedIndex])
+            await self.interaction.edit_original_response(
+                embed=self.categoryEmbeds[self.EmbedIndex]
+            )
+
+    # next button
+    @discord.ui.button(emoji="▶️", style=discord.ButtonStyle.grey, row=0)
+    async def next(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button[discord.ui.View],
+    ):
+        if interaction.user.id != self.user.id:
+            return await interaction.response.send_message(
+                "You can't control this help menu. try help command yourself.",
+                ephemeral=True,
+            )
+
+        await interaction.response.defer()
+
+        self.EmbedIndex = (self.EmbedIndex + 1) % len(self.categoryEmbeds)  # next embed
+        if not self.slash:
+            await self.msg.edit(embed=self.categoryEmbeds[self.EmbedIndex])
+        else:
+            await self.interaction.edit_original_response(
+                embed=self.categoryEmbeds[self.EmbedIndex]
+            )
 
     async def on_timeout(self):
-        #disables buttons on timeout
+        # disables buttons on timeout
         for btn in self.children:
             if isinstance(btn, discord.ui.Button):
                 btn.disabled = True
 
         try:
-            #edits the message to remove buttons on timeout
+            # edits the message to remove buttons on timeout
             if not self.slash:
-                await self.msg.edit(view = None)
+                await self.msg.edit(view=None)
             else:
-                await self.interaction.edit_original_response(view = None)
+                await self.interaction.edit_original_response(view=None)
         except discord.NotFound:
             pass
-        
-        self.stop() #stops further interaction on timeout
 
-    async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[discord.ui.View]):
-        logger.exception(f"❌ something went wrong with help interaction - button: {getattr(item, 'emoji', 'unknown')}")
+        self.stop()  # stops further interaction on timeout
+
+    async def on_error(
+        self,
+        interaction: discord.Interaction,
+        error: Exception,
+        item: discord.ui.Item[discord.ui.View],
+    ):
+        logger.exception(
+            f"❌ something went wrong with help interaction - button: {getattr(item, 'emoji', 'unknown')}"
+        )
         try:
-            await interaction.response.send_message("something went wrong with **help**.", ephemeral = True)
+            await interaction.response.send_message(
+                "something went wrong with **help**.", ephemeral=True
+            )
         except Exception:
             pass
 
-        self.stop() #stops further interaction on error
+        self.stop()  # stops further interaction on error
 
 
 async def setup(bot: commands.Bot):

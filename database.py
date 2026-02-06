@@ -2,22 +2,22 @@ import aiosqlite
 from typing import TypedDict, Any, Iterable
 from contextlib import asynccontextmanager
 
+
 class EconomyData(TypedDict):
     name: str
     icon: str
 
-#economy constant datas
-economyData: EconomyData = {
-    "name": "Cookie",
-    "icon": "<:1lvl:1027191671328354304>"
-}
+
+# economy constant datas
+economyData: EconomyData = {"name": "Cookie", "icon": "<:1lvl:1027191671328354304>"}
 
 db_path = "bot_database.db"
+
 
 class Database:
     @asynccontextmanager
     async def _connect(self, db_path: str = db_path):
-        async with aiosqlite.connect(db_path) as conn: #connects to the db file
+        async with aiosqlite.connect(db_path) as conn:  # connects to the db file
             await conn.execute("PRAGMA foreign_keys = ON;")
             conn.row_factory = aiosqlite.Row
             try:
@@ -31,21 +31,21 @@ class Database:
             async with conn.execute(query, params) as cursor:
                 await conn.commit()
                 return cursor
-            
+
     async def fetchone(self, query: str, params: Iterable[Any] | None = None):
         async with self._connect() as conn:
             async with conn.execute(query, params) as cursor:
                 return await cursor.fetchone()
-            
+
     async def fetchall(self, query: str, params: Iterable[Any] | None = None):
         async with self._connect() as conn:
             async with conn.execute(query, params) as cursor:
                 return await cursor.fetchall()
 
-    #setups the db helper function
+    # setups the db helper function
     async def tableInitialize(self):
         tables = [
-            #warns table
+            # warns table
             """
             CREATE TABLE IF NOT EXISTS warns (
                 warn_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,7 +57,7 @@ class Database:
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """,
-            #anon public ids table
+            # anon public ids table
             """
             CREATE TABLE IF NOT EXISTS anonpublicids (
                 public_id TEXT PRIMARY KEY NOT NULL,
@@ -65,7 +65,7 @@ class Database:
                 created_date DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """,
-            #anon user contact table
+            # anon user contact table
             """
             CREATE TABLE IF NOT EXISTS anonusercontact (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,7 +78,7 @@ class Database:
                 UNIQUE(public_id, sender_id)
             );
             """,
-            #anon session table
+            # anon session table
             """
             CREATE TABLE IF NOT EXISTS anonsessions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -92,7 +92,7 @@ class Database:
                 UNIQUE(reciever_id, sender_id, session_id)
             );
             """,
-            #user balance table
+            # user balance table
             """
             CREATE TABLE IF NOT EXISTS userbalance (
                 user_id INTEGER PRIMARY KEY NOT NULL,
@@ -101,7 +101,7 @@ class Database:
                 created_date DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """,
-            #tickets table
+            # tickets table
             """
             CREATE TABLE IF NOT EXISTS tickets (
                 ticket_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -112,11 +112,12 @@ class Database:
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 closed_at DATETIME
             );
-            """
+            """,
         ]
         async with self._connect() as conn:
             for table in tables:
                 await conn.execute(table)
             await conn.commit()
+
 
 db = Database()
