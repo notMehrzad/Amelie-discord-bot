@@ -1,20 +1,31 @@
 import aiosqlite
-from typing import TypedDict, Any, Iterable
+from typing import Any, Iterable
 from contextlib import asynccontextmanager
 
 
-class EconomyData(TypedDict):
-    name: str
-    icon: str
+# economy constant data
+class EconomyData:
+    currency_name = "Cookie"
+    currency_icon = "<:1lvl:1027191671328354304>"
+
+    @property
+    def currency_postfix(self):
+        return self.currency_icon + " " + self.currency_name + "s"
+
+    daily = 500
+
+    work = 60
+
+    # shop
+    # Spices: dict[str, str | float] = {"name": "Spices", "price": 200}
 
 
-# economy constant datas
-economyData: EconomyData = {"name": "Cookie", "icon": "<:1lvl:1027191671328354304>"}
-
-db_path = "bot_database.db"
+eco = EconomyData()  # economy instance to import
 
 
 class Database:
+    db_path = "bot_database.db"
+
     @asynccontextmanager
     async def _connect(self, db_path: str = db_path):
         async with aiosqlite.connect(db_path) as conn:  # connects to the db file
@@ -92,12 +103,13 @@ class Database:
                 UNIQUE(reciever_id, sender_id, session_id)
             );
             """,
-            # user balance table
+            # user table
             """
-            CREATE TABLE IF NOT EXISTS userbalance (
+            CREATE TABLE IF NOT EXISTS user (
                 user_id INTEGER PRIMARY KEY NOT NULL,
                 balance INTEGER NOT NULL,
                 last_daily_date DATETIME,
+                last_work_date DATETIME,
                 created_date DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """,
@@ -120,4 +132,4 @@ class Database:
             await conn.commit()
 
 
-db = Database()
+db = Database()  # database instance to import

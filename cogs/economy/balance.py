@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from database import db, economyData
+from database import db, eco
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
@@ -32,7 +32,7 @@ class Balance(commands.Cog):
         # checks if the user has an account already
         row = await db.fetchone(
             """
-            SELECT balance FROM userbalance
+            SELECT balance FROM user
             WHERE user_id = ?;
             """,
             (ctx.author.id,),
@@ -42,7 +42,7 @@ class Balance(commands.Cog):
         if not row:
             await db.execute(
                 """
-                INSERT INTO userbalance (user_id, balance, created_date)
+                INSERT INTO user (user_id, balance, created_date)
                 VALUES (?, ?, ?);
                 """,
                 (ctx.author.id, 0, now),
@@ -54,7 +54,7 @@ class Balance(commands.Cog):
         # sends the result
         resultEmbed = discord.Embed(
             title=f"{ctx.author.display_name}'s Balance",
-            description=f"*{balance} {economyData["icon"]}* {economyData["name"]}s",
+            description=f"*{balance} {eco.currency_postfix}*",
             timestamp=now,
         )
         await ctx.reply(embed=resultEmbed)
@@ -79,7 +79,7 @@ class Balance(commands.Cog):
         # checks if the user has an account already
         row = await db.fetchone(
             """
-            SELECT balance FROM userbalance
+            SELECT balance FROM user
             WHERE user_id = ?;
             """,
             (interaction.user.id,),
@@ -89,7 +89,7 @@ class Balance(commands.Cog):
         if not row:
             await db.execute(
                 """
-                INSERT INTO userbalance (user_id, balance, created_date)
+                INSERT INTO user (user_id, balance, created_date)
                 VALUES (?, ?, ?);
                 """,
                 (interaction.user.id, 0, now),
@@ -101,7 +101,7 @@ class Balance(commands.Cog):
         # sends the result
         resultEmbed = discord.Embed(
             title=f"{interaction.user.display_name}'s Balance",
-            description=f"*{balance} {economyData["icon"]}* {economyData["name"]}s",
+            description=f"*{balance} {eco.currency_postfix}*",
             timestamp=now,
         )
         await interaction.response.send_message(embed=resultEmbed, ephemeral=hidden)

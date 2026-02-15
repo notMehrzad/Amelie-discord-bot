@@ -2,37 +2,36 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import random
-from typing import TypedDict
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 
 
-class ChoiceInfo(TypedDict):
-    name: str
-    beats: str
-    emoji: str
+class Choice:
+    def __init__(self, name: str, beats: str, emoji: str):
+        self.name = name
+        self.beats = beats
+        self.emoji = emoji
 
 
-choices: list[ChoiceInfo] = [
-    {"name": "Rock", "beats": "Scissors", "emoji": "<:susrock:1013833657749864529>"},
-    {"name": "Paper", "beats": "Rock", "emoji": "📃"},
-    {"name": "Scissors", "beats": "Paper", "emoji": "✂️"},
-]
+Rock = Choice("Rock", "Scissors", "<:susrock:1013833657749864529>")
+Paper = Choice("Paper", "Rock", "📃")
+Scissors = Choice("Scissors", "Paper", "✂️")
+choices = (Rock, Paper, Scissors)
 
 
 def rpsResult(
-    c1: tuple[discord.abc.User, ChoiceInfo], c2: tuple[discord.abc.User, ChoiceInfo]
+    c1: tuple[discord.abc.User, Choice], c2: tuple[discord.abc.User, Choice]
 ) -> discord.abc.User | None:
     """
     Checks the result of a Rock, Paper, Scissors match.
 
     Parameters
     ---------
-    c1: tuple[:class:`discord.abc.User`, :class:`ChoiceInfo`]
+    c1: tuple[:class:`discord.abc.User`, :class:`Choice`]
         The first player's user instance and played option wrapped inside a tuple.
-    c2: tuple[:class:`discord.abc.User`, :class:`ChoiceInfo`]
+    c2: tuple[:class:`discord.abc.User`, :class:`Choice`]
         The second player's user instance and played option wrapped inside a tuple.
 
     Returns
@@ -44,10 +43,10 @@ def rpsResult(
     """
 
     # draw
-    if c1[1]["name"] == c2[1]["name"]:
+    if c1[1].name == c2[1].name:
         return None
     # player 2 wins
-    elif c2[1]["beats"] == c1[1]["name"]:
+    elif c2[1].beats == c1[1].name:
         return c2[0]
     # player 1 wins
     else:
@@ -83,52 +82,59 @@ class Rps(commands.Cog):
         ctx: commands.Context[commands.Bot],
         user: discord.User | str | None = None,
     ):
-        # if user mentions an invalid user
-        if user and not isinstance(user, discord.abc.User):
-            raise commands.BadArgument
+        # if user mentions a target
+        if user:
+            # if the target is invalid
+            if not isinstance(user, discord.abc.User):
+                return await ctx.reply("Mention a valid user.")
 
-        # if user mentions itself
-        if user and user.id == ctx.author.id:
-            return await ctx.reply("You can't play with yourself.")
+            # if the target is user themselves
+            if user.id == ctx.author.id:
+                return await ctx.reply("You can't play with yourself.")
 
-        # if the user runs this command in dm to play with another user
-        if not ctx.guild and user and user.id != ctx.me.id:
-            return await ctx.reply(
-                "You can only play this game with others in a server. (except me!)"
-            )
-
-        if user and ctx.guild:
-            target = ctx.guild.get_member(user.id)
-            if not target:
+            # if user runs the command in dm and target is not the bot
+            if not ctx.guild and user.id != ctx.me.id:
                 return await ctx.reply(
-                    f"{user.mention} is not a member of this server."
+                    "You can play this game with others only in a server they are also in."
                 )
+
+            if user and ctx.guild:
+                target = ctx.guild.get_member(user.id)
+                if not target:
+                    return await ctx.reply(
+                        f"{user.mention} is not a member of this server."
+                    )
+            else:
+                target = None
+
+            # if user wants to play with any other bot
+            if user.bot and user.id != ctx.me.id:
+                return await ctx.reply("You can't play with bots. (except me!)")
+
+            # if target is bot, bot plays
+            if user.id == ctx.me.id:
+                target = None
+
+            # trys to fetch the taget user otherwise
+            else:
+                target = ctx.guild.get_member(user.id) if ctx.guild else None
+                if not target:
+                    return await ctx.reply(
+                        f"{user.mention} is not a member of this server."
+                    )
+
         else:
             target = None
 
-        # if user wants to play with a bot except this bot
-        if target and target.bot and target.id != ctx.me.id:
-            return await ctx.reply("You can't play with bots. (except me!)")
-
-        # plays with bot if no target is mentioned or the target is the bot itself
-        if not target or target.id == ctx.me.id:
-            view = RpsView(ctx, ctx.me, botPlay=True)
-
-        else:
-            view = RpsView(ctx, target)
-
+        view = RpsView(ctx, target) if target else RpsView(ctx, ctx.me, botPlay=True)
         await view.start()
 
     @rps.error
     async def rps_error(
         self, ctx: commands.Context[commands.Bot], error: commands.CommandError
     ):
-        # if user mentioned an invalid user
-        if isinstance(error, commands.BadArgument):
-            await ctx.reply("User not found. Please mention a valid user.")
-        else:
-            logger.exception(f"❌ something went wrong with rps command:")
-            await ctx.reply("something went wrong with **rps**.")
+        logger.exception(f"❌ something went wrong with rps command:")
+        await ctx.reply("something went wrong with **rps**.")
 
     # rps slash command
     @app_commands.command(name="rps", description=Help["brief"], extras=Help["extras"])
@@ -136,47 +142,62 @@ class Rps(commands.Cog):
     async def slashRps(
         self, interaction: discord.Interaction, user: discord.User | None = None
     ):
-        # if user mentions itself
-        if user and user.id == interaction.user.id:
-            return await interaction.response.send_message(
-                "You can't play with yourself.", ephemeral=True
-            )
-
-        # if the user runs this command in dm to play with another user
-        if (
-            not interaction.guild
-            and user
-            and user.id != interaction.client.application_id
-        ):
-            return await interaction.response.send_message(
-                "You can only play this game with others in a server. (except me!)",
-                ephemeral=True,
-            )
-
-        if user and interaction.guild:
-            target = interaction.guild.get_member(user.id)
-            if not target:
+        # if user mentions a target
+        if user:
+            # if the target is user themselves
+            if user.id == interaction.user.id:
                 return await interaction.response.send_message(
-                    f"{user.mention} is not a member of this server.", ephemeral=True
+                    "You can't play with yourself.", ephemeral=True
                 )
+
+            # if user runs the command in dm and target is not the bot
+            if not interaction.guild and user.id != interaction.application_id:
+                return await interaction.response.send_message(
+                    "You can play this game with others only in a server they are also in.",
+                    ephemeral=True,
+                )
+
+            if user and interaction.guild:
+                target = interaction.guild.get_member(user.id)
+                if not target:
+                    return await interaction.response.send_message(
+                        f"{user.mention} is not a member of this server.",
+                        ephemeral=True,
+                    )
+            else:
+                target = None
+
+            # if user wants to play with any other bot
+            if user.bot and user.id != interaction.application_id:
+                return await interaction.response.send_message(
+                    "You can't play with bots. (except me!)", ephemeral=True
+                )
+
+            # if target is bot, bot plays
+            if user.id == interaction.application_id:
+                target = None
+
+            # trys to fetch the taget user otherwise
+            else:
+                target = (
+                    interaction.guild.get_member(user.id) if interaction.guild else None
+                )
+                if not target:
+                    return await interaction.response.send_message(
+                        f"{user.mention} is not a member of this server.",
+                        ephemeral=True,
+                    )
+
         else:
             target = None
 
-        # if user wants to play with a bot except this bot
-        if target and target.bot and target.id != interaction.client.application_id:
-            return await interaction.response.send_message(
-                "You can't play with bots. (except me!)", ephemeral=True
-            )
-
-        # plays with bot if no target is mentioned or the target is the bot itself
-        if not target or target.id == interaction.client.application_id:
+        if target:
+            view = RpsView(interaction, target)
+            await view.start()
+        else:
             if isinstance(interaction.client.user, discord.abc.User):
                 view = RpsView(interaction, interaction.client.user, botPlay=True)
                 await view.start()
-
-        else:
-            view = RpsView(interaction, target)
-            await view.start()
 
     @slashRps.error
     async def slashRps_error(self, interaction: discord.Interaction, error: Exception):
@@ -210,18 +231,16 @@ class RpsView(discord.ui.View):
         self.botPlay = botPlay
         self.embedColor = discord.Color.random()
         self.timestamp = discord.utils.utcnow()
-        self.playersChoice: dict[str, ChoiceInfo | None] = {
-            "user": None,
-            "target": None,
-        }
+        self.userChoice: Choice | None = None
+        self.targetChoice: Choice | None = None
         self.state = "target_choose"
 
         # creates buttons as many as given in choices list
         for choice in choices:
             button: discord.ui.Button[discord.ui.View] = discord.ui.Button(
                 style=discord.ButtonStyle.primary,
-                label=choice["name"],
-                emoji=choice["emoji"],
+                label=choice.name,
+                emoji=choice.emoji,
             )
             button.callback = self.make_callback(choice)
             self.add_item(button)
@@ -250,7 +269,7 @@ class RpsView(discord.ui.View):
                 content=content, embed=startEmbed, view=self
             )  # saves the message to edit later
 
-    def make_callback(self, choice: ChoiceInfo):
+    def make_callback(self, choice: Choice):
         async def callback(interaction: discord.Interaction):
             # checks if only the user and target can interact with buttons
             if interaction.user.id not in (self.target.id, self.user.id):
@@ -264,43 +283,43 @@ class RpsView(discord.ui.View):
                 and self.state == "target_choose"
                 and interaction.user.id != self.target.id
             ):
-                if not self.playersChoice["user"]:
+                if not self.userChoice:
                     return await interaction.response.send_message(
                         f"It's currently {self.target.mention}'s turn to play.",
                         ephemeral=True,
                     )
                 else:
                     return await interaction.response.send_message(
-                        f"You've already played your turn. ({self.playersChoice["user"]["emoji"]})",
+                        f"You've already played your turn. ({self.userChoice.emoji})",
                         ephemeral=True,
                     )
 
             # if target trys to play when it's user's turn
             if self.state == "user_choose" and interaction.user.id != self.user.id:
-                if not self.playersChoice["target"]:
+                if not self.targetChoice:
                     return await interaction.response.send_message(
                         f"It's currently {self.user.mention}'s turn to play.",
                         ephemeral=True,
                     )
                 else:
                     return await interaction.response.send_message(
-                        f"You've already played your turn. ({self.playersChoice["target"]["emoji"]})",
+                        f"You've already played your turn. ({self.targetChoice.emoji})",
                         ephemeral=True,
                     )
 
             # if bot is the target
             if self.botPlay:
-                self.playersChoice["target"] = random.choice(
+                self.targetChoice = random.choice(
                     choices
                 )  # saves the choice for the bot
                 self.state = "user_choose"  # bot's turn's over, user's turn starts
 
             # target's turn
             if self.state == "target_choose":
-                self.playersChoice["target"] = choice  # saves the choice for the target
+                self.targetChoice = choice  # saves the choice for the target
 
                 await interaction.response.send_message(
-                    f"You played {choice["emoji"]}.", ephemeral=True
+                    f"You played {self.targetChoice.emoji}.", ephemeral=True
                 )
 
                 userchooseEmbed = discord.Embed(
@@ -324,7 +343,7 @@ class RpsView(discord.ui.View):
 
             # user's turn
             elif self.state == "user_choose":
-                self.playersChoice["user"] = choice  # saves the choice for the user
+                self.userChoice = choice  # saves the choice for the user
 
                 self.state = "result"  # result phase begins
                 await self.endMatch()
@@ -332,10 +351,10 @@ class RpsView(discord.ui.View):
         return callback
 
     async def endMatch(self):
-        if self.playersChoice["target"] and self.playersChoice["user"]:
+        if self.targetChoice and self.userChoice:
             winner = rpsResult(
-                (self.target, self.playersChoice["target"]),
-                (self.user, self.playersChoice["user"]),
+                (self.target, self.targetChoice),
+                (self.user, self.userChoice),
             )  # gets the result
 
             # draw
@@ -368,12 +387,12 @@ class RpsView(discord.ui.View):
                 .set_footer(text=cori)
                 .add_field(
                     name=f"{self.user.display_name} Choice",
-                    value=f"{self.playersChoice["user"]["name"]} {self.playersChoice["user"]["emoji"]}",
+                    value=f"{self.userChoice.name} {self.userChoice.emoji}",
                     inline=True,
                 )
                 .add_field(
                     name=f"{self.target.display_name} Choice",
-                    value=f"{self.playersChoice["target"]["name"]} {self.playersChoice["target"]["emoji"]}",
+                    value=f"{self.targetChoice.name} {self.targetChoice.emoji}",
                     inline=True,
                 )
                 .set_thumbnail(url=winner.display_avatar.url if winner else None)

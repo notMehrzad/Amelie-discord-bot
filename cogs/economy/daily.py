@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from database import db, economyData
+from database import db, eco
 from datetime import timedelta, datetime
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
@@ -22,9 +22,6 @@ def tdFormatter(td: timedelta):
     if s > 0:
         parts.append(f"{s}s")
     return " ".join(parts)
-
-
-dailyAmount = 100  # the amount of daily to be rewarded to the users
 
 
 class Daily(commands.Cog):
@@ -53,7 +50,7 @@ class Daily(commands.Cog):
         # checks the balance and the last daily date of the user
         row = await db.fetchone(
             """
-            SELECT balance, last_daily_date FROM userbalance
+            SELECT balance, last_daily_date FROM user
             WHERE user_id = ?;
             """,
             (ctx.author.id,),
@@ -62,35 +59,35 @@ class Daily(commands.Cog):
         if not row:
             await db.execute(
                 """
-                INSERT INTO userbalance (user_id, balance, last_daily_date, created_date)
+                INSERT INTO user (user_id, balance, last_daily_date, created_date)
                 VALUES (?, ?, ?, ?);
                 """,
-                (ctx.author.id, dailyAmount, now, now),
+                (ctx.author.id, eco.daily, now, now),
             )
 
-            newBalance = dailyAmount
+            newBalance = eco.daily
 
         # if user has an economy account
         else:
-            dailyDate: datetime = (
+            dailyDate: datetime | None = (
                 datetime.fromisoformat(row["last_daily_date"])
                 if isinstance(row["last_daily_date"], str)
                 else row["last_daily_date"]
             )
 
             # if user trys to claim 2 dailies within a day
-            if dailyDate and dailyDate + timedelta(days=1) >= now:
+            if dailyDate and dailyDate + timedelta(days=1) > now:
                 await ctx.reply(
-                    f"You must wait `{tdFormatter(dailyDate + timedelta(days = 1) - now)}` to claim your next Daily Rreward."
+                    f"You must wait `{tdFormatter(dailyDate + timedelta(days=1) - now)}` to claim your next Daily Rreward."
                 )
                 return
 
-            newBalance: int = row["balance"] + dailyAmount
+            newBalance: int = row["balance"] + eco.daily
 
             # updates the user balance
             await db.execute(
                 """
-                UPDATE userbalance
+                UPDATE user
                 SET balance = ?, last_daily_date = ?
                 WHERE user_id = ?;
                 """,
@@ -100,7 +97,10 @@ class Daily(commands.Cog):
         # sends the result
         resultEmbed = discord.Embed(
             title="Daily Reward !",
-            description=f"You have claimed your Daily Reward for today.\nCurrent balance: *{newBalance} {economyData["icon"]}* {economyData["name"]}s",
+            description=(
+                f"You have claimed your Daily reward for today."
+                f"\nCurrent balance: *{newBalance} {eco.currency_postfix}*"
+            ),
             color=discord.Color.blurple(),
             timestamp=now,
         )
@@ -121,7 +121,7 @@ class Daily(commands.Cog):
         # checks the balance and the last daily date of the user
         row = await db.fetchone(
             """
-            SELECT balance, last_daily_date FROM userbalance
+            SELECT balance, last_daily_date FROM user
             WHERE user_id = ?;
             """,
             (interaction.user.id,),
@@ -130,13 +130,13 @@ class Daily(commands.Cog):
         if not row:
             await db.execute(
                 """
-                INSERT INTO userbalance (user_id, balance, last_daily_date, created_date)
+                INSERT INTO user (user_id, balance, last_daily_date, created_date)
                 VALUES (?, ?, ?, ?);
                 """,
-                (interaction.user.id, dailyAmount, now, now),
+                (interaction.user.id, eco.daily, now, now),
             )
 
-            newBalance = dailyAmount
+            newBalance = eco.daily
 
         # if user has an economy account
         else:
@@ -147,19 +147,19 @@ class Daily(commands.Cog):
             )
 
             # if user trys to claim 2 dailies within a day
-            if dailyDate and dailyDate + timedelta(days=1) >= now:
+            if dailyDate + timedelta(days=1) > now:
                 await interaction.response.send_message(
                     f"You must wait `{tdFormatter(dailyDate + timedelta(days = 1) - now)}` to claim your next Daily Rreward.",
                     ephemeral=True,
                 )
                 return
 
-            newBalance: int = row["balance"] + dailyAmount
+            newBalance: int = row["balance"] + eco.daily
 
             # updates the user balance
             await db.execute(
                 """
-                UPDATE userbalance
+                UPDATE user
                 SET balance = ?, last_daily_date = ?
                 WHERE user_id = ?;
                 """,
@@ -169,7 +169,7 @@ class Daily(commands.Cog):
         # sends the result
         resultEmbed = discord.Embed(
             title="Daily Reward !",
-            description=f"You have claimed your Daily Reward for today.\nCurrent balance: *{newBalance} {economyData["icon"]}* {economyData["name"]}s",
+            description=f"You have claimed your Daily Reward for today.\nCurrent balance: *{newBalance} {eco.currency_postfix}*",
             color=discord.Color.blurple(),
             timestamp=now,
         )

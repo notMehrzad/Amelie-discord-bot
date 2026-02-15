@@ -96,7 +96,7 @@ class Blackjack(commands.Cog):
 
     Help: HelpData = {
         "help": "",
-        "brief": "",
+        "brief": "The traditional BlackJack game.",
         "usage": "<bet_amount[*optional*]>",
         "aliases": ["bj"],
         "extras": {"Category": "Games"},
@@ -122,7 +122,7 @@ class Blackjack(commands.Cog):
             # if player has an active session
             if ctx.author.id in sessions:
                 return await ctx.reply(
-                    "You have an actice game session somewhere. close that one first and try again."
+                    "You have an active game session somewhere. close that one first and try again."
                 )
 
             # if bet is lower than limit
@@ -139,7 +139,7 @@ class Blackjack(commands.Cog):
             # trys to fetch user's balance
             row = await db.fetchone(
                 """
-                SELECT balance from userbalance
+                SELECT balance FROM user
                 WHERE user_id = ?;
                 """,
                 (ctx.author.id,),
@@ -165,6 +165,10 @@ class Blackjack(commands.Cog):
     async def blackjack_error(
         self, ctx: commands.Context[commands.Bot], error: commands.CommandError
     ):
+        try:
+            sessions.remove(ctx.author.id)
+        except:
+            pass
         logger.exception(f"❌ something went wrong with blackjack command:")
         await ctx.reply("something went wrong with **blackjack**.")
 
@@ -201,7 +205,7 @@ class Blackjack(commands.Cog):
             # trys to fetch user's balance
             row = await db.fetchone(
                 """
-                SELECT balance from userbalance
+                SELECT balance FROM user
                 WHERE user_id = ?;
                 """,
                 (interaction.user.id,),
@@ -229,6 +233,10 @@ class Blackjack(commands.Cog):
     async def slashBlackjack_error(
         self, interaction: discord.Interaction, error: Exception
     ):
+        try:
+            sessions.remove(interaction.user.id)
+        except:
+            pass
         logger.exception(f"❌ something went wrong with /blackjack command:")
         try:
             await interaction.response.send_message(
@@ -265,7 +273,7 @@ class blackjackView(discord.ui.View):
         if bet != 0:
             row = await db.fetchone(
                 """
-                SELECT balance FROM userbalance
+                SELECT balance FROM user
                 WHERE user_id = ?;
                 """,
                 (self.user.id,),
@@ -274,7 +282,7 @@ class blackjackView(discord.ui.View):
                 if firstBet:
                     await db.execute(
                         """
-                        UPDATE userbalance
+                        UPDATE user
                         SET balance = ?
                         WHERE user_id = ?;
                         """,
@@ -283,7 +291,7 @@ class blackjackView(discord.ui.View):
                 else:
                     await db.execute(
                         """
-                        UPDATE userbalance
+                        UPDATE user
                         SET balance = ?
                         WHERE user_id = ?;
                         """,
@@ -328,10 +336,10 @@ class blackjackView(discord.ui.View):
         self.playerHand = BjHand([self.deck.pop() for _ in range(2)])
         self.dealerHand = BjHand([self.deck.pop() for _ in range(2)], dealers=True)
 
-        await asyncio.sleep(2)  # a short delay
+        await asyncio.sleep(3)  # a short delay
 
         # dealer must peek the hole card
-        if self.playerHand.cards[0].rank in ("A", "K", "Q", "J", 10):
+        if self.dealerHand.cards[0].rank in ("A", "K", "Q", "J", 10):
             # if the face up card is an ace, dealer offers insurance first
             if self.dealerHand.cards[0].rank == "A":
                 await self.insuranceOffer()
@@ -352,8 +360,9 @@ class blackjackView(discord.ui.View):
                 "Cards have been distributed and it seems like my first card is an ACE !"
                 "\nI'm offering you an Insurance (a side bet) with a cost of the half amount your bet before I peek over my hole card."
                 "\nIf I peek my hole card and turns out I got BlackJack, you'll win an amount equal to your bet."
-                "\nIf I get not BlackJack, you'll lose half of your bet."
-            ),
+                "\nIf I get not BlackJack, you'll lose half of your bet.\n"
+            )
+            + handStr(self.dealerHand, self.playerHand),
         )
         if self.slash:
             await self.interaction.edit_original_response(
@@ -492,9 +501,11 @@ class blackjackView(discord.ui.View):
                 color=self.embedColor,
             )
             if self.slash:
-                await self.interaction.edit_original_response(embed=playerActionEmbed)
+                await self.interaction.edit_original_response(
+                    embed=playerActionEmbed, view=self
+                )
             else:
-                await self.msg.edit(embed=playerActionEmbed)
+                await self.msg.edit(embed=playerActionEmbed, view=self)
 
     @discord.ui.button(label="hit", style=discord.ButtonStyle.gray)
     async def hit(
@@ -546,9 +557,9 @@ class blackjackView(discord.ui.View):
                 color=self.embedColor,
             )
             if self.slash:
-                await self.interaction.edit_original_response(embed=hitEmbed)
+                await self.interaction.edit_original_response(embed=hitEmbed, view=self)
             else:
-                await self.msg.edit(embed=hitEmbed)
+                await self.msg.edit(embed=hitEmbed, view=self)
 
     @discord.ui.button(label="stand", style=discord.ButtonStyle.gray)
     async def stand(
@@ -657,7 +668,7 @@ class blackjackView(discord.ui.View):
         else:
             await self.msg.edit(embed=dealerTurnEmbed, view=None)
 
-        await asyncio.sleep(1)  # a short delay
+        await asyncio.sleep(3)  # a short delay
 
         # while dealer has <=16, it hits
         while self.dealerHand.value <= 16:
@@ -674,7 +685,7 @@ class blackjackView(discord.ui.View):
             else:
                 await self.msg.edit(embed=dealerHitEmbed)
 
-            await asyncio.sleep(1)  # a short delay
+            await asyncio.sleep(2)  # a short delay
 
             self.dealerHand.addCard(self.deck.pop())  # adds a card to dealer's hand
             # if dealer busts, match comes to an end
@@ -686,10 +697,7 @@ class blackjackView(discord.ui.View):
                 resultEmbed = discord.Embed(
                     title="BlackJack 🖤",
                     description=self.insuranceStr
-                    + (
-                        f"\n\nI got {self.dealerHand.value}. I Bust !"
-                        "You Won the match.\n\n"
-                    )
+                    + f"\n\nI got {self.dealerHand.value}. I Bust ! You Won the match.\n\n"
                     + handStr(self.dealerHand, self.playerHand),
                     timestamp=self.timestamp,
                     color=self.embedColor,
@@ -760,13 +768,13 @@ class blackjackView(discord.ui.View):
         self.stop()
 
     async def payout(self):
-        sessions.pop(self.user.id)  # ends the session
+        sessions.remove(self.user.id)  # ends the session
 
         if self.outcome != 0:
             # fetches user's balance
             row = await db.fetchone(
                 """
-                SELECT balance from userbalance
+                SELECT balance from user
                 WHERE user_id = ?;
                 """,
                 (self.user.id,),
@@ -775,7 +783,7 @@ class blackjackView(discord.ui.View):
                 # updates user balance based on the outcome and returns the bet
                 await db.execute(
                     """
-                    UPDATE userbalance
+                    UPDATE user
                     SET balance = ?
                     WHERE user_id = ?;
                     """,
@@ -820,7 +828,7 @@ class blackjackView(discord.ui.View):
         # fetches user's balance
         row = await db.fetchone(
             """
-            SELECT balance FROM userbalance
+            SELECT balance FROM user
             WHERE user_id = ?;
             """,
             (self.user.id,),
@@ -829,7 +837,7 @@ class blackjackView(discord.ui.View):
             # returns back the bet
             await db.execute(
                 """
-                UPDATE userbalance
+                UPDATE user
                 SET balance = ?
                 WHERE user_id = ?;
                 """,
