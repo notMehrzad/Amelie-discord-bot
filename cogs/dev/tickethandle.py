@@ -17,22 +17,23 @@ class TicketHandle(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Responds to an open Ticket.",
-        "usage": "<ticket ID>",
-        "aliases": [],
-        "extras": {"Category": "Dev"},
-    }
+    Help = HelpData(
+        category="Dev",
+        subcommands=["respond", "close"],
+        help=None,
+        brief="Responds to an open Ticket.",
+        usage="<subcommand> <ticket ID>",
+        aliases=[],
+    )
 
     @commands.command(
         name="tickethandle",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
         hidden=True,
-        extras=Help["extras"],
+        extras=Help.extras,
     )
     async def tickethandle(
         self,

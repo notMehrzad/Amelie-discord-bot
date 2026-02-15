@@ -57,25 +57,25 @@ class Rps(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
+    Help = HelpData(
+        category="Games",
+        help=(
             "A game between two people. Both players play one of three options: Rock, Paper or Scissors."
             "\n A Rock beats Scissors, a Paper beats Rock, a Scissors beats Paper."
             "\nYou can only play with Amélie herself if you run this game in her dm."
         ),
-        "brief": "Traditional *Rock, Paper, Scissors* game.",
-        "usage": "<target[*optional*]>",
-        "aliases": ["rockpaperscissors"],
-        "extras": {"Category": "Games"},
-    }
+        brief="Traditional *Rock, Paper, Scissors* game.",
+        usage="<target[*optional*]>",
+        aliases=["rockpaperscissors"],
+    )
 
     @commands.command(
         name="rps",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def rps(
         self,
@@ -137,7 +137,7 @@ class Rps(commands.Cog):
         await ctx.reply("something went wrong with **rps**.")
 
     # rps slash command
-    @app_commands.command(name="rps", description=Help["brief"], extras=Help["extras"])
+    @app_commands.command(name="rps", description=Help.brief, extras=Help.extras)
     @app_commands.describe(user="The user you want to play rps with.")
     async def slashRps(
         self, interaction: discord.Interaction, user: discord.User | None = None

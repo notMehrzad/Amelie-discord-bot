@@ -58,27 +58,27 @@ class DiceRoll(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
+    Help = HelpData(
+        category="Games",
+        help=(
             "Rolls dice using standard notation.\n\n"
             "Formats:\n"
             '• "6" → rolls 1d6\n'
             '• "d6" → rolls 1d6\n'
             '• "2d6" → rolls 2d6\n\n'
         ),
-        "brief": "Rolls one or more dice using standard tabletop dice notation.",
-        "usage": "<dice [*optional*]>",
-        "aliases": ["dr", "dicer", "droll", "dice", "roll"],
-        "extras": {"Category": "Games"},
-    }
+        brief="Rolls one or more dice using standard tabletop dice notation.",
+        usage="<dice [*optional*]>",
+        aliases=["dr", "dicer", "droll", "dice", "roll"],
+    )
 
     @commands.command(
         name="diceroll",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def diceroll(self, ctx: commands.Context[commands.Bot], dice: str = "6"):
         try:
@@ -102,9 +102,7 @@ class DiceRoll(commands.Cog):
         await ctx.reply("something went wrong with **diceroll**.")
 
     # diceroll slash command
-    @app_commands.command(
-        name="diceroll", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="diceroll", description=Help.brief, extras=Help.extras)
     @app_commands.describe(dice="The dice to roll. Format: d6, 2d6, or 6")
     async def slashDiceroll(self, interaction: discord.Interaction, dice: str = "6"):
         try:

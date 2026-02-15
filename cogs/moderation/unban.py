@@ -11,25 +11,23 @@ class Unban(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Unbans a user from the server.",
-        "usage": "<target_ID> <reason[*optional*]>",
-        "aliases": ["ub"],
-        "extras": {
-            "Category": "Moderation",
-            "Permissions needed": "`Ban Members`",
-            "server-only": "Yes",
-        },
-    }
+    Help = HelpData(
+        category="Moderation",
+        serverOnly=True,
+        permissions=["`Ban Members`"],
+        help=None,
+        brief="Unbans a user from the server.",
+        usage="<target_ID> <reason[*optional*]>",
+        aliases=["ub"],
+    )
 
     @commands.command(
         name="unban",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def unban(
         self,
@@ -107,9 +105,7 @@ class Unban(commands.Cog):
         await ctx.reply("something went wrong with **unban**.")
 
     # unban slash command
-    @app_commands.command(
-        name="unban", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="unban", description=Help.brief, extras=Help.extras)
     @app_commands.guild_only()
     @app_commands.describe(
         user_id="The target user ID to unban.",

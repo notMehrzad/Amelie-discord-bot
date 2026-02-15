@@ -35,25 +35,26 @@ class AnonId(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
+    Help = HelpData(
+        category="Anonymous",
+        dmOnly=True,
+        help=(
             "Shows the public anonymous ID for the user."
             "\nIf user had no ID before, creates one for it."
             "\nUser can share this public ID anywhere and people can start sending anonymous messages with it (try `/help anonsend` for more information)."
         ),
-        "brief": "Shows the anonymous ID for the user.",
-        "usage": "",
-        "aliases": ["anonymousid"],
-        "extras": {"Category": "Anonymous", "dm-only": "Yes"},
-    }
+        brief="Shows the anonymous ID for the user.",
+        usage=None,
+        aliases=["anonymousid"],
+    )
 
     @commands.command(
         name="anonid",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def anonid(self, ctx: commands.Context[commands.Bot]):
         # if user runs the command in a server
@@ -120,9 +121,7 @@ class AnonId(commands.Cog):
         await ctx.reply("something went wrong with **anonid**.")
 
     # anonid slash command
-    @app_commands.command(
-        name="anonid", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="anonid", description=Help.brief, extras=Help.extras)
     @app_commands.dm_only()
     async def slashAnonid(self, interaction: discord.Interaction):
         await interaction.response.defer()

@@ -15,24 +15,24 @@ class Ping(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
+    Help = HelpData(
+        category="Utility",
+        help=(
             "Checks Amelies conenction speed by measuring WebSocket Latency (which is the delay between bots server and Discord Gateway) and Bot Latency"
             "\n(which is the time it takes Amélie to send a message and recieve a response)."
         ),
-        "brief": "Pings Amélie.",
-        "usage": "",
-        "aliases": [],
-        "extras": {"Category": "Utility"},
-    }
+        brief="Pings Amélie.",
+        usage=None,
+        aliases=[],
+    )
 
     @commands.command(
         name="ping",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def ping(self, ctx: commands.Context[commands.Bot]):
         pings: list[float] | None = []  # stores pings results
@@ -99,7 +99,7 @@ class Ping(commands.Cog):
         await ctx.reply("something went wrong with **ping**.")
 
     # ping slash command
-    @app_commands.command(name="ping", description=Help["brief"], extras=Help["extras"])
+    @app_commands.command(name="ping", description=Help.brief, extras=Help.extras)
     @app_commands.describe(
         hidden="Whether the result should be visible only to you or not."
     )

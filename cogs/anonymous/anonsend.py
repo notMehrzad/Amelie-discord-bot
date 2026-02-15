@@ -38,23 +38,24 @@ class AnonSend(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
+    Help = HelpData(
+        category="Anonymous",
+        dmOnly=True,
+        help=(
             "Starts an anonymous messaging session, allowing the user to send as many messages as they want anonymously to the target who has shared their public ID."
         ),
-        "brief": "Sends an anonymous message to someone.",
-        "usage": "<public ID>",
-        "aliases": ["anons"],
-        "extras": {"Category": "Anonymous", "dm-only": "Yes"},
-    }
+        brief="Sends an anonymous message to someone.",
+        usage="<public ID>",
+        aliases=["anons"],
+    )
 
     @commands.command(
         name="anonsend",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def anonsend(self, ctx: commands.Context[commands.Bot], publicId: str | None):
         # if user runs the command in a server
@@ -136,9 +137,7 @@ class AnonSend(commands.Cog):
         await ctx.reply("something went wrong with **anonsend**.")
 
     # anonsend slash command
-    @app_commands.command(
-        name="anonsend", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="anonsend", description=Help.brief, extras=Help.extras)
     @app_commands.dm_only()
     async def slashAnonsend(self, interaction: discord.Interaction, public_id: str):
         # if user already has an active session

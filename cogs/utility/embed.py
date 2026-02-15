@@ -186,24 +186,24 @@ class Embed(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
+    Help = HelpData(
+        category="Utility",
+        help=(
             "This command can sends or edits an embed in the channel."
             "\nYou can specify Embed attributes like `key: (value)` (title: (hi) for instance). Supports all kind of Embed attributes."
         ),
-        "brief": "Sends an Embed in the channel.",
-        "usage": "<embed argument 1> <embed argument 2> <embed argument ..>",
-        "aliases": [],
-        "extras": {"Category": "Utility"},
-    }
+        brief="Sends an Embed in the channel.",
+        usage="<embed argument 1> <embed argument 2> <embed argument ..>",
+        aliases=[],
+    )
 
     @commands.command(
         name="embed",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def embed(
         self, ctx: commands.Context[commands.Bot], *, args: str | None = None
@@ -257,9 +257,7 @@ class Embed(commands.Cog):
         await ctx.reply(f"something went wrong with **embed**.")
 
     # embed slash command
-    @app_commands.command(
-        name="embed", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="embed", description=Help.brief, extras=Help.extras)
     async def slashEmbed(
         self,
         interaction: discord.Interaction,

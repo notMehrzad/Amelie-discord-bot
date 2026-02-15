@@ -17,8 +17,9 @@ class Vrps(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
+    Help = HelpData(
+        category="Games",
+        help=(
             "A game between two people. yet needed a whole class-"
             "\nFirst, everyone in the class draws either a Rock, Paper or Scissors on a card. Then they drop those cards into the ballot box so players can't see them."
             "\nPlayers both draw *three* cards from the box, choose just one, and play *Rock, Paper, Scissors !*."
@@ -27,19 +28,18 @@ class Vrps(commands.Cog):
             "\nUnlike normal Rock-Paper-Scissors, players don't always show their entire hand. Trying to read each other under such unfair circumstances is the appeal."
             "\nYou can only play with Amélie herself if you run this game in her dm."
         ),
-        "brief": "Classic rock-paper-scissors, but played with predetermined drawings on cards.",
-        "usage": "<target[*optional*]>",
-        "aliases": ["voterps", "voterockpaperscissors"],
-        "extras": {"Category": "Games"},
-    }
+        brief="Classic rock-paper-scissors, but played with predetermined drawings on cards.",
+        usage="<target[*optional*]>",
+        aliases=["voterps", "voterockpaperscissors"],
+    )
 
     @commands.command(
         name="vrps",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def vrps(
         self,
@@ -91,7 +91,7 @@ class Vrps(commands.Cog):
         await ctx.reply("something went wrong with **vrps**.")
 
     # vrps slash command
-    @app_commands.command(name="vrps", description=Help["brief"], extras=Help["extras"])
+    @app_commands.command(name="vrps", description=Help.brief, extras=Help.extras)
     @app_commands.describe(user="The user you want to play vrps with.")
     async def slashVrps(
         self, interaction: discord.Interaction, user: discord.User | None = None

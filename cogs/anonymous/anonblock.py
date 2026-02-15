@@ -13,21 +13,22 @@ class AnonBlock(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Blocks an anonymous sender to prevent them from messaging.",
-        "usage": "<private ID> <unblock(y/n) [*optional*]>",
-        "aliases": ["anonb"],
-        "extras": {"Category": "Anonymous", "dm-only": "Yes"},
-    }
+    Help = HelpData(
+        category="Anonymous",
+        dmOnly=True,
+        help=None,
+        brief="Blocks an anonymous sender to prevent them from messaging.",
+        usage="<private ID> <unblock(y/n) [*optional*]>",
+        aliases=["anonb"],
+    )
 
     @commands.command(
         name="anonblock",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def anonblock(
         self,
@@ -120,9 +121,7 @@ class AnonBlock(commands.Cog):
         await ctx.reply("something went wrong with **anonblock**.")
 
     # anonblock slash command
-    @app_commands.command(
-        name="anonblock", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="anonblock", description=Help.brief, extras=Help.extras)
     @app_commands.dm_only()
     @app_commands.describe(
         private_id="The private ID of anonymous sender to block.",

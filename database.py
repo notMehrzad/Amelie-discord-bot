@@ -56,6 +56,16 @@ class Database:
     # setups the db helper function
     async def tableInitialize(self):
         tables = [
+            # sessions table
+            """
+            CREATE TABLE IF NOT EXISTS sessions (
+                session_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                channel_id INTEGER NOT NULL,
+                type TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            """,
             # warns table
             """
             CREATE TABLE IF NOT EXISTS warns (

@@ -13,24 +13,25 @@ class AnonReply(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
-            "Replys to an anonymous session created via the anonymous sender."
+    Help = HelpData(
+        category="Anonymous",
+        dmOnly=True,
+        help=(
+            "Replies to an anonymous session created via the anonymous sender."
             "\nThe anonymous sender will recieve the reply message and get notified who responded to their anonymous session."
         ),
-        "brief": "Replys to an anonymous session.",
-        "usage": "<private ID> <session ID> <message>",
-        "aliases": ["anonr"],
-        "extras": {"Category": "Anonymous", "dm-only": "Yes"},
-    }
+        brief="Replies to an anonymous session.",
+        usage="<private ID> <session ID> <message>",
+        aliases=["anonr"],
+    )
 
     @commands.command(
         name="anonreply",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def anonreply(
         self,
@@ -189,9 +190,7 @@ class AnonReply(commands.Cog):
         await ctx.reply("something went wrong with **anonreply**.")
 
     # anonreply slash command
-    @app_commands.command(
-        name="anonreply", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="anonreply", description=Help.brief, extras=Help.extras)
     @app_commands.dm_only()
     async def slashAnonreply(
         self,

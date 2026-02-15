@@ -12,24 +12,24 @@ class Calc(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
+    Help = HelpData(
+        category="Utility",
+        help=(
             "Calculates the given math expression."
             "\nsupports trigonometric, logarithms and etc."
         ),
-        "brief": "Calculates the given math expression.",
-        "usage": "<math_expression>",
-        "aliases": ["calculator", "calculate"],
-        "extras": {"Category": "Utility"},
-    }
+        brief="Calculates the given math expression.",
+        usage="<math_expression>",
+        aliases=["calculator", "calculate"],
+    )
 
     @commands.command(
         name="calc",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def calc(
         self, ctx: commands.Context[commands.Bot], *, expression: str | None = None
@@ -88,7 +88,7 @@ class Calc(commands.Cog):
         await ctx.reply("something went wrong with **calc**.")
 
     # calc slash command
-    @app_commands.command(name="calc", description=Help["brief"], extras=Help["extras"])
+    @app_commands.command(name="calc", description=Help.brief, extras=Help.extras)
     @app_commands.describe(
         expression="The expression to be calculated.",
         hidden="Whether the result should be vsible only to you or not.",

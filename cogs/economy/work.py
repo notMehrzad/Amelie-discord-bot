@@ -14,21 +14,21 @@ class Work(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Works i guess",
-        "usage": "",
-        "aliases": [""],
-        "extras": {"Category": "Economy"},
-    }
+    Help = HelpData(
+        category="Economy",
+        help=None,
+        brief="Works i guess",
+        usage=None,
+        aliases=[],
+    )
 
     @commands.command(
         name="work",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def work(self, ctx: commands.Context[commands.Bot]):
         # checks the balance and the last work date of the user
@@ -88,7 +88,7 @@ class Work(commands.Cog):
         await ctx.reply("something went wrong with **work**.")
 
     # work slash command
-    @app_commands.command(name="work", description=Help["brief"], extras=Help["extras"])
+    @app_commands.command(name="work", description=Help.brief, extras=Help.extras)
     async def slashWork(self, interaction: discord.Interaction):
         # checks the balance and the last work date of the user
         row = await db.fetchone(

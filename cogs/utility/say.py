@@ -11,25 +11,25 @@ class Say(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
+    Help = HelpData(
+        category="Utility",
+        help=(
             "Says the given message in the desired channel."
             "But first, it checks if the user(and Amélie herself) have the propper permission to say or send something in the target channel."
             "\nThis also works in DM and Group channels."
         ),
-        "brief": "Says something in a channel.",
-        "usage": '<target channel *or* "here"> <message>',
-        "aliases": ["echo"],
-        "extras": {"Category": "Utility"},
-    }
+        brief="Says something in a channel.",
+        usage='<target channel *or* "here"> <message>',
+        aliases=["echo"],
+    )
 
     @commands.command(
         name="say",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def say(
         self,
@@ -92,7 +92,7 @@ class Say(commands.Cog):
         await ctx.reply("something went wrong with **say**.")
 
     # say slash command
-    @app_commands.command(name="say", description=Help["brief"], extras=Help["extras"])
+    @app_commands.command(name="say", description=Help.brief, extras=Help.extras)
     @app_commands.describe(
         message="The message to be said.",
         channel="The channel you want to say something in.",

@@ -12,21 +12,21 @@ class CoinFlip(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Flips a coin.",
-        "usage": "",
-        "aliases": ["cf", "coinf"],
-        "extras": {"Category": "Games"},
-    }
+    Help = HelpData(
+        category="Games",
+        help=None,
+        brief="Flips a coin.",
+        usage=None,
+        aliases=["cf", "coinf"],
+    )
 
     @commands.command(
         name="coinflip",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def coinflip(self, ctx: commands.Context[commands.Bot]):
         result = random.choice(("Heads", "Tails"))  # flips the coin
@@ -40,9 +40,7 @@ class CoinFlip(commands.Cog):
         await ctx.reply("something went wrong with **coinflip**.")
 
     # coinflip slash command
-    @app_commands.command(
-        name="coinflip", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="coinflip", description=Help.brief, extras=Help.extras)
     async def slashCoinflip(self, interaction: discord.Interaction):
         result = random.choice(("Heads", "Tails"))  # flips the coin
         await interaction.response.send_message(result + ".")  # sends the result

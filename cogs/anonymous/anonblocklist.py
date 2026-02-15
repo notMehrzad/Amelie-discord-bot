@@ -12,21 +12,22 @@ class AnonBlockList(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Shows the anonymous block list of the user.",
-        "usage": "",
-        "aliases": ["anonbl"],
-        "extras": {"Category": "Anonymous", "dm-only": "Yes"},
-    }
+    Help = HelpData(
+        category="Anonymous",
+        dmOnly=True,
+        help=None,
+        brief="Shows the anonymous block list of the user.",
+        usage=None,
+        aliases=["anonbl"],
+    )
 
     @commands.command(
         name="anonblocklist",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def anonblocklist(self, ctx: commands.Context[commands.Bot]):
         # if user runs the command in a server
@@ -79,7 +80,7 @@ class AnonBlockList(commands.Cog):
 
     # anonblocklist slash command
     @app_commands.command(
-        name="anonblocklist", description=Help["brief"], extras=Help["extras"]
+        name="anonblocklist", description=Help.brief, extras=Help.extras
     )
     @app_commands.dm_only()
     async def slashAnonblocklist(self, interaction: discord.Interaction):

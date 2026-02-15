@@ -13,29 +13,27 @@ class StartUp(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
+    Help = HelpData(
+        category="Dev",
+        subcommands=["reload", "list"],
+        help=(
             "A cog handling command made for developers of the bot."
             '\nif "reload" subcommand is used, it takes an optional parameter <cog_name> for reloading that specific cog. if not specified, all cogs will be reloaded instead.'
             '\nif "list" subcommand is used, it prints the cog list into the bots console.'
         ),
-        "brief": "A cog moderation command made for developers of the bot.",
-        "usage": "<subcommand> <cog_name[*optional*]>",
-        "aliases": [],
-        "extras": {
-            "Category": "Dev",
-            "Subcommands": '"reload"[aliases: "r"] | "list"[aliases: "show"]',
-        },
-    }
+        brief="A cog moderation command made for developers of the bot.",
+        usage="<subcommand> <cog_name[*optional*]>",
+        aliases=[],
+    )
 
     @commands.command(
         name="cog",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
         hidden=True,
-        extras=Help["extras"],
+        extras=Help.extras,
     )
     async def cog(
         self,
@@ -67,7 +65,7 @@ class StartUp(commands.Cog):
         extensionList = list(self.bot.extensions)  # stores all registered extentions
 
         # reload subcommand
-        if cmd in ["reload", "r"]:
+        if cmd == "reload":
             # reloads all cogs if no extension is given
             if not extension or extension == "all":
                 msg = await ctx.reply("Reloading all cogs..")
@@ -112,7 +110,7 @@ class StartUp(commands.Cog):
                 await ctx.message.delete()
 
         # list subcommand
-        elif cmd in ["list", "show"]:
+        elif cmd == "list":
             print(f"\n--------------\n{extensionList}")
             msg = await ctx.reply(content="Cogs list has been sent to the console. ✅")
             if inGuild:

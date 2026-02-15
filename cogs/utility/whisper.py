@@ -11,21 +11,22 @@ class Whisper(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "Whispers a message to a member. use this command to talk with a member privately inside a server.",
-        "brief": "Whispers something to a member.",
-        "usage": "<target> <message>",
-        "aliases": ["wh"],
-        "extras": {"Category": "Utility", "server-only": "Yes"},
-    }
+    Help = HelpData(
+        category="Utility",
+        serverOnly=True,
+        help="Whispers a message to a member. use this command to talk with a member privately inside a server.",
+        brief="Whispers something to a member.",
+        usage="<target> <message>",
+        aliases=["wh"],
+    )
 
     @commands.command(
         name="whisper",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def whisper(
         self,
@@ -86,9 +87,7 @@ class Whisper(commands.Cog):
             await ctx.reply("something went wrong with **whisper**.")
 
     # whisper slash command
-    @app_commands.command(
-        name="whisper", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="whisper", description=Help.brief, extras=Help.extras)
     @app_commands.guild_only()
     @app_commands.describe(
         target="The Member to whisper.", message="The message to be whispered."

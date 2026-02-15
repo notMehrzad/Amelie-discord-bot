@@ -13,22 +13,22 @@ class CommandSync(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "A command for syncing bot command tree.",
-        "usage": "",
-        "aliases": ["csync"],
-        "extras": {"Category": "Dev"},
-    }
+    Help = HelpData(
+        category="Dev",
+        help=None,
+        brief="A command for syncing bot command tree.",
+        usage=None,
+        aliases=["csync"],
+    )
 
     @commands.command(
         name="commandsync",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
         hidden=True,
-        extras=Help["extras"],
+        extras=Help.extras,
     )
     async def commandsync(self, ctx: commands.Context[commands.Bot]):
         inGuild = True if ctx.guild else False

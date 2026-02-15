@@ -12,21 +12,21 @@ class Choose(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Chooses one option between given choices",
-        "usage": '<count[*optional*]> <choices(separated with "|")>',
-        "aliases": [],
-        "extras": {"Category": "Utility"},
-    }
+    Help = HelpData(
+        category="Utility",
+        help=None,
+        brief="Chooses one option between given choices",
+        usage='<count[*optional*]> <choices(separated with "|")>',
+        aliases=[],
+    )
 
     @commands.command(
         name="choose",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def choose(
         self,
@@ -66,9 +66,7 @@ class Choose(commands.Cog):
         await ctx.reply("something went wrong with **choose**.")
 
     # choose slash command
-    @app_commands.command(
-        name="choose", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="choose", description=Help.brief, extras=Help.extras)
     @app_commands.describe(
         choices='The choices to choose from, separated with "|".',
         count="The number of choices to make.",

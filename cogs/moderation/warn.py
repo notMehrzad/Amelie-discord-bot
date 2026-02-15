@@ -14,25 +14,23 @@ class Warn(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Warns a member from the server.",
-        "usage": "<target (mention *or* id)> <reason[*optional*]>",
-        "aliases": ["w"],
-        "extras": {
-            "Category": "Moderation",
-            "Permissions needed": "`Kick, Approve and Reject Members`",
-            "server-only": "Yes",
-        },
-    }
+    Help = HelpData(
+        category="Moderation",
+        serverOnly=True,
+        permissions=["`Kick, Approve and Reject Members`"],
+        help=None,
+        brief="Warns a member from the server.",
+        usage="<target (mention *or* id)> <reason[*optional*]>",
+        aliases=["w"],
+    )
 
     @commands.command(
         name="warn",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def warn(
         self,
@@ -180,7 +178,7 @@ class Warn(commands.Cog):
             await ctx.reply("something went wrong with **warn**.")
 
     # warn slash command
-    @app_commands.command(name="warn", description=Help["brief"], extras=Help["extras"])
+    @app_commands.command(name="warn", description=Help.brief, extras=Help.extras)
     @app_commands.guild_only()
     @app_commands.describe(
         user="The target member to warn.", reason="The reason to warn the target."

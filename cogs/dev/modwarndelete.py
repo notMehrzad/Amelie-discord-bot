@@ -15,28 +15,29 @@ class ModWarnDelete(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
+    Help = HelpData(
+        category="Dev",
+        subcommands=["all", "server", "user"],
+        help=(
             "This command helps moderating the warns table in database."
             "\nIt has three subcommand (all, server, user):"
             '\n-If "all" subcommand is used, deletes all warns table data..'
             '\n-If "server" subcommand is used, it takes another parameter <id> to fetch the target Server and deletes that server warns table data.'
             '\n-If "user" subcommand is used, it takes another parameter <id> to fetch the target User and deletes that User warns table data.'
         ),
-        "brief": "A developer command to moderate warns table from database.",
-        "usage": "<subcommand> <id>",
-        "aliases": [],
-        "extras": {"Category": "Dev", "Subcommands": "all | server | user"},
-    }
+        brief="A developer command to moderate warns table from database.",
+        usage="<subcommand> <id>",
+        aliases=[],
+    )
 
     @commands.command(
         name="modwarndelete",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
         hidden=True,
-        extras=Help["extras"],
+        extras=Help.extras,
     )
     async def modwarndelete(
         self,

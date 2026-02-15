@@ -22,8 +22,9 @@ class LimitDice(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
+    Help = HelpData(
+        category="Games",
+        help=(
             "A game between two players; All about luck and will."
             "\nBoth players take turns rolling their die. and they can't see each other's hand."
             "\nAny roll from **one to five** worths **1 point**."
@@ -36,19 +37,18 @@ class LimitDice(commands.Cog):
             "\n\nIf your opponent keep rolling their die, never stopping.., it'll make you wonder if they rolled a six or not."
             "\nShould you stop or not? You'll need to think about that, all the way to your Limits, in this **test of Willpower!**"
         ),
-        "brief": "A two-player dice game of luck, bluffing, and willpower where rolling a six can change everything.",
-        "usage": "<target[*optional*]>",
-        "aliases": ["lm"],
-        "extras": {"Category": "Games"},
-    }
+        brief="A two-player dice game of luck, bluffing, and willpower where rolling a six can change everything.",
+        usage="<target[*optional*]>",
+        aliases=["lm"],
+    )
 
     @commands.command(
         name="limitdice",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def limitdice(
         self,
@@ -103,9 +103,7 @@ class LimitDice(commands.Cog):
             await ctx.reply("something went wrong with **limitdice**.")
 
     # limitdice slash command
-    @app_commands.command(
-        name="limitdice", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="limitdice", description=Help.brief, extras=Help.extras)
     @app_commands.describe(user="The user you want to play Limit Dice with.")
     async def slashLimitdice(
         self, interaction: discord.Interaction, user: discord.User | None = None

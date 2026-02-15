@@ -12,25 +12,23 @@ class WarnList(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Shows warnings of a member from the server.",
-        "usage": '<target (mention *or* ID *or* "all")[*optional*]>',
-        "aliases": ["wl", "warns"],
-        "extras": {
-            "Category": "Moderation",
-            "Permissions needed": "`Kick, Approve and Reject Members`",
-            "server-only": "Yes",
-        },
-    }
+    Help = HelpData(
+        category="Moderation",
+        serverOnly=True,
+        permissions=["`Kick, Approve and Reject Members`"],
+        help=None,
+        brief="Shows warnings of a member from the server.",
+        usage='<target (mention *or* ID *or* "all")[*optional*]>',
+        aliases=["wl", "warns"],
+    )
 
     @commands.command(
         name="warnlist",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def warnlist(
         self,
@@ -192,9 +190,7 @@ class WarnList(commands.Cog):
             await ctx.reply("something went wrong with **warnlist**.")
 
     # warnlist slash command
-    @app_commands.command(
-        name="warnlist", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="warnlist", description=Help.brief, extras=Help.extras)
     @app_commands.guild_only()
     @app_commands.describe(user="The target user to get warning list for.")
     async def slashWarnlist(

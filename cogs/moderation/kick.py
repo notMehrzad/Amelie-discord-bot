@@ -11,25 +11,23 @@ class Kick(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Kicks a member from the server.",
-        "usage": "<target> <reason[*optional*]>",
-        "aliases": ["k"],
-        "extras": {
-            "Category": "Moderation",
-            "Permissions needed": "`Kick, Approve and Reject Members`",
-            "server-only": "Yes",
-        },
-    }
+    Help = HelpData(
+        category="Moderation",
+        serverOnly=True,
+        permissions=["`Kick, Approve and Reject Members`"],
+        help=None,
+        brief="Kicks a member from the server.",
+        usage="<target> <reason[*optional*]>",
+        aliases=["k"],
+    )
 
     @commands.command(
         name="kick",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def kick(
         self,
@@ -127,7 +125,7 @@ class Kick(commands.Cog):
             await ctx.reply("something went wrong with **kick**.")
 
     # kick slash command
-    @app_commands.command(name="kick", description=Help["brief"], extras=Help["extras"])
+    @app_commands.command(name="kick", description=Help.brief, extras=Help.extras)
     @app_commands.guild_only()
     @app_commands.describe(
         user="The target Member to kick from the server.",

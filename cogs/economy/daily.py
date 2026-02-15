@@ -28,21 +28,21 @@ class Daily(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Claims the Daily Reward for the user..",
-        "usage": "",
-        "aliases": ["d"],
-        "extras": {"Category": "Economy"},
-    }
+    Help = HelpData(
+        category="Economy",
+        help=None,
+        brief="Claims the Daily Reward for the user.",
+        usage=None,
+        aliases=["d"],
+    )
 
     @commands.command(
         name="daily",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def daily(self, ctx: commands.Context[commands.Bot]):
         now = discord.utils.utcnow()
@@ -112,9 +112,7 @@ class Daily(commands.Cog):
         await ctx.reply("something went wrong with **daily**.")
 
     # daily slash command
-    @app_commands.command(
-        name="daily", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="daily", description=Help.brief, extras=Help.extras)
     async def slashDaily(self, interaction: discord.Interaction):
         now = discord.utils.utcnow()
 

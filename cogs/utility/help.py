@@ -2,18 +2,44 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import json
-from typing import TypedDict, Any
+from typing import Any
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 
 
-class HelpData(TypedDict):
-    help: str
-    brief: str
-    usage: str
-    aliases: list[str]
-    extras: dict[Any, Any]
+class HelpData:
+    def __init__(
+        self,
+        category: str | None = None,
+        dmOnly: bool = False,
+        serverOnly: bool = False,
+        subcommands: list[str] = [],
+        permissions: list[str] = [],
+        help: str | None = None,
+        brief: str = "",
+        usage: str | None = None,
+        aliases: list[str] = [],
+    ):
+        self.category = category
+        self.dmOnly = dmOnly
+        self.serverOnly = serverOnly
+        self.subcommands = subcommands
+        self.permissions = permissions
+        self.help = help
+        self.brief = brief
+        self.usage = usage
+        self.aliases = aliases
+
+    @property
+    def extras(self) -> dict[Any, Any]:
+        return {
+            "category": self.category,
+            "dm-only": self.dmOnly,
+            "server-only": self.serverOnly,
+            "subcommands": self.subcommands,
+            "permissions": self.permissions,
+        }
 
 
 with open("config.json") as file:
@@ -24,24 +50,24 @@ class Help(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": (
+    Help = HelpData(
+        category="Utility",
+        help=(
             "Shows the help menu which gives a brief information about Commands."
             "\nEnter a Command name for its full detail such as its application, usage, necessery permissions (if any) and etc. or don't, to get the help menu."
         ),
-        "brief": "Shows the help menu.",
-        "usage": "<command_name*[optional]*>",
-        "aliases": ["h"],
-        "extras": {"Category": "Utility"},
-    }
+        brief="Shows the help menu.",
+        usage="<command_name*[optional]*>",
+        aliases=["h"],
+    )
 
     @commands.command(
         name="help",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def help(
         self, ctx: commands.Context[commands.Bot], command: str | None = None
@@ -64,19 +90,42 @@ class Help(commands.Cog):
 
             cmdEmbed = discord.Embed(
                 title="." + cmd.name,
-                description=cmd.help or cmd.brief or "*no description*",
+                description=cmd.help
+                or cmd.brief
+                or "*No description provided for this command.*",
                 color=discord.Color.blurple(),
             ).set_author(name="Help")
             # if command has aliases
             if cmd.aliases:
-                cmdEmbed.add_field(name="Aliases", value=", ".join(cmd.aliases))
+                cmdEmbed.add_field(name="Aliases", value=" | ".join(cmd.aliases))
 
+            # if command has usage
             if cmd.usage:
-                cmdEmbed.add_field(name="Usage", value=f".{cmd.name} {cmd.usage}")
+                cmdEmbed.add_field(name="Usage", value=f"/{cmd.name} {cmd.usage}")
+
+            # if command has subcommands
+            if cmd.extras["subcommands"]:
+                cmdEmbed.add_field(
+                    name="Subcommands", value=" | ".join(cmd.extras["subcommands"])
+                )
+
+            # if command is dm only
+            if cmd.extras["dm-only"]:
+                cmdEmbed.add_field(name="DM-only", value="Yes")
+
+            # if command is server only
+            if cmd.extras["server-only"]:
+                cmdEmbed.add_field(name="Server-only", value="Yes")
+
+            # if command needs certain permissions
+            if cmd.extras["permissions"]:
+                cmdEmbed.add_field(
+                    name="Permissions", value=" | ".join(cmd.extras["permissions"])
+                )
 
             # if command has extra information
             for key, value in cmd.extras.items():
-                if key == "Category":
+                if key == "category":
                     continue
                 cmdEmbed.add_field(
                     name=key, value=value
@@ -101,7 +150,7 @@ class Help(commands.Cog):
                     continue
 
                 category = cmd.extras.get(
-                    "Category", "etc."
+                    "category", "etc."
                 )  # fetches each commands category
                 categorized.setdefault(category, []).append(
                     cmd
@@ -127,7 +176,7 @@ class Help(commands.Cog):
                 for cmd in cmdList:
                     embed.add_field(
                         name="." + cmd.name,
-                        value=cmd.brief or "*no description*",
+                        value=cmd.brief or "*No description*",
                         inline=False,
                     )  # create fields based on fetched commands
 
@@ -149,16 +198,16 @@ class Help(commands.Cog):
         await ctx.reply("something went wrong with **help**.")
 
     # help slash command
-    @app_commands.command(name="help", description=Help["brief"], extras=Help["extras"])
+    @app_commands.command(name="help", description=Help.brief, extras=Help.extras)
     @app_commands.describe(
-        command="The command to get information of.",
-        hidden="Whether the help menu should be visible only to you or not.",
+        command="The command to get the help of.",
+        ephemeral="Whether the help menu should be ephemeral or not.",
     )
     async def slashHelp(
         self,
         interaction: discord.Interaction,
         command: str | None = None,
-        hidden: bool = False,
+        ephemeral: bool = False,
     ):
         # help for specific command
         if command:
@@ -179,26 +228,49 @@ class Help(commands.Cog):
                 )
 
             cmdEmbed = discord.Embed(
-                title="." + cmd.name,
-                description=cmd.help or cmd.brief or "*no description*",
+                title="/" + cmd.name,
+                description=cmd.help
+                or cmd.brief
+                or "*No description provided for this command.*",
                 color=discord.Color.blurple(),
             ).set_author(name="Help")
             # if command has aliases
             if cmd.aliases:
-                cmdEmbed.add_field(name="Aliases", value=", ".join(cmd.aliases))
+                cmdEmbed.add_field(name="Aliases", value=" | ".join(cmd.aliases))
 
+            # if command has usage
             if cmd.usage:
-                cmdEmbed.add_field(name="Usage", value=f".{cmd.name} {cmd.usage}")
+                cmdEmbed.add_field(name="Usage", value=f"/{cmd.name} {cmd.usage}")
+
+            # if command has subcommands
+            if cmd.extras["subcommands"]:
+                cmdEmbed.add_field(
+                    name="Subcommands", value=" | ".join(cmd.extras["subcommands"])
+                )
+
+            # if command is dm only
+            if cmd.extras["dm-only"]:
+                cmdEmbed.add_field(name="DM-only", value="Yes")
+
+            # if command is server only
+            if cmd.extras["server-only"]:
+                cmdEmbed.add_field(name="Server-only", value="Yes")
+
+            # if command needs certain permissions
+            if cmd.extras["permissions"]:
+                cmdEmbed.add_field(
+                    name="Permissions", value=" | ".join(cmd.extras["permissions"])
+                )
 
             # if command has extra information
             for key, value in cmd.extras.items():
-                if key == "Category":
+                if key == "category":
                     continue
                 cmdEmbed.add_field(
                     name=key, value=value
                 )  # add extra information to fields
 
-            await interaction.response.send_message(embed=cmdEmbed, ephemeral=hidden)
+            await interaction.response.send_message(embed=cmdEmbed, ephemeral=ephemeral)
 
         # shows the help menu
         else:
@@ -217,7 +289,7 @@ class Help(commands.Cog):
                     continue
 
                 category = cmd.extras.get(
-                    "Category", "etc."
+                    "category", "etc."
                 )  # fetches each commands category
                 categorized.setdefault(category, []).append(
                     cmd
@@ -242,8 +314,8 @@ class Help(commands.Cog):
                 ).set_author(name="Help Menu")
                 for cmd in cmdList:
                     embed.add_field(
-                        name="." + cmd.name,
-                        value=cmd.brief or "*no description*",
+                        name="/" + cmd.name,
+                        value=cmd.brief or "*No description*",
                         inline=False,
                     )  # create fields based on fetched commands
 
@@ -252,12 +324,12 @@ class Help(commands.Cog):
             # if there is only one category, no buttons needed
             if len(categoryEmbeds) == 1:
                 await interaction.response.send_message(
-                    embed=categoryEmbeds[0], ephemeral=hidden
+                    embed=categoryEmbeds[0], ephemeral=ephemeral
                 )  # send the help menu
 
             else:
                 view = HelpView(
-                    interaction, interaction.user, categoryEmbeds, hidden
+                    interaction, interaction.user, categoryEmbeds, ephemeral
                 )  # initializes the help view
                 await view.start()
 

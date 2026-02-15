@@ -12,25 +12,23 @@ class WarnClear(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Clears warnings of a member from the server.",
-        "usage": '<target (mention *or* id)> <warn ID (*or* "all")[*optional*]> <reason[*optional*]>',
-        "aliases": ["wc", "warnremove", "wr"],
-        "extras": {
-            "Category": "Moderation",
-            "Permissions needed": "`Kick, Approve and Reject Members`",
-            "server-only": "Yes",
-        },
-    }
+    Help = HelpData(
+        category="Moderation",
+        serverOnly=True,
+        permissions=["`Kick, Approve and Reject Members`"],
+        help=None,
+        brief="Clears warnings of a member from the server.",
+        usage='<target (mention *or* id)> <warn ID (*or* "all")[*optional*]> <reason[*optional*]>',
+        aliases=["wc", "warnremove", "wr"],
+    )
 
     @commands.command(
         name="warnclear",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def warnclear(
         self,
@@ -188,9 +186,7 @@ class WarnClear(commands.Cog):
             await ctx.reply("something went wrong with **warnclear**.")
 
     # warnclear slash command
-    @app_commands.command(
-        name="warnclear", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="warnclear", description=Help.brief, extras=Help.extras)
     @app_commands.guild_only()
     @app_commands.describe(
         user="The target user to clear it's warning.",

@@ -11,25 +11,23 @@ class Ban(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Bans a member from the server.",
-        "usage": "<target> <reason[*optional*]>",
-        "aliases": ["b"],
-        "extras": {
-            "Category": "Moderation",
-            "Permissions needed": "`Ban Members`",
-            "server-only": "Yes",
-        },
-    }
+    Help = HelpData(
+        category="Moderation",
+        serverOnly=True,
+        permissions=["`Ban Members`"],
+        help=None,
+        brief="Bans a member from the server.",
+        usage="<target> <reason[*optional*]>",
+        aliases=["b"],
+    )
 
     @commands.command(
         name="ban",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def ban(
         self,
@@ -133,7 +131,7 @@ class Ban(commands.Cog):
             await ctx.reply("something went wrong with **ban**.")
 
     # ban slash command
-    @app_commands.command(name="ban", description=Help["brief"], extras=Help["extras"])
+    @app_commands.command(name="ban", description=Help.brief, extras=Help.extras)
     @app_commands.guild_only()
     @app_commands.describe(
         user="The target Member to ban from the server.",

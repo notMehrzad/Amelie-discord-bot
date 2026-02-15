@@ -39,7 +39,7 @@ async def cogsload():
                 await bot.load_extension(module)  # loads cog
                 succeed.append(module.split(".")[-1])
             except Exception:
-                logger.exception(f"❌ Failed to load {module}:")
+                logger.exception(f"❌ Failed to load {module}: ")
                 failed.append(module.split(".")[-1])
     if failed:
         print(f"{failed} cogs failed to load ❌")
@@ -96,7 +96,7 @@ async def main():
         try:
             await bot.start(config["TOKEN"])  # starts the bot
         except Exception:
-            logger.exception(f"❌ Failed to start the bot:")
+            logger.exception(f"❌ Failed to start the bot: ")
 
 
 asyncio.run(main())

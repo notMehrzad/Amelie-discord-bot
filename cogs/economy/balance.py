@@ -12,21 +12,21 @@ class Balance(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "Shows the balance of the user.",
-        "usage": "",
-        "aliases": ["bal"],
-        "extras": {"Category": "Economy"},
-    }
+    Help = HelpData(
+        category="Economy",
+        help=None,
+        brief="Shows the balance of the user.",
+        usage=None,
+        aliases=["bal"],
+    )
 
     @commands.command(
         name="balance",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def balance(self, ctx: commands.Context[commands.Bot]):
         # checks if the user has an account already
@@ -67,9 +67,7 @@ class Balance(commands.Cog):
         await ctx.reply("something went wrong with **balance**.")
 
     # balance slash command
-    @app_commands.command(
-        name="balance", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="balance", description=Help.brief, extras=Help.extras)
     @app_commands.describe(
         hidden="Whether the result should be visible only to you or not."
     )

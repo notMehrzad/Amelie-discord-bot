@@ -94,21 +94,21 @@ class Blackjack(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    Help: HelpData = {
-        "help": "",
-        "brief": "The traditional BlackJack game.",
-        "usage": "<bet_amount[*optional*]>",
-        "aliases": ["bj"],
-        "extras": {"Category": "Games"},
-    }
+    Help = HelpData(
+        category="Games",
+        help=None,
+        brief="The traditional BlackJack game.",
+        usage="<bet_amount[*optional*]>",
+        aliases=["bj"],
+    )
 
     @commands.command(
         name="blackjack",
-        help=Help["help"],
-        brief=Help["brief"],
-        usage=Help["usage"],
-        aliases=Help["aliases"],
-        extras=Help["extras"],
+        help=Help.help,
+        brief=Help.brief,
+        usage=Help.usage,
+        aliases=Help.aliases,
+        extras=Help.extras,
     )
     async def blackjack(
         self, ctx: commands.Context[commands.Bot], bet: int | str | None = None
@@ -173,9 +173,7 @@ class Blackjack(commands.Cog):
         await ctx.reply("something went wrong with **blackjack**.")
 
     # blackjack slash command
-    @app_commands.command(
-        name="blackjack", description=Help["brief"], extras=Help["extras"]
-    )
+    @app_commands.command(name="blackjack", description=Help.brief, extras=Help.extras)
     @app_commands.describe(
         bet="The amount you want to set your initial bet. (max: 300/min: 100)"
     )
