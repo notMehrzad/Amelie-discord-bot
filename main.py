@@ -3,6 +3,7 @@ from discord.ext import commands, tasks
 import json
 import asyncio
 import os
+from terminal import command
 from itertools import cycle
 from database import db
 from logHandler import loggerSetup
@@ -46,11 +47,21 @@ async def cogsload():
     print(f"{succeed} cogs loaded ☑️")
 
 
+async def terminal_listener():
+    loop = asyncio.get_running_loop()
+    while True:
+        cmd = await loop.run_in_executor(None, input, ">> ")
+        await command(bot, cmd)
+
+
 @bot.event
 async def on_ready():
-    # prints a message when bot is ready
-    print("--------------" f"\nWe have logged in as {bot.user} ✅")
-
+    print(
+        "--------------" f"\nWe have logged in as {bot.user} ✅"
+    )  # prints a message when bot is ready
+    bot.loop.create_task(
+        terminal_listener()
+    )  # runs the terminal listener for in-line commands
     botStatusChange.start()  # starts changing bot statuses
 
 

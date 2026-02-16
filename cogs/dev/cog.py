@@ -65,7 +65,7 @@ class StartUp(commands.Cog):
         extensionList = list(self.bot.extensions)  # stores all registered extentions
 
         # reload subcommand
-        if cmd == "reload":
+        if cmd in ("reload", "r"):
             # reloads all cogs if no extension is given
             if not extension or extension == "all":
                 msg = await ctx.reply("Reloading all cogs..")

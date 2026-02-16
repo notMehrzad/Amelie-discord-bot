@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import json
-from database import db
+from database import db, Session
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
@@ -9,8 +9,6 @@ logger = loggerSetup(__name__)
 
 with open("config.json") as file:
     config = json.load(file)
-
-sessions: dict[int, list[discord.Message]] = {}
 
 
 class TicketHandle(commands.Cog):
@@ -48,10 +46,11 @@ class TicketHandle(commands.Cog):
             return
 
         # if user has an active responding session
-        if ctx.author.id in sessions:
-            return await ctx.reply(
-                "You have an open *Ticket Responding* session. Try closing it and try again."
-            )
+        for session in Session.sessions:
+            if session.type != "gambling" and session.userId == ctx.author.id:
+                return await ctx.reply(
+                    f"You have an open *{session.type}* session. Try closing it and try again."
+                )
 
         # if user entered no subcommand
         if not cmd:
@@ -139,10 +138,12 @@ class TicketHandle(commands.Cog):
 
         # respond subcommand
         if cmd == "respond":
-            sessions[ctx.author.id] = []  # creates a responding session for the admin
+            session = Session(
+                type="ticket-responding", userId=ctx.author.id, channelId=ctx.channel.id
+            )  # creates a responding session for the admin
 
             view = TicketRespondView(
-                ctx, ticketId, ticketUser, messageCollector, subject
+                ctx, ticketId, ticketUser, messageCollector, subject, session
             )  # initializes the ticket responding view
             await view.start()
 
@@ -179,8 +180,13 @@ class TicketHandle(commands.Cog):
         if msg.author.bot:
             return
 
-        if msg.author.id in sessions:
-            sessions[msg.author.id].append(msg)
+        if msg.author.id in Session.tickethandlesession:
+            for session in Session.sessions:
+                if (
+                    session.userId == msg.author.id
+                    and session.type == "ticket-responding"
+                ):
+                    return session.addMessage(msg)
 
 
 class TicketRespondView(discord.ui.View):
@@ -191,6 +197,7 @@ class TicketRespondView(discord.ui.View):
         ticketUser: discord.User,
         messageCollector: discord.Message | None,
         subject: str,
+        session: Session,
     ):
         super().__init__(timeout=300)
         self.ctx = ctx
@@ -199,6 +206,7 @@ class TicketRespondView(discord.ui.View):
         self.ticketUser = ticketUser
         self.messageCollector = messageCollector
         self.subject = subject
+        self.session = session
         self.timestamp = discord.utils.utcnow()
 
     async def start(self):
@@ -227,12 +235,10 @@ class TicketRespondView(discord.ui.View):
                 "You can't control this session.", ephemeral=True
             )
 
-        messages = sessions.pop(
-            self.user.id
-        )  # ends the admin responding session and collects the sent messages
+        self.session.close()  # ends the session
 
         # if no message is sent, session gets canceled
-        if not messages:
+        if not self.session.messages:
             endEmbed = discord.Embed(
                 title="Ticket Response 🎫",
                 description="You sent no messages, responding session ended.",
@@ -262,7 +268,7 @@ class TicketRespondView(discord.ui.View):
         )  # sends the initial message to the ticket user
 
         # replys the collected messages to the initial message
-        for m in messages:
+        for m in self.session.messages:
             # if message is sticker
             if m.stickers:
                 for s in m.stickers:
@@ -308,7 +314,7 @@ class TicketRespondView(discord.ui.View):
                 "You can't control this session.", ephemeral=True
             )
 
-        sessions.pop(self.user.id, None)  # ends the session
+        self.session.close()  # ends the session
 
         # sends the cancel message to the user
         endEmbed = discord.Embed(
@@ -327,7 +333,7 @@ class TicketRespondView(discord.ui.View):
             if isinstance(btn, discord.ui.Button):
                 btn.disabled = True
 
-        sessions.pop(self.user.id, None)  # ends the session
+        self.session.close()  # ends the session upon timeout
 
         # sends the timeout message
         toEmbed = discord.Embed(
@@ -349,6 +355,8 @@ class TicketRespondView(discord.ui.View):
         error: Exception,
         item: discord.ui.Item[discord.ui.View],
     ):
+        self.session.close()  # ends the session upon error
+
         logger.exception(
             f"❌ something went wrong with tickethandle interaction - button: {getattr(item, 'label', 'unknown')}"
         )

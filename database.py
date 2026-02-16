@@ -1,6 +1,45 @@
 import aiosqlite
+import discord
 from typing import Any, Iterable
 from contextlib import asynccontextmanager
+
+
+class Session:
+    sessions: list["Session"] = []
+
+    anonsendsession: list[int] = []
+    tickethandlesession: list[int] = []
+    ticketsession: list[int] = []
+
+    def __init__(self, type: str, userId: int, channelId: int | None):
+        self.type = type
+        self.userId = userId
+        self.channelId = channelId
+        self.timestamp = discord.utils.utcnow()
+        Session.sessions.append(self)
+
+        self.messages: list[discord.Message]
+        if self.type == "anonymous-send":
+            Session.anonsendsession.append(self.userId)
+        elif self.type == "ticket-responding":
+            Session.tickethandlesession.append(self.userId)
+        elif self.type == "ticketing":
+            Session.ticketsession.append(self.userId)
+
+    def close(self):
+        try:
+            Session.sessions.remove(self)
+            if self.type == "anonymous-send":
+                Session.anonsendsession.remove(self.userId)
+            elif self.type == "ticket-responding":
+                Session.tickethandlesession.remove(self.userId)
+            elif self.type == "ticketing":
+                Session.ticketsession.remove(self.userId)
+        except ValueError:
+            pass
+
+    def addMessage(self, msg: discord.Message):
+        self.messages.append(msg)
 
 
 # economy constant data

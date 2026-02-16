@@ -1,8 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from database import db
-from typing import TypedDict
+from database import db, Session
 from cogs.utility.help import HelpData
 from cogs.anonymous.anonid import idGenerator, publicIdLength
 from logHandler import loggerSetup
@@ -10,14 +9,6 @@ from logHandler import loggerSetup
 logger = loggerSetup(__name__)
 
 privateIdLength = 6  # the length of the private ids
-
-
-class sessionData(TypedDict):
-    messages: list[discord.Message]
-    reciever_id: int
-
-
-sessions: dict[int, sessionData] = {}
 
 
 async def privateIdGenerator(publicId: str):
@@ -63,9 +54,13 @@ class AnonSend(commands.Cog):
             return await ctx.reply("This command can only be used in Amélie's dm.")
 
         # if user already has an active session
-        if ctx.author.id in sessions:
+        if ctx.author.id in [
+            session.userId
+            for session in Session.sessions
+            if session.type == "anonymous-send"
+        ]:
             return await ctx.reply(
-                "You are already in a messaging session, close the open one and try again."
+                "You already have an open anonymous message sending session, close it and try again."
             )
 
         # if user doesn't enter any id
@@ -122,10 +117,12 @@ class AnonSend(commands.Cog):
             privateId: str = row["sender_anon_id"]
 
         # opens a session
-        sessions[ctx.author.id] = {"messages": [], "reciever_id": recieverUser.id}
+        session = Session(
+            type="anonymous-send", userId=ctx.author.id, channelId=ctx.channel.id
+        )
 
         view = AnonView(
-            ctx, recieverUser, publicId, privateId, sessions
+            ctx, recieverUser, publicId, privateId, session
         )  # initializes the Anon View
         await view.start()
 
@@ -141,9 +138,13 @@ class AnonSend(commands.Cog):
     @app_commands.dm_only()
     async def slashAnonsend(self, interaction: discord.Interaction, public_id: str):
         # if user already has an active session
-        if interaction.user.id in sessions:
+        if interaction.user.id in [
+            session.userId
+            for session in Session.sessions
+            if session.type == "anonymous-send"
+        ]:
             return await interaction.response.send_message(
-                "You are already in a messaging session, close the open one and try again.",
+                "You already have an open anonymous message sending session, close it and try again.",
                 ephemeral=True,
             )
 
@@ -201,10 +202,14 @@ class AnonSend(commands.Cog):
             privateId: str = row["sender_anon_id"]
 
         # opens a session
-        sessions[interaction.user.id] = {"messages": [], "reciever_id": recieverUser.id}
+        session = Session(
+            type="anonymous-send",
+            userId=interaction.user.id,
+            channelId=interaction.channel_id,
+        )
 
         view = AnonView(
-            interaction, recieverUser, public_id, privateId, sessions
+            interaction, recieverUser, public_id, privateId, session
         )  # initializes the Anon View
         await view.start()  # starts the view
 
@@ -230,8 +235,10 @@ class AnonSend(commands.Cog):
         if msg.guild:
             return
 
-        if msg.author.id in sessions:
-            sessions[msg.author.id]["messages"].append(msg)
+        if msg.author.id in Session.anonsendsession:
+            for session in Session.sessions:
+                if session.userId == msg.author.id and session.type == "anonymous-send":
+                    return session.addMessage(msg)
 
 
 class AnonView(discord.ui.View):
@@ -241,7 +248,7 @@ class AnonView(discord.ui.View):
         recieverUser: discord.User,
         public_id: str,
         private_id: str,
-        sessions: dict[int, sessionData],
+        session: Session,
     ):
         super().__init__(timeout=300)
         if isinstance(ctx, discord.Interaction):
@@ -255,7 +262,7 @@ class AnonView(discord.ui.View):
         self.recieverUser = recieverUser
         self.public_id = public_id
         self.private_id = private_id
-        self.sessions = sessions
+        self.session = session
 
     async def start(self):
         initialEmbed = discord.Embed(
@@ -291,11 +298,10 @@ class AnonView(discord.ui.View):
 
         now = discord.utils.utcnow()
 
-        endedSession = self.sessions.pop(self.user.id)  # ends the session
-        messages = endedSession["messages"]  # collects the messages
+        self.session.close()  # ends the session
 
         # if no message is sent, session gets canceled
-        if not messages:
+        if not self.session.messages:
             endEmbed = discord.Embed(
                 title="Anonymous Message",
                 description="You sent no message, session ended.",
@@ -344,7 +350,7 @@ class AnonView(discord.ui.View):
         )  # sends an initial message to the reciever
 
         # replys the collected messages
-        for m in messages:
+        for m in self.session.messages:
             # if message is sticker
             if m.stickers:
                 for s in m.stickers:
@@ -387,7 +393,7 @@ class AnonView(discord.ui.View):
 
         now = discord.utils.utcnow()
 
-        self.sessions.pop(self.user.id)  # ends the session
+        self.session.close()  # ends the session
 
         # sends the cancel message to the user
         endEmbed = discord.Embed(
@@ -409,7 +415,7 @@ class AnonView(discord.ui.View):
             if isinstance(btn, discord.ui.Button):
                 btn.disabled = True
 
-        self.sessions.pop(self.user.id)  # ends the session
+        self.session.close()  # ends the session upon timeout
 
         # sends the timeout message
         toEmbed = discord.Embed(
@@ -431,6 +437,8 @@ class AnonView(discord.ui.View):
         error: Exception,
         item: discord.ui.Item[discord.ui.View],
     ):
+        self.session.close()  # ends the session upon error
+
         logger.exception(
             f"❌ something went wrong with anonsend interaction - button: {getattr(item, 'label', 'unknown')}"
         )

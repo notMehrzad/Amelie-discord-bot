@@ -123,14 +123,6 @@ class Help(commands.Cog):
                     name="Permissions", value=" | ".join(cmd.extras["permissions"])
                 )
 
-            # if command has extra information
-            for key, value in cmd.extras.items():
-                if key == "category":
-                    continue
-                cmdEmbed.add_field(
-                    name=key, value=value
-                )  # add extra information to fields
-
             await ctx.reply(embed=cmdEmbed)
 
         # shows the help menu
