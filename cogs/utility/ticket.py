@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import json
-from database import db, Session
+from database import db, Session, sessionCheck
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
@@ -13,6 +13,8 @@ with open("config.json") as file:
 TicketPlaceId = config["ADMINS"][
     0
 ]  # where tickets should be sent, either admins' dm or a channel
+
+sessionCache: dict[int, Session] = {}
 
 
 class Ticket(commands.Cog):
@@ -48,34 +50,22 @@ class Ticket(commands.Cog):
         if ctx.guild:
             return await ctx.reply("This command can only be used in Amélie's dm.")
 
-        # if user already has an active ticketing session
-        row = await db.fetchone(
-            """
-            SELECT 1 FROM sessions
-            WHERE user_id = ? AND type = ?;
-            """,
-            (ctx.author.id, "ticketing"),
+        # if user already has an active session
+        session = sessionCheck(
+            userId=ctx.author.id, type=Session.Types.ticketing, messageBased=True
         )
-        if row:
+        if session:
             return await ctx.reply(
-                "You already have an open Ticketing session, try closing it and try again."
+                f"You have an open {session.type.value} session, try closing it and try again."
             )
 
         # if user doesn't enter the ticket subject
         if not subject:
             return await ctx.reply("You must enter a subject to open the Ticket.")
 
-        # creates a session for the user
-        await db.execute(
-            """
-            INSERT INTO sessions (user_id, channel_id, type, timestamp)
-            VALUES (?, ?, ?, ?);
-            """,
-            (ctx.author.id, ctx.channel.id, "ticketing", discord.utils.utcnow()),
-        )
-        session = Session(
-            type="ticketing", userId=ctx.author.id, channelId=ctx.channel.id
-        )
+        sessionCache[ctx.author.id] = Session(
+            type=Session.Types.ticketing, userId=ctx.author.id, channelId=ctx.channel.id
+        )  # opens a session
 
         admin = (
             self.bot.get_user(TicketPlaceId)
@@ -84,7 +74,7 @@ class Ticket(commands.Cog):
             or await self.bot.fetch_channel(TicketPlaceId)
         )  # fetches the admin user or channel to send the message to
 
-        view = TicketView(ctx, subject, admin, session)  # initializes the Ticket View
+        view = TicketView(ctx, subject, admin)  # initializes the Ticket View
         await view.start()  # starts the view
 
     @ticket.error
@@ -92,56 +82,32 @@ class Ticket(commands.Cog):
         self, ctx: commands.Context[commands.Bot], error: commands.CommandError
     ):
         # ends the session upon error
-        await db.execute(
-            """
-            DELETE FROM sessions
-            WHERE user_id = ? AND type = ?;
-            """,
-            (ctx.author.id, "ticketing"),
-        )
-        for session in Session.sessions:
-            if session.userId == ctx.author.id and session.type == "ticketing":
-                session.close()
+        sessionCache[ctx.author.id].close()
+        sessionCache.pop(ctx.author.id)
 
         logger.exception(f"❌ something went wrong with ticket command:")
         await ctx.reply("something went wrong with **ticket**.")
 
     # ticket slash command
     @app_commands.command(name="ticket", description=Help.brief, extras=Help.extras)
+    @app_commands.describe(subject="The subject of the Ticket.")
     @app_commands.dm_only()
     async def slashTicket(self, interaction: discord.Interaction, subject: str):
         # if user already has an active session
-        row = await db.fetchone(
-            """
-            SELECT 1 FROM sessions
-            WHERE user_id = ? AND type = ?;
-            """,
-            (interaction.user.id, "ticketing"),
+        session = sessionCheck(
+            userId=interaction.user.id, type=Session.Types.ticketing, messageBased=True
         )
-        if row:
+        if session:
             return await interaction.response.send_message(
-                "You already have an open Ticketing session, try closing it and try again.",
+                f"You have an open {session.type.value} session, try closing it and try again.",
                 ephemeral=True,
             )
 
-        # creates a session for the user
-        await db.execute(
-            """
-            INSERT INTO sessions (user_id, channel_id, type, timestamp)
-            VALUES (?, ?, ?, ?);
-            """,
-            (
-                interaction.user.id,
-                interaction.channel_id,
-                "ticketing",
-                discord.utils.utcnow(),
-            ),
-        )
-        session = Session(
-            type="ticketing",
+        sessionCache[interaction.user.id] = Session(
+            type=Session.Types.ticketing,
             userId=interaction.user.id,
             channelId=interaction.channel_id,
-        )
+        )  # creates a session for the user
 
         admin = (
             self.bot.get_user(TicketPlaceId)
@@ -150,9 +116,7 @@ class Ticket(commands.Cog):
             or await self.bot.fetch_channel(TicketPlaceId)
         )  # fetches the admin user or channel to send the message to
 
-        view = TicketView(
-            interaction, subject, admin, session
-        )  # initializes the Ticket View
+        view = TicketView(interaction, subject, admin)  # initializes the Ticket View
         await view.start()  # starts the view
 
     @slashTicket.error
@@ -160,16 +124,8 @@ class Ticket(commands.Cog):
         self, interaction: discord.Interaction, error: Exception
     ):
         # ends the session upon error
-        await db.execute(
-            """
-            DELETE FROM sessions
-            WHERE user_id = ? AND type = ?;
-            """,
-            (interaction.user.id, "ticketing"),
-        )
-        for session in Session.sessions:
-            if session.userId == interaction.user.id and session.type == "ticketing":
-                session.close()
+        sessionCache[interaction.user.id].close()
+        sessionCache.pop(interaction.user.id)
 
         logger.exception(f"❌ something went wrong with /ticket command:")
         try:
@@ -189,10 +145,8 @@ class Ticket(commands.Cog):
         if msg.guild:
             return
 
-        if msg.author.id in Session.ticketsession:
-            for session in Session.sessions:
-                if session.userId == msg.author.id and session.type == "ticketing":
-                    return session.addMessage(msg)
+        if msg.author.id in sessionCache:
+            sessionCache[msg.author.id].messages.append(msg)
 
 
 class TicketView(discord.ui.View):
@@ -201,7 +155,6 @@ class TicketView(discord.ui.View):
         ctx: commands.Context[commands.Bot] | discord.Interaction,
         subject: str,
         admin: discord.User,
-        session: Session,
     ):
         super().__init__(timeout=300)
         if isinstance(ctx, discord.Interaction):
@@ -214,7 +167,6 @@ class TicketView(discord.ui.View):
             self.user = ctx.author
         self.subject = subject
         self.admin = admin
-        self.session = session
 
     async def start(self):
         initialEmbed = discord.Embed(
@@ -249,18 +201,11 @@ class TicketView(discord.ui.View):
 
         timestamp = discord.utils.utcnow()
 
-        # ends the session for the user
-        await db.execute(
-            """
-            DELETE FROM sessions
-            WHERE user_id = ? AND type = ?;
-            """,
-            (self.user.id, "ticketing"),
-        )
-        self.session.close()
+        sessionCache[self.user.id].close()  # ends the session
+        messages = sessionCache.pop(self.user.id).messages  # collects the messages
 
         # if no message is sent, session gets canceled
-        if not self.session.messages:
+        if not messages:
             endEmbed = discord.Embed(
                 title="Ticket 🎫",
                 description="You sent no message, session ended.",
@@ -299,7 +244,7 @@ class TicketView(discord.ui.View):
         )  # sends an initial message to the reciever
 
         # replys the collected messages to the initial message
-        for m in self.session.messages:
+        for m in messages:
             # if message is sticker
             if m.stickers:
                 for s in m.stickers:
@@ -341,14 +286,8 @@ class TicketView(discord.ui.View):
         timestamp = discord.utils.utcnow()
 
         # ends the session
-        await db.execute(
-            """
-            DELETE FROM sessions
-            WHERE user_id = ? AND type = ?;
-            """,
-            (self.user.id, "ticketing"),
-        )
-        self.session.close()
+        sessionCache[self.user.id].close()
+        sessionCache.pop(self.user.id)
 
         # sends the cancel message to the user
         endEmbed = discord.Embed(
@@ -371,14 +310,8 @@ class TicketView(discord.ui.View):
                 btn.disabled = True
 
         # ends the session upon timeout
-        await db.execute(
-            """
-            DELETE FROM sessions
-            WHERE user_id = ? AND type = ?;
-            """,
-            (self.user.id, "ticketing"),
-        )
-        self.session.close()
+        sessionCache[self.user.id].close()
+        sessionCache.pop(self.user.id)
 
         # sends the timeout message
         toEmbed = discord.Embed(
@@ -404,14 +337,8 @@ class TicketView(discord.ui.View):
         item: discord.ui.Item[discord.ui.View],
     ):
         # ends the session upon error
-        await db.execute(
-            """
-            DELETE FROM sessions
-            WHERE user_id = ? AND type = ?;
-            """,
-            (self.user.id, "ticketing"),
-        )
-        self.session.close()
+        sessionCache[self.user.id].close()
+        sessionCache.pop(self.user.id)
 
         logger.exception(
             f"❌ something went wrong with ticket interaction - button: {getattr(item, 'label', 'unknown')}"

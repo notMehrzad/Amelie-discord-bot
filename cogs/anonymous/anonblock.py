@@ -43,7 +43,7 @@ class AnonBlock(commands.Cog):
         # checks if the user has a public id
         row = await db.fetchone(
             """
-            SELECT public_id FROM anonpublicids
+            SELECT public_id FROM anoneusers
             WHERE user_id = ?;
             """,
             (ctx.author.id,),
@@ -52,8 +52,6 @@ class AnonBlock(commands.Cog):
             return await ctx.reply(
                 "You have no public ID so nobody has messaged you to block or unblock now."
             )
-
-        public_id: str = row["public_id"]
 
         # if user doesn't enter a private id
         if not private_id:
@@ -69,23 +67,24 @@ class AnonBlock(commands.Cog):
         row = await db.fetchone(
             """
             SELECT blocked from anonusercontact
-            WHERE public_id = ? AND sender_anon_id = ?;
+            WHERE user_id = ? AND contact_anon_id = ?;
             """,
-            (public_id, private_id),
+            (ctx.author.id, private_id),
         )
         if not row:
             return await ctx.reply(
                 "No user with given private ID has messaged you ever."
             )
 
-        if isinstance(unblock, str) and unblock.lower() in ["true", "yes", "y"]:
-            unblock = True
-        elif isinstance(unblock, str) and unblock.lower() in ["false", "no", "n"]:
-            unblock = False
-        else:
-            return await ctx.reply(
-                f"{unblock} is invalid. Choose either *yes* or *no*."
-            )
+        if isinstance(unblock, str):
+            if unblock.lower() in ["true", "yes", "y"]:
+                unblock = True
+            elif unblock.lower() in ["false", "no", "n"]:
+                unblock = False
+            else:
+                return await ctx.reply(
+                    f"{unblock} is invalid. Choose either *yes* or *no*."
+                )
 
         # if user with given private id is blocked already
         if not unblock and row["blocked"] == 1:
@@ -100,9 +99,9 @@ class AnonBlock(commands.Cog):
             """
             UPDATE anonusercontact
             SET blocked = ?
-            WHERE public_id = ? AND sender_anon_id = ?;
+            WHERE user_id = ? AND contact_anon_id = ?;
             """,
-            (1 if not unblock else 0, public_id, private_id),
+            (0 if unblock else 1, ctx.author.id, private_id),
         )
 
         # sends the result
@@ -122,56 +121,57 @@ class AnonBlock(commands.Cog):
 
     # anonblock slash command
     @app_commands.command(name="anonblock", description=Help.brief, extras=Help.extras)
-    @app_commands.dm_only()
     @app_commands.describe(
-        private_id="The private ID of anonymous sender to block.",
+        private_id="The private ID of the anonymous sender you want to block.",
         unblock="Whether you want to block or unblock the user. (default is False=Block)",
     )
+    @app_commands.dm_only()
     async def slashAnonblock(
         self, interaction: discord.Interaction, private_id: str, unblock: bool = False
     ):
         # checks if the user has a public id
         row = await db.fetchone(
             """
-            SELECT public_id FROM anonpublicids
+            SELECT public_id FROM anoneusers
             WHERE user_id = ?;
             """,
             (interaction.user.id,),
         )
         if not row:
             return await interaction.response.send_message(
-                "You have no public ID so nobody has messaged you to block or unblock now."
+                "You have no public ID so nobody has messaged you to block or unblock now.",
+                ephemeral=True,
             )
-
-        public_id: str = row["public_id"]
 
         # if entered private id is invalid
         if len(private_id) != privateIdLength:
-            return await interaction.response.send_message("Enter a valid private ID.")
+            return await interaction.response.send_message(
+                "Enter a valid private ID.", ephemeral=True
+            )
 
         # checks if the user with given private id exists in user contact
         row = await db.fetchone(
             """
             SELECT blocked from anonusercontact
-            WHERE public_id = ? AND sender_anon_id = ?;
+            WHERE user_id = ? AND contact_anon_id = ?;
             """,
-            (public_id, private_id),
+            (interaction.user.id, private_id),
         )
         if not row:
             return await interaction.response.send_message(
-                "No user with given private ID has messaged you ever."
+                "No user with given private ID has messaged you ever.", ephemeral=True
             )
 
         # if user with given private id is blocked already
         if not unblock and row["blocked"] == 1:
             return await interaction.response.send_message(
-                "This anonymous user is Blocked already."
+                "This anonymous user is Blocked already.", ephemeral=True
             )
 
         # if user with given private id is unblocked already
         if unblock and row["blocked"] == 0:
             return await interaction.response.send_message(
-                "This anonymous user is Unblocked already."
+                "This anonymous user is Unblocked already.", ephemeral=True
             )
 
         # blocks or unblocks the target user
@@ -179,9 +179,9 @@ class AnonBlock(commands.Cog):
             """
             UPDATE anonusercontact
             SET blocked = ?
-            WHERE public_id = ? AND sender_anon_id = ?;
+            WHERE user_id = ? AND contact_anon_id = ?;
             """,
-            (1 if not unblock else 0, public_id, private_id),
+            (0 if unblock else 1, interaction.user.id, private_id),
         )
 
         # sends the result

@@ -22,7 +22,7 @@ async def publicIdGenerator():
         publicId = idGenerator(publicIdLength)
         row = await db.fetchone(
             """
-            SELECT 1 FROM anonpublicids
+            SELECT 1 FROM anonusers
             WHERE public_id = ?
             """,
             (publicId,),
@@ -61,37 +61,36 @@ class AnonId(commands.Cog):
         if ctx.guild:
             return await ctx.reply("This command can only be used in Amélie's dm.")
 
-        # checks if the user id exists or not
+        # trys to fetch user's public id
         row = await db.fetchone(
             """
-            SELECT public_id FROM anonpublicids
+            SELECT public_id FROM anonusers
             WHERE user_id = ?;
             """,
             (ctx.author.id,),
         )
-        # if user id doesn't exist
+        # if user id doesn't exist, creates one
         if not row:
             newId = await publicIdGenerator()  # creates an id
 
             # inserts the new created id
             await db.execute(
                 """
-                INSERT INTO anonpublicids (public_id, user_id, created_date)
-                VALUES (?, ?, ?)
+                INSERT INTO anonusers (user_id, public_id, created_at)
+                VALUES (?, ?, ?);
                 """,
-                (newId, ctx.author.id, discord.utils.utcnow()),
+                (ctx.author.id, newId, discord.utils.utcnow()),
             )
 
             publicId = newId
 
-        # checks if id length is ok
+        # if existing public id length is invalid, updates it
         elif len(row["public_id"]) != publicIdLength:
             newId = await publicIdGenerator()  # creates another id with updated length
 
-            # updates the existing id
             await db.execute(
                 """
-                UPDATE anonpublicids
+                UPDATE anonusers
                 SET public_id = ?
                 WHERE user_id = ?;
                 """,
@@ -109,7 +108,7 @@ class AnonId(commands.Cog):
             title="Anonymous ID",
             description=(
                 f"Your anonymous ID is: `{publicId}`"
-                "\nShare this somewhere and people can message you anonymously using `anonsend` command."
+                "\nShare this somewhere and people can message you anonymously with `/anonsend`."
             ),
             color=discord.Color.blurple(),
         )
@@ -124,38 +123,36 @@ class AnonId(commands.Cog):
     @app_commands.command(name="anonid", description=Help.brief, extras=Help.extras)
     @app_commands.dm_only()
     async def slashAnonid(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-        # checks if the user id exists or not
+        # trys to fetch user's public id
         row = await db.fetchone(
             """
-            SELECT public_id FROM anonpublicids
+            SELECT public_id FROM anonusers
             WHERE user_id = ?;
             """,
             (interaction.user.id,),
         )
-        # if user id doesn't exist
+        # if user id doesn't exist, creates one
         if not row:
             newId = await publicIdGenerator()  # creates an id
 
             # inserts the new created id
             await db.execute(
                 """
-                INSERT INTO anonpublicids (public_id, user_id, created_date)
-                VALUES (?, ?, ?)
+                INSERT INTO anonusers (user_id, public_id, created_at)
+                VALUES (?, ?, ?);
                 """,
-                (newId, interaction.user.id, discord.utils.utcnow()),
+                (interaction.user.id, newId, discord.utils.utcnow()),
             )
 
             publicId = newId
 
-        # checks if id length is ok
+        # if existing public id length is invalid, updates it
         elif len(row["public_id"]) != publicIdLength:
             newId = await publicIdGenerator()  # creates another id with updated length
 
-            # updates the existing id
             await db.execute(
                 """
-                UPDATE anonpublicids
+                UPDATE anonusers
                 SET public_id = ?
                 WHERE user_id = ?;
                 """,
@@ -168,15 +165,16 @@ class AnonId(commands.Cog):
         else:
             publicId: str = row["public_id"]
 
+        # sends the result
         resultEmbed = discord.Embed(
             title="Anonymous ID",
             description=(
                 f"Your anonymous ID is: `{publicId}`"
-                "\nShare this somewhere and people can message you anonymously using `anonsend` command."
+                "\nShare this somewhere and people can message you anonymously with `/anonsend`."
             ),
             color=discord.Color.blurple(),
         )
-        await interaction.followup.send(embed=resultEmbed)  # sends the result
+        await interaction.response.send_message(embed=resultEmbed)
 
     @slashAnonid.error
     async def slashAnonid_error(

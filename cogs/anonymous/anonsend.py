@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from database import db, Session
+from database import db, Session, sessionCheck
 from cogs.utility.help import HelpData
 from cogs.anonymous.anonid import idGenerator, publicIdLength
 from logHandler import loggerSetup
@@ -10,16 +10,18 @@ logger = loggerSetup(__name__)
 
 privateIdLength = 6  # the length of the private ids
 
+sessionCache: dict[int, Session] = {}
 
-async def privateIdGenerator(publicId: str):
+
+async def privateIdGenerator(recieverUserId: int):
     while True:
         privateId = idGenerator(privateIdLength)
         row = await db.fetchone(
             """
             SELECT 1 FROM anonusercontact
-            WHERE public_id = ? AND sender_anon_id = ?;
+            WHERE user_id = ? AND contact_anon_id = ?;
             """,
-            (publicId, privateId),
+            (recieverUserId, privateId),
         )
         if not row:
             return privateId
@@ -48,38 +50,39 @@ class AnonSend(commands.Cog):
         aliases=Help.aliases,
         extras=Help.extras,
     )
-    async def anonsend(self, ctx: commands.Context[commands.Bot], publicId: str | None):
+    async def anonsend(
+        self, ctx: commands.Context[commands.Bot], public_id: str | None
+    ):
         # if user runs the command in a server
         if ctx.guild:
             return await ctx.reply("This command can only be used in Amélie's dm.")
 
-        # if user already has an active session
-        if ctx.author.id in [
-            session.userId
-            for session in Session.sessions
-            if session.type == "anonymous-send"
-        ]:
+        # if user has an active session
+        session = sessionCheck(
+            userId=ctx.author.id, type=Session.Types.anonymoussend, messageBased=True
+        )
+        if session:
             return await ctx.reply(
-                "You already have an open anonymous message sending session, close it and try again."
+                f"You have an open {session.type.value} session, close it first and try again."
             )
 
         # if user doesn't enter any id
-        if not publicId:
+        if not public_id:
             return await ctx.reply(
                 "You must enter the user's Public ID to send anonymous message to."
             )
 
         # if user enters an invalid id
-        if len(publicId) != publicIdLength:
+        if len(public_id) != publicIdLength:
             return await ctx.reply("Enter a valid public ID.")
 
         # checks if a user with given public id exists
         row = await db.fetchone(
             """
-            SELECT user_id FROM anonpublicids
+            SELECT user_id FROM anonusers
             WHERE public_id = ?;
             """,
-            (publicId,),
+            (public_id,),
         )
         # if user with given public id doesn't exist
         if not row:
@@ -87,25 +90,25 @@ class AnonSend(commands.Cog):
 
         recieverUser = self.bot.get_user(row["user_id"]) or await self.bot.fetch_user(
             row["user_id"]
-        )  # fetches the reciever user from found id
+        )  # fetches the reciever user
 
-        # if user contact doesn't exist
+        # fetches the reciever's anon contacts
         row = await db.fetchone(
             """
-            SELECT sender_anon_id, blocked from anonusercontact
-            WHERE public_id = ? AND sender_id = ?;
+            SELECT contact_anon_id, blocked from anonusercontact
+            WHERE user_id = ? AND contact_id = ?;
             """,
-            (publicId, ctx.author.id),
+            (recieverUser.id, ctx.author.id),
         )
-        # if user is not in target user anon contact, creates the contact
+        # if user is not in the target's anon contacts, creates one
         if not row:
-            newId = await privateIdGenerator(publicId)
+            newId = await privateIdGenerator(recieverUser.id)
             await db.execute(
                 """
-                INSERT INTO anonusercontact (public_id, sender_id, sender_anon_id)
+                INSERT INTO anonusercontact (user_id, contact_id, contact_anon_id)
                 VALUES (?, ?, ?);
                 """,
-                (publicId, ctx.author.id, newId),
+                (recieverUser.id, ctx.author.id, newId),
             )
             privateId = newId
 
@@ -114,15 +117,16 @@ class AnonSend(commands.Cog):
             return await ctx.reply("You can't send anonymous messages to this user.")
 
         else:
-            privateId: str = row["sender_anon_id"]
+            privateId: str = row["contact_anon_id"]
 
-        # opens a session
-        session = Session(
-            type="anonymous-send", userId=ctx.author.id, channelId=ctx.channel.id
-        )
+        sessionCache[ctx.author.id] = Session(
+            type=Session.Types.anonymoussend,
+            userId=ctx.author.id,
+            channelId=ctx.channel.id,
+        )  # opens a session
 
         view = AnonView(
-            ctx, recieverUser, publicId, privateId, session
+            ctx, recieverUser, public_id, privateId
         )  # initializes the Anon View
         await view.start()
 
@@ -130,34 +134,43 @@ class AnonSend(commands.Cog):
     async def anonsend_error(
         self, ctx: commands.Context[commands.Bot], error: Exception
     ):
+        # ends the session upon error
+        sessionCache[ctx.author.id].close()
+        sessionCache.pop(ctx.author.id)
+
         logger.exception(f"❌ something went wrong with anonsend command:")
         await ctx.reply("something went wrong with **anonsend**.")
 
     # anonsend slash command
     @app_commands.command(name="anonsend", description=Help.brief, extras=Help.extras)
+    @app_commands.describe(
+        public_id="The public ID of the person you want to send anonymous message to."
+    )
     @app_commands.dm_only()
     async def slashAnonsend(self, interaction: discord.Interaction, public_id: str):
-        # if user already has an active session
-        if interaction.user.id in [
-            session.userId
-            for session in Session.sessions
-            if session.type == "anonymous-send"
-        ]:
+        # if user has an active session
+        session = sessionCheck(
+            userId=interaction.user.id,
+            type=Session.Types.anonymoussend,
+            messageBased=True,
+        )
+        if session:
             return await interaction.response.send_message(
-                "You already have an open anonymous message sending session, close it and try again.",
+                f"You have an open {session.type.value} session, close it first and try again.",
                 ephemeral=True,
             )
 
         # if user enters an invalid id
         if len(public_id) != publicIdLength:
             return await interaction.response.send_message(
-                "Enter a valid ID.", ephemeral=True
+                "Enter a valid public ID.",
+                ephemeral=True,
             )
 
         # checks if a user with given public id exists
         row = await db.fetchone(
             """
-            SELECT user_id FROM anonpublicids
+            SELECT user_id FROM anonusers
             WHERE public_id = ?;
             """,
             (public_id,),
@@ -165,58 +178,63 @@ class AnonSend(commands.Cog):
         # if user with given public id doesn't exist
         if not row:
             return await interaction.response.send_message(
-                "User with this ID doesn't exist.", ephemeral=True
+                "User with this ID doesn't exist.",
+                ephemeral=True,
             )
 
         recieverUser = self.bot.get_user(row["user_id"]) or await self.bot.fetch_user(
             row["user_id"]
-        )  # fetches the reciever user from found id
+        )  # fetches the reciever user
 
-        # if user contact doesn't exist
+        # fetches the reciever's anon contacts
         row = await db.fetchone(
             """
-            SELECT sender_anon_id, blocked from anonusercontact
-            WHERE public_id = ? AND sender_id = ?;
+            SELECT contact_anon_id, blocked from anonusercontact
+            WHERE user_id = ? AND contact_id = ?;
             """,
-            (public_id, interaction.user.id),
+            (recieverUser.id, interaction.user.id),
         )
-        # if user is not in target user anon contact, creates the contact
+        # if user is not in the target's anon contacts, creates one
         if not row:
-            newId = await privateIdGenerator(public_id)
+            newId = await privateIdGenerator(recieverUser.id)
             await db.execute(
                 """
-                INSERT INTO anonusercontact (public_id, sender_id, sender_anon_id)
+                INSERT INTO anonusercontact (user_id, contact_id, contact_anon_id)
                 VALUES (?, ?, ?);
                 """,
-                (public_id, interaction.user.id, newId),
+                (recieverUser.id, interaction.user.id, newId),
             )
             privateId = newId
 
         # if user contact exists but is blocked
         elif row["blocked"] == 1:
             return await interaction.response.send_message(
-                "You can't send anonymous messages to this user.", ephemeral=True
+                "You can't send anonymous messages to this user.",
+                ephemeral=True,
             )
 
         else:
-            privateId: str = row["sender_anon_id"]
+            privateId: str = row["contact_anon_id"]
 
-        # opens a session
-        session = Session(
-            type="anonymous-send",
+        sessionCache[interaction.user.id] = Session(
+            type=Session.Types.anonymoussend,
             userId=interaction.user.id,
             channelId=interaction.channel_id,
-        )
+        )  # opens a session
 
         view = AnonView(
-            interaction, recieverUser, public_id, privateId, session
+            interaction, recieverUser, public_id, privateId
         )  # initializes the Anon View
-        await view.start()  # starts the view
+        await view.start()
 
     @slashAnonsend.error
     async def slashAnonsend_error(
         self, interaction: discord.Interaction, error: Exception
     ):
+        # ends the session upon error
+        sessionCache[interaction.user.id].close()
+        sessionCache.pop(interaction.user.id)
+
         logger.exception(f"❌ something went wrong with /Anonsend command:")
         try:
             await interaction.response.send_message(
@@ -235,10 +253,8 @@ class AnonSend(commands.Cog):
         if msg.guild:
             return
 
-        if msg.author.id in Session.anonsendsession:
-            for session in Session.sessions:
-                if session.userId == msg.author.id and session.type == "anonymous-send":
-                    return session.addMessage(msg)
+        if msg.author.id in sessionCache:
+            sessionCache[msg.author.id].messages.append(msg)
 
 
 class AnonView(discord.ui.View):
@@ -248,7 +264,6 @@ class AnonView(discord.ui.View):
         recieverUser: discord.User,
         public_id: str,
         private_id: str,
-        session: Session,
     ):
         super().__init__(timeout=300)
         if isinstance(ctx, discord.Interaction):
@@ -262,7 +277,6 @@ class AnonView(discord.ui.View):
         self.recieverUser = recieverUser
         self.public_id = public_id
         self.private_id = private_id
-        self.session = session
 
     async def start(self):
         initialEmbed = discord.Embed(
@@ -298,10 +312,11 @@ class AnonView(discord.ui.View):
 
         now = discord.utils.utcnow()
 
-        self.session.close()  # ends the session
+        sessionCache[self.user.id].close()  # ends the session
+        messages = sessionCache.pop(self.user.id).messages  # collects the messages
 
         # if no message is sent, session gets canceled
-        if not self.session.messages:
+        if not messages:
             endEmbed = discord.Embed(
                 title="Anonymous Message",
                 description="You sent no message, session ended.",
@@ -350,7 +365,7 @@ class AnonView(discord.ui.View):
         )  # sends an initial message to the reciever
 
         # replys the collected messages
-        for m in self.session.messages:
+        for m in sessionCache[self.user.id].messages:
             # if message is sticker
             if m.stickers:
                 for s in m.stickers:
@@ -393,7 +408,9 @@ class AnonView(discord.ui.View):
 
         now = discord.utils.utcnow()
 
-        self.session.close()  # ends the session
+        # ends the session
+        sessionCache[self.user.id].close()
+        sessionCache.pop(self.user.id)
 
         # sends the cancel message to the user
         endEmbed = discord.Embed(
@@ -415,7 +432,9 @@ class AnonView(discord.ui.View):
             if isinstance(btn, discord.ui.Button):
                 btn.disabled = True
 
-        self.session.close()  # ends the session upon timeout
+        # ends the session upon timeout
+        sessionCache[self.user.id].close()
+        sessionCache.pop(self.user.id)
 
         # sends the timeout message
         toEmbed = discord.Embed(
@@ -437,7 +456,9 @@ class AnonView(discord.ui.View):
         error: Exception,
         item: discord.ui.Item[discord.ui.View],
     ):
-        self.session.close()  # ends the session upon error
+        # ends the session upon error
+        sessionCache[self.user.id].close()
+        sessionCache.pop(self.user.id)
 
         logger.exception(
             f"❌ something went wrong with anonsend interaction - button: {getattr(item, 'label', 'unknown')}"

@@ -36,8 +36,8 @@ class AnonReply(commands.Cog):
     async def anonreply(
         self,
         ctx: commands.Context[commands.Bot],
-        privateId: str | None,
-        sessionId: int | str | None,
+        private_id: str | None,
+        session_id: int | str | None,
         *,
         message: str | None,
     ):
@@ -48,7 +48,7 @@ class AnonReply(commands.Cog):
         # checks if user has a public id
         row = await db.fetchone(
             """
-            SELECT public_id FROM anonpublicids
+            SELECT public_id FROM anonusers
             WHERE user_id = ?;
             """,
             (ctx.author.id,),
@@ -57,25 +57,25 @@ class AnonReply(commands.Cog):
             return await ctx.reply(
                 "You have no public ID so nobody has sent you anything."
             )
+        publicId: str = row["public_id"]  # stores public id for later use
 
-        public_id: str = row["public_id"]
-
-        # if user doesn't enter target private id
-        if not privateId:
+        # if user doesn't enter the target's private id
+        if not private_id:
             return await ctx.reply(
                 "You must enter the private ID of the user you want to reply."
             )
 
-        if len(privateId) != privateIdLength:
+        # if entered private id is invalid
+        if len(private_id) != privateIdLength:
             return await ctx.reply("Enter a valid private ID.")
 
-        # checks if target private id is in users anon contact
+        # checks if target private id is in user's anon contact
         row = await db.fetchone(
             """
-            SELECT sender_id, blocked FROM anonusercontact
-            WHERE public_id = ? AND sender_anon_id = ?;
+            SELECT contact_id, blocked FROM anonusercontact
+            WHERE user_id = ? AND contact_anon_id = ?;
             """,
-            (public_id, privateId),
+            (ctx.author.id, private_id),
         )
         if not row:
             return await ctx.reply("User with given ID hasn't sent you anything.")
@@ -85,10 +85,11 @@ class AnonReply(commands.Cog):
                 "You have blocked this user and can't reply to them anymore."
             )
 
-        senderUserId: int = row["sender_id"]
         try:
-            senderUser = self.bot.get_user(senderUserId) or await self.bot.fetch_user(
-                senderUserId
+            contactUser = self.bot.get_user(
+                row["contact_id"]
+            ) or await self.bot.fetch_user(
+                row["contact_id"]
             )  # fetchs the sender user
 
         # if user doesn't exist anymore, deletes the contact
@@ -96,9 +97,9 @@ class AnonReply(commands.Cog):
             await db.execute(
                 """
                 DELETE FROM anonusercontact
-                WHERE public_id = ? AND sender_id = ?;
+                WHERE user_id = ? AND contact_id = ?;
                 """,
-                (public_id, senderUserId),
+                (ctx.author.id, row["contact_id"]),
             )
 
             return await ctx.reply(
@@ -106,10 +107,10 @@ class AnonReply(commands.Cog):
             )
 
         # if user doesn't enter the session id
-        if not sessionId:
+        if not session_id:
             return await ctx.reply("You must enter the session ID you want to reply.")
         # if user doesn't enter a valid session id
-        if not isinstance(sessionId, int):
+        if not isinstance(session_id, int):
             return await ctx.reply("Enter a valid session ID.")
 
         # checks if session id with target private id exists in sessions
@@ -118,37 +119,34 @@ class AnonReply(commands.Cog):
             SELECT sender_message_collector_id, responded FROM anonsessions
             WHERE reciever_id = ? AND sender_id = ? AND session_id = ?;
             """,
-            (public_id, privateId, sessionId),
+            (publicId, private_id, session_id),
         )
         if not row:
             return await ctx.reply("User with given ID had no such session with you.")
 
         if row["responded"] == 1:
-            return await ctx.reply("You have already responded this session before.")
+            return await ctx.reply("You have already responded to this session before.")
 
-        channel = senderUser.dm_channel  # fetches the dm channel
-        # fetches the message collecter message
-        try:
-            messageCollector = (
-                await channel.fetch_message(row["sender_message_collector_id"])
-                if channel
-                else None
-            )
-        except discord.NotFound:
-            messageCollector = None
-
-        # if user doesn't enter message
+        # if user doesn't enter any message
         if not message:
             return await ctx.reply(
                 "You must enter your message to be replied to this session."
             )
 
+        # fetches the message collecter message
+        try:
+            messageCollector = await contactUser.fetch_message(
+                row["sender_message_collector_id"]
+            )
+        except discord.NotFound:
+            messageCollector = None
+
         now = discord.utils.utcnow()
 
         desc = (
-            f"`{ctx.author.display_name}` has replied to [this]({messageCollector.jump_url}) Session(Session ID: *{sessionId}*):"
+            f"`{ctx.author.display_name}` has replied to [this]({messageCollector.jump_url}) Session(Session ID: *{session_id}*):"
             if messageCollector
-            else f"`{ctx.author.display_name}` has replied to the Session(Session ID: *{sessionId}*):"
+            else f"`{ctx.author.display_name}` has replied to the Session(Session ID: *{session_id}*):"
         )
         sendingEmbed = discord.Embed(
             title="Anonymous Message",
@@ -161,7 +159,7 @@ class AnonReply(commands.Cog):
             msg = await messageCollector.reply(embed=sendingEmbed)
             await msg.reply(message)
         else:
-            msg = await senderUser.send(embed=sendingEmbed)
+            msg = await contactUser.send(embed=sendingEmbed)
             await msg.reply(message)
 
         # updates session status to responded
@@ -171,12 +169,12 @@ class AnonReply(commands.Cog):
             SET responded = ?
             WHERE reciever_id = ? AND sender_id = ? AND session_id = ?;
             """,
-            (1, public_id, privateId, sessionId),
+            (1, publicId, private_id, session_id),
         )
 
         resultEmbed = discord.Embed(
             title="Anonymous Message",
-            description=f"Your reply message for `{privateId}` with Session(Session ID: *{sessionId}*) has been sent.",
+            description=f"Your reply message for `{private_id}` with Session(Session ID: *{session_id}*) has been sent.",
             color=discord.Color.green(),
             timestamp=now,
         )
@@ -191,6 +189,11 @@ class AnonReply(commands.Cog):
 
     # anonreply slash command
     @app_commands.command(name="anonreply", description=Help.brief, extras=Help.extras)
+    @app_commands.describe(
+        private_id="The private ID of the person you want to reply to.",
+        session_id="The session ID of the session you want to reply to.",
+        message="The message you want to be replied.",
+    )
     @app_commands.dm_only()
     async def slashAnonreply(
         self,
@@ -202,7 +205,7 @@ class AnonReply(commands.Cog):
         # checks if user has a public id
         row = await db.fetchone(
             """
-            SELECT public_id FROM anonpublicids
+            SELECT public_id FROM anonusers
             WHERE user_id = ?;
             """,
             (interaction.user.id,),
@@ -211,21 +214,21 @@ class AnonReply(commands.Cog):
             return await interaction.response.send_message(
                 "You have no public ID so nobody has sent you anything.", ephemeral=True
             )
+        publicId: str = row["public_id"]  # stores public id for later use
 
-        public_id: str = row["public_id"]
-
+        # if entered private id is invalid
         if len(private_id) != privateIdLength:
             return await interaction.response.send_message(
                 "Enter a valid private ID.", ephemeral=True
             )
 
-        # checks if target private id is in users anon contact
+        # checks if target private id is in user's anon contact
         row = await db.fetchone(
             """
-            SELECT sender_id, blocked FROM anonusercontact
-            WHERE public_id = ? AND sender_anon_id = ?;
+            SELECT contact_id, blocked FROM anonusercontact
+            WHERE user_id = ? AND contact_anon_id = ?;
             """,
-            (public_id, private_id),
+            (interaction.user.id, private_id),
         )
         if not row:
             return await interaction.response.send_message(
@@ -238,10 +241,11 @@ class AnonReply(commands.Cog):
                 ephemeral=True,
             )
 
-        senderUserId: int = row["sender_id"]
         try:
-            senderUser = self.bot.get_user(senderUserId) or await self.bot.fetch_user(
-                senderUserId
+            contactUser = self.bot.get_user(
+                row["contact_id"]
+            ) or await self.bot.fetch_user(
+                row["contact_id"]
             )  # fetchs the sender user
 
         # if user doesn't exist anymore, deletes the contact
@@ -249,13 +253,13 @@ class AnonReply(commands.Cog):
             await db.execute(
                 """
                 DELETE FROM anonusercontact
-                WHERE public_id = ? AND sender_id = ?;
+                WHERE user_id = ? AND contact_id = ?;
                 """,
-                (public_id, senderUserId),
+                (interaction.user.id, row["contact_id"]),
             )
 
             return await interaction.response.send_message(
-                "The sender with this private ID dosn't exist anymore.", ephemeral=True
+                "The sender with this private ID doesn't exist anymore.", ephemeral=True
             )
 
         # checks if session id with target private id exists in sessions
@@ -264,7 +268,7 @@ class AnonReply(commands.Cog):
             SELECT sender_message_collector_id, responded FROM anonsessions
             WHERE reciever_id = ? AND sender_id = ? AND session_id = ?;
             """,
-            (public_id, private_id, session_id),
+            (publicId, private_id, session_id),
         )
         if not row:
             return await interaction.response.send_message(
@@ -273,16 +277,13 @@ class AnonReply(commands.Cog):
 
         if row["responded"] == 1:
             return await interaction.response.send_message(
-                "You have already responded this session before.", ephemeral=True
+                "You have already responded to this session before.", ephemeral=True
             )
 
-        channel = senderUser.dm_channel  # fetches the dm channel
-        # fetches the message collector message
+        # fetches the message collecter message
         try:
-            messageCollector = (
-                await channel.fetch_message(row["sender_message_collector_id"])
-                if channel
-                else None
+            messageCollector = await contactUser.fetch_message(
+                row["sender_message_collector_id"]
             )
         except discord.NotFound:
             messageCollector = None
@@ -305,7 +306,7 @@ class AnonReply(commands.Cog):
             msg = await messageCollector.reply(embed=sendingEmbed)
             await msg.reply(message)
         else:
-            msg = await senderUser.send(embed=sendingEmbed)
+            msg = await contactUser.send(embed=sendingEmbed)
             await msg.reply(message)
 
         # updates session status to responded
@@ -315,7 +316,7 @@ class AnonReply(commands.Cog):
             SET responded = ?
             WHERE reciever_id = ? AND sender_id = ? AND session_id = ?;
             """,
-            (1, public_id, private_id, session_id),
+            (1, publicId, private_id, session_id),
         )
 
         resultEmbed = discord.Embed(

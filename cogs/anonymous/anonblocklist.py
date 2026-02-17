@@ -37,7 +37,7 @@ class AnonBlockList(commands.Cog):
         # checks if the user has a public id
         row = await db.fetchone(
             """
-            SELECT public_id FROM anonpublicids
+            SELECT public_id FROM anonusers
             WHERE user_id = ?;
             """,
             (ctx.author.id,),
@@ -47,15 +47,13 @@ class AnonBlockList(commands.Cog):
                 "You have no public ID which means you have no block list either."
             )
 
-        public_id: str = row["public_id"]
-
         # fetches all blocked users
-        row = await db.fetchall(
+        rows = await db.fetchall(
             """
-            SELECT sender_anon_id FROM anonusercontact
-            WHERE public_id = ? AND blocked = ?;
+            SELECT contact_anon_id FROM anonusercontact
+            WHERE user_id = ? AND blocked = ?;
             """,
-            (public_id, 1),
+            (ctx.author.id, 1),
         )
         # if no user was blocked, notifies the user
         if not row:
@@ -65,7 +63,7 @@ class AnonBlockList(commands.Cog):
         resultEmbed = discord.Embed(
             title="Anonymous Block List",
             description="\n".join(
-                f"{i}. {v["sender_anon_id"]}" for i, v in enumerate(row, start=1)
+                f"{i}. {row["contact_anon_id"]}" for i, row in enumerate(rows, start=1)
             ),
             color=discord.Color.blurple(),
         )
@@ -87,7 +85,7 @@ class AnonBlockList(commands.Cog):
         # checks if the user has a public id
         row = await db.fetchone(
             """
-            SELECT public_id FROM anonpublicids
+            SELECT public_id FROM anonusers
             WHERE user_id = ?;
             """,
             (interaction.user.id,),
@@ -98,15 +96,13 @@ class AnonBlockList(commands.Cog):
                 ephemeral=True,
             )
 
-        public_id: str = row["public_id"]
-
         # fetches all blocked users
-        row = await db.fetchall(
+        rows = await db.fetchall(
             """
-            SELECT sender_anon_id FROM anonusercontact
-            WHERE public_id = ? AND blocked = ?;
+            SELECT contact_anon_id FROM anonusercontact
+            WHERE user_id = ? AND blocked = ?;
             """,
-            (public_id, 1),
+            (interaction.user.id, 1),
         )
         # if no user was blocked, notifies the user
         if not row:
@@ -118,7 +114,7 @@ class AnonBlockList(commands.Cog):
         resultEmbed = discord.Embed(
             title="Anonymous Block List",
             description="\n".join(
-                f"{i}. {v["sender_anon_id"]}" for i, v in enumerate(row, start=1)
+                f"{i}. {row["contact_anon_id"]}" for i, row in enumerate(rows, start=1)
             ),
             color=discord.Color.blurple(),
         )

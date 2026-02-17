@@ -1,45 +1,48 @@
 import aiosqlite
 import discord
 from typing import Any, Iterable
+from enum import Enum
 from contextlib import asynccontextmanager
 
 
 class Session:
+    class Types(Enum):
+        gambling = "gambling"
+        ticketing = "ticketing"
+        ticketHandling = "ticket-responding"
+        anonymoussend = "anonymous-send"
+
     sessions: list["Session"] = []
 
-    anonsendsession: list[int] = []
-    tickethandlesession: list[int] = []
-    ticketsession: list[int] = []
-
-    def __init__(self, type: str, userId: int, channelId: int | None):
+    def __init__(self, type: Types, userId: int, channelId: int | None):
+        session = sessionCheck(userId=userId, type=type, messageBased=False)
+        if session:
+            raise ValueError("User has an open session with the same type.")
         self.type = type
         self.userId = userId
         self.channelId = channelId
         self.timestamp = discord.utils.utcnow()
         Session.sessions.append(self)
 
-        self.messages: list[discord.Message]
-        if self.type == "anonymous-send":
-            Session.anonsendsession.append(self.userId)
-        elif self.type == "ticket-responding":
-            Session.tickethandlesession.append(self.userId)
-        elif self.type == "ticketing":
-            Session.ticketsession.append(self.userId)
+        self.messages: list[discord.Message] = []
 
     def close(self):
         try:
             Session.sessions.remove(self)
-            if self.type == "anonymous-send":
-                Session.anonsendsession.remove(self.userId)
-            elif self.type == "ticket-responding":
-                Session.tickethandlesession.remove(self.userId)
-            elif self.type == "ticketing":
-                Session.ticketsession.remove(self.userId)
         except ValueError:
             pass
 
-    def addMessage(self, msg: discord.Message):
-        self.messages.append(msg)
+
+def sessionCheck(userId: int, type: Session.Types, messageBased: bool):
+    for session in Session.sessions:
+        if session.userId == userId:
+            if messageBased and session.type != Session.Types.gambling:
+                return session
+
+            if session.type == type:
+                return session
+
+    return None
 
 
 # economy constant data
@@ -95,16 +98,6 @@ class Database:
     # setups the db helper function
     async def tableInitialize(self):
         tables = [
-            # sessions table
-            """
-            CREATE TABLE IF NOT EXISTS sessions (
-                session_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                channel_id INTEGER NOT NULL,
-                type TEXT NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-            """,
             # warns table
             """
             CREATE TABLE IF NOT EXISTS warns (
@@ -117,25 +110,25 @@ class Database:
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """,
-            # anon public ids table
+            # anon users table
             """
-            CREATE TABLE IF NOT EXISTS anonpublicids (
-                public_id TEXT PRIMARY KEY NOT NULL,
-                user_id INTEGER NOT NULL,
-                created_date DATETIME DEFAULT CURRENT_TIMESTAMP
+            CREATE TABLE IF NOT EXISTS anonusers (
+                user_id INTEGER PRIMARY KEY NOT NULL,
+                public_id TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """,
             # anon user contact table
             """
             CREATE TABLE IF NOT EXISTS anonusercontact (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                public_id TEXT NOT NULL,
-                sender_id INTEGER NOT NULL,
-                sender_anon_id TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                contact_id INTEGER NOT NULL,
+                contact_anon_id TEXT NOT NULL,
                 blocked INTEGER DEFAULT 0,
-                FOREIGN KEY (public_id) REFERENCES anonpublicids(public_id),
-                UNIQUE(public_id, sender_anon_id),
-                UNIQUE(public_id, sender_id)
+                FOREIGN KEY (user_id) REFERENCES anonusers(user_id),
+                UNIQUE(user_id, contact_id),
+                UNIQUE(user_id, contact_anon_id)
             );
             """,
             # anon session table
