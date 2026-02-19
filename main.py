@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 import json
 import asyncio
 import os
-from terminal import command
+import terminal
 from itertools import cycle
 from database import db
 from logHandler import loggerSetup
@@ -49,9 +49,10 @@ async def cogsload():
 
 async def terminal_listener():
     loop = asyncio.get_running_loop()
+    term = terminal.Terminal(bot)
     while True:
         cmd = await loop.run_in_executor(None, input, ">> ")
-        await command(bot, cmd)
+        await term.command(cmd)
 
 
 @bot.event

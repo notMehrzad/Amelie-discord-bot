@@ -15,20 +15,19 @@ class AnonBlockList(commands.Cog):
     Help = HelpData(
         category="Anonymous",
         dmOnly=True,
-        help=None,
-        brief="Shows the anonymous block list of the user.",
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
+        help=(
+            "Shows the Anonymous block list of the user."
+            "\n\nEvery each blocked Anonymous sender private ID will be listed."
+        ),
+        brief="Shows the Anonymous block list.",
         usage=None,
         aliases=["anonbl"],
     )
 
-    @commands.command(
-        name="anonblocklist",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="anonblocklist", **Help.to_kwargs)
     async def anonblocklist(self, ctx: commands.Context[commands.Bot]):
         # if user runs the command in a server
         if ctx.guild:

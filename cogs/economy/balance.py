@@ -14,20 +14,17 @@ class Balance(commands.Cog):
 
     Help = HelpData(
         category="Economy",
+        dmOnly=False,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=None,
         brief="Shows the balance of the user.",
         usage=None,
         aliases=["bal"],
     )
 
-    @commands.command(
-        name="balance",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="balance", **Help.to_kwargs)
     async def balance(self, ctx: commands.Context[commands.Bot]):
         # checks if the user has an account already
         row = await db.fetchone(

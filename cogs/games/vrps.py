@@ -19,6 +19,10 @@ class Vrps(commands.Cog):
 
     Help = HelpData(
         category="Games",
+        dmOnly=False,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=(
             "A game between two people. yet needed a whole class-"
             "\nFirst, everyone in the class draws either a Rock, Paper or Scissors on a card. Then they drop those cards into the ballot box so players can't see them."
@@ -33,14 +37,7 @@ class Vrps(commands.Cog):
         aliases=["voterps", "voterockpaperscissors"],
     )
 
-    @commands.command(
-        name="vrps",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="vrps", **Help.to_kwargs)
     async def vrps(
         self,
         ctx: commands.Context[commands.Bot],

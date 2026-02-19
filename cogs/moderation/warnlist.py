@@ -14,7 +14,9 @@ class WarnList(commands.Cog):
 
     Help = HelpData(
         category="Moderation",
+        dmOnly=False,
         serverOnly=True,
+        subcommands=None,
         permissions=["`Kick, Approve and Reject Members`"],
         help=None,
         brief="Shows warnings of a member from the server.",
@@ -22,14 +24,7 @@ class WarnList(commands.Cog):
         aliases=["wl", "warns"],
     )
 
-    @commands.command(
-        name="warnlist",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="warnlist", **Help.to_kwargs)
     async def warnlist(
         self,
         ctx: commands.Context[commands.Bot],

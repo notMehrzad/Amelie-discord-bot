@@ -14,20 +14,17 @@ class Choose(commands.Cog):
 
     Help = HelpData(
         category="Utility",
+        dmOnly=False,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=None,
         brief="Chooses one option between given choices",
         usage='<count[*optional*]> <choices(separated with "|")>',
-        aliases=[],
+        aliases=None,
     )
 
-    @commands.command(
-        name="choose",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="choose", **Help.to_kwargs)
     async def choose(
         self,
         ctx: commands.Context[commands.Bot],

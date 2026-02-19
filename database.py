@@ -1,48 +1,41 @@
 import aiosqlite
 import discord
 from typing import Any, Iterable
+from discord.ext import commands
 from enum import Enum
 from contextlib import asynccontextmanager
 
 
 class Session:
+    sessions: dict[tuple[int, "Types"], "Session"] = {}
+
     class Types(Enum):
         gambling = "gambling"
-        ticketing = "ticketing"
-        ticketHandling = "ticket-responding"
-        anonymoussend = "anonymous-send"
+        messaging = "messaging"
 
-    sessions: list["Session"] = []
-
-    def __init__(self, type: Types, userId: int, channelId: int | None):
-        session = sessionCheck(userId=userId, type=type, messageBased=False)
-        if session:
-            raise ValueError("User has an open session with the same type.")
-        self.type = type
+    def __init__(self, userId: int, type: Types):
         self.userId = userId
-        self.channelId = channelId
-        self.timestamp = discord.utils.utcnow()
-        Session.sessions.append(self)
-
-        self.messages: list[discord.Message] = []
+        self.type = type
+        Session.sessions[(self.userId, self.type)] = self
 
     def close(self):
         try:
-            Session.sessions.remove(self)
-        except ValueError:
+            Session.sessions.pop((self.userId, self.type))
+        except KeyError:
             pass
 
+    async def collectMessage(self, bot: commands.Bot, *, dmOnly: bool):
+        def check(msg: discord.Message):
+            return (
+                (msg.author.id == self.userId and not msg.guild)
+                if dmOnly
+                else msg.author.id == self.userId
+            )
 
-def sessionCheck(userId: int, type: Session.Types, messageBased: bool):
-    for session in Session.sessions:
-        if session.userId == userId:
-            if messageBased and session.type != Session.Types.gambling:
-                return session
-
-            if session.type == type:
-                return session
-
-    return None
+        self.messages: list[discord.Message] = []
+        while (self.userId, self.type) in Session.sessions:
+            msg = await bot.wait_for("message", check=check)
+            self.messages.append(msg)
 
 
 # economy constant data
@@ -136,13 +129,13 @@ class Database:
             CREATE TABLE IF NOT EXISTS anonsessions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 session_id INTEGER NOT NULL,
-                reciever_id TEXT NOT NULL,
-                sender_id INTEGER NOT NULL,
-                sender_message_collector_id INTEGER NOT NULL,
+                reciever_id INTEGER NOT NULL,
+                contact_anon_id TEXT NOT NULL,
+                contact_message_collector_id INTEGER NOT NULL,
                 session_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                 responded INTEGER DEFAULT 0,
-                FOREIGN KEY (reciever_id) REFERENCES anonpublicids(public_id),
-                UNIQUE(reciever_id, sender_id, session_id)
+                FOREIGN KEY (reciever_id) REFERENCES anonusers(user_id),
+                UNIQUE(reciever_id, contact_anon_id, session_id)
             );
             """,
             # user table

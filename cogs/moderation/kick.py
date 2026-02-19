@@ -13,7 +13,9 @@ class Kick(commands.Cog):
 
     Help = HelpData(
         category="Moderation",
+        dmOnly=False,
         serverOnly=True,
+        subcommands=None,
         permissions=["`Kick, Approve and Reject Members`"],
         help=None,
         brief="Kicks a member from the server.",
@@ -21,14 +23,7 @@ class Kick(commands.Cog):
         aliases=["k"],
     )
 
-    @commands.command(
-        name="kick",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="kick", **Help.to_kwargs)
     async def kick(
         self,
         ctx: commands.Context[commands.Bot],

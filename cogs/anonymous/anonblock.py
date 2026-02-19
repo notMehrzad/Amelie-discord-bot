@@ -16,20 +16,20 @@ class AnonBlock(commands.Cog):
     Help = HelpData(
         category="Anonymous",
         dmOnly=True,
-        help=None,
-        brief="Blocks an anonymous sender to prevent them from messaging.",
-        usage="<private ID> <unblock(y/n) [*optional*]>",
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
+        help=(
+            "Blocks an Anonymous sender."
+            "\n\nThis action detemines that the Anonymous sender will be able to either message the user again or not."
+            "\n\nIf user blocks an Anonymous sender, the Anonymous sender will get an error if they try to start a session with that user again."
+        ),
+        brief="Blocks or unblocks an Anonymous sender.",
+        usage="<private_id> <unblock(y/n)[*optional*]>",
         aliases=["anonb"],
     )
 
-    @commands.command(
-        name="anonblock",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="anonblock", **Help.to_kwargs)
     async def anonblock(
         self,
         ctx: commands.Context[commands.Bot],
@@ -77,9 +77,9 @@ class AnonBlock(commands.Cog):
             )
 
         if isinstance(unblock, str):
-            if unblock.lower() in ["true", "yes", "y"]:
+            if unblock.lower() in ("true", "yes", "y"):
                 unblock = True
-            elif unblock.lower() in ["false", "no", "n"]:
+            elif unblock.lower() in ("false", "no", "n"):
                 unblock = False
             else:
                 return await ctx.reply(
@@ -113,7 +113,7 @@ class AnonBlock(commands.Cog):
         await ctx.reply(embed=resultEmbed)
 
     @anonblock.error
-    async def anonblocklist_error(
+    async def anonblock_error(
         self, ctx: commands.Context[commands.Bot], error: Exception
     ):
         logger.exception(f"❌ something went wrong with anonblock command:")

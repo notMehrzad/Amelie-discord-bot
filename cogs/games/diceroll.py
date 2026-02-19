@@ -60,26 +60,23 @@ class DiceRoll(commands.Cog):
 
     Help = HelpData(
         category="Games",
+        dmOnly=False,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=(
-            "Rolls dice using standard notation.\n\n"
-            "Formats:\n"
-            '• "6" → rolls 1d6\n'
-            '• "d6" → rolls 1d6\n'
-            '• "2d6" → rolls 2d6\n\n'
+            "Rolls dice using standard notation."
+            "\n\nDice formats:"
+            '\n• "6" → rolls 1d6'
+            '\n• "d6" → rolls 1d6'
+            '\n• "2d6" → rolls 2d6'
         ),
-        brief="Rolls one or more dice using standard tabletop dice notation.",
-        usage="<dice [*optional*]>",
+        brief="Rolls dice.",
+        usage="<dice[*optional*]>",
         aliases=["dr", "dicer", "droll", "dice", "roll"],
     )
 
-    @commands.command(
-        name="diceroll",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="diceroll", **Help.to_kwargs)
     async def diceroll(self, ctx: commands.Context[commands.Bot], dice: str = "6"):
         try:
             rolls, total, count, sides = dice_roll(dice)

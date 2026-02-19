@@ -13,7 +13,9 @@ class Unban(commands.Cog):
 
     Help = HelpData(
         category="Moderation",
+        dmOnly=False,
         serverOnly=True,
+        subcommands=None,
         permissions=["`Ban Members`"],
         help=None,
         brief="Unbans a user from the server.",
@@ -21,14 +23,7 @@ class Unban(commands.Cog):
         aliases=["ub"],
     )
 
-    @commands.command(
-        name="unban",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="unban", **Help.to_kwargs)
     async def unban(
         self,
         ctx: commands.Context[commands.Bot],

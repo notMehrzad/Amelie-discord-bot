@@ -14,20 +14,17 @@ class CoinFlip(commands.Cog):
 
     Help = HelpData(
         category="Games",
+        dmOnly=False,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=None,
         brief="Flips a coin.",
         usage=None,
         aliases=["cf", "coinf"],
     )
 
-    @commands.command(
-        name="coinflip",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="coinflip", **Help.to_kwargs)
     async def coinflip(self, ctx: commands.Context[commands.Bot]):
         result = random.choice(("Heads", "Tails"))  # flips the coin
         await ctx.reply(result + ".")  # sends the result

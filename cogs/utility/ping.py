@@ -17,23 +17,20 @@ class Ping(commands.Cog):
 
     Help = HelpData(
         category="Utility",
+        dmOnly=False,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=(
             "Checks Amelies conenction speed by measuring WebSocket Latency (which is the delay between bots server and Discord Gateway) and Bot Latency"
             "\n(which is the time it takes Amélie to send a message and recieve a response)."
         ),
         brief="Pings Amélie.",
         usage=None,
-        aliases=[],
+        aliases=None,
     )
 
-    @commands.command(
-        name="ping",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="ping", **Help.to_kwargs)
     async def ping(self, ctx: commands.Context[commands.Bot]):
         pings: list[float] | None = []  # stores pings results
         pingNumbers = 4

@@ -94,20 +94,17 @@ class Blackjack(commands.Cog):
 
     Help = HelpData(
         category="Games",
+        dmOnly=False,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=None,
         brief="The traditional BlackJack game.",
         usage="<bet_amount[*optional*]>",
         aliases=["bj"],
     )
 
-    @commands.command(
-        name="blackjack",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="blackjack", **Help.to_kwargs)
     async def blackjack(
         self, ctx: commands.Context[commands.Bot], bet: int | str | None = None
     ):
@@ -118,13 +115,9 @@ class Blackjack(commands.Cog):
                 return await ctx.reply("Enter a valid integer bet amount.")
 
             # if player has an active session
-            if ctx.author.id in [
-                session.userId
-                for session in Session.sessions
-                if session.type == "gambling"
-            ]:
+            if (ctx.author.id, Session.Types.gambling) in Session.sessions:
                 return await ctx.reply(
-                    "You have an active gambling session somewhere. close that one first and try again."
+                    "You have an open gambling session somewhere. Finish that one first and try again."
                 )
 
             # if bet is lower than limit
@@ -157,11 +150,11 @@ class Blackjack(commands.Cog):
                     f"Your desired bet is higher than your current balance. Try `balance` to see your balance."
                 )
 
-        session = Session(
-            type="gambling", userId=ctx.author.id, channelId=ctx.channel.id
+        Session(
+            userId=ctx.author.id, type=Session.Types.gambling
         )  # opens a gambling session for the user
         view = blackjackView(
-            ctx, bet if isinstance(bet, int) else 0, session
+            ctx, bet if isinstance(bet, int) else 0
         )  # initializes the view
         await view.start()
 
@@ -169,10 +162,12 @@ class Blackjack(commands.Cog):
     async def blackjack_error(
         self, ctx: commands.Context[commands.Bot], error: commands.CommandError
     ):
-        # ends the session upon error
-        for session in Session.sessions:
-            if session.userId == ctx.author.id and session.type == "gambling":
-                session.close()
+        try:
+            Session.sessions[
+                (ctx.author.id, Session.Types.gambling)
+            ].close()  # ends the session upon error
+        except KeyError:
+            pass
 
         logger.exception(f"❌ something went wrong with blackjack command:")
         await ctx.reply("something went wrong with **blackjack**.")
@@ -188,13 +183,9 @@ class Blackjack(commands.Cog):
         # if player bets
         if bet:
             # if player has an active session
-            if interaction.user.id in [
-                session.userId
-                for session in Session.sessions
-                if session.type == "gambling"
-            ]:
+            if (interaction.user.id, Session.Types.gambling) in Session.sessions:
                 return await interaction.response.send_message(
-                    "You have an actice game session somewhere. close that one first and try again.",
+                    "You have an open gambling session somewhere. Finish that one first and try again.",
                     ephemeral=True,
                 )
 
@@ -230,13 +221,11 @@ class Blackjack(commands.Cog):
                     ephemeral=True,
                 )
 
-        session = Session(
-            type="gambling",
-            userId=interaction.user.id,
-            channelId=interaction.channel_id,
+        Session(
+            userId=interaction.user.id, type=Session.Types.gambling
         )  # opens a gambling session for the user
         view = blackjackView(
-            interaction, bet if isinstance(bet, int) else 0, session
+            interaction, bet if isinstance(bet, int) else 0
         )  # initializes the view
         await view.start()
 
@@ -244,10 +233,12 @@ class Blackjack(commands.Cog):
     async def slashBlackjack_error(
         self, interaction: discord.Interaction, error: Exception
     ):
-        # ends the session upon error
-        for session in Session.sessions:
-            if session.userId == interaction.user.id and session.type == "gambling":
-                session.close()
+        try:
+            Session.sessions[
+                (interaction.user.id, Session.Types.gambling)
+            ].close()  # ends the session upon error
+        except KeyError:
+            pass
 
         logger.exception(f"❌ something went wrong with /blackjack command:")
         try:
@@ -265,7 +256,6 @@ class blackjackView(discord.ui.View):
         self,
         ctx: commands.Context[commands.Bot] | discord.Interaction,
         bet: int,
-        session: Session,
     ):
         super().__init__(timeout=180)
         if isinstance(ctx, discord.Interaction):
@@ -280,7 +270,7 @@ class blackjackView(discord.ui.View):
         self.insurance = None
         self.timestamp = discord.utils.utcnow()
         self.embedColor = discord.Color.random()
-        self.session = session
+        self.session = Session.sessions[(self.user.id, Session.Types.gambling)]
 
         for button in self.children:
             self.remove_item(button)

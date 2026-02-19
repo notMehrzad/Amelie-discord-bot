@@ -17,22 +17,17 @@ class TicketHandle(commands.Cog):
 
     Help = HelpData(
         category="Dev",
+        dmOnly=False,
+        serverOnly=False,
         subcommands=["respond", "close"],
+        permissions=None,
         help=None,
-        brief="Responds to an open Ticket.",
+        brief="Ticket handler command.",
         usage="<subcommand> <ticket ID>",
-        aliases=[],
+        aliases=None,
     )
 
-    @commands.command(
-        name="tickethandle",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        hidden=True,
-        extras=Help.extras,
-    )
+    @commands.command(name="tickethandle", hidden=True, **Help.to_kwargs)
     async def tickethandle(
         self,
         ctx: commands.Context[commands.Bot],
@@ -45,12 +40,11 @@ class TicketHandle(commands.Cog):
         if str(ctx.author.id) not in config["ADMINS"]:
             return
 
-        # if user has an active responding session
-        for session in Session.sessions:
-            if session.type != "gambling" and session.userId == ctx.author.id:
-                return await ctx.reply(
-                    f"You have an open *{session.type}* session. Try closing it and try again."
-                )
+        # if user has an active session
+        if (ctx.author.id, Session.Types.messaging) in Session.sessions:
+            return await ctx.reply(
+                "You have an open messaging session, close it first and try again."
+            )
 
         # if user entered no subcommand
         if not cmd:
@@ -138,12 +132,12 @@ class TicketHandle(commands.Cog):
 
         # respond subcommand
         if cmd == "respond":
-            session = Session(
-                type="ticket-responding", userId=ctx.author.id, channelId=ctx.channel.id
+            Session(
+                userId=ctx.author.id, type=Session.Types.messaging
             )  # creates a responding session for the admin
 
             view = TicketRespondView(
-                ctx, ticketId, ticketUser, messageCollector, subject, session
+                ctx, ticketId, ticketUser, messageCollector, subject, self.bot
             )  # initializes the ticket responding view
             await view.start()
 
@@ -171,22 +165,15 @@ class TicketHandle(commands.Cog):
     async def ticket_error(
         self, ctx: commands.Context[commands.Bot], error: commands.CommandError
     ):
+        try:
+            Session.sessions[
+                (ctx.author.id, Session.Types.messaging)
+            ].close()  # ends the session upon error
+        except KeyError:
+            pass
+
         logger.exception(f"❌ something went wrong with tickethandle command:")
         await ctx.reply("something went wrong with **tickethandle**.")
-
-    # the message collecter listener
-    @commands.Cog.listener()
-    async def on_message(self, msg: discord.Message):
-        if msg.author.bot:
-            return
-
-        if msg.author.id in Session.tickethandlesession:
-            for session in Session.sessions:
-                if (
-                    session.userId == msg.author.id
-                    and session.type == "ticket-responding"
-                ):
-                    return session.addMessage(msg)
 
 
 class TicketRespondView(discord.ui.View):
@@ -197,7 +184,7 @@ class TicketRespondView(discord.ui.View):
         ticketUser: discord.User,
         messageCollector: discord.Message | None,
         subject: str,
-        session: Session,
+        bot: commands.Bot,
     ):
         super().__init__(timeout=300)
         self.ctx = ctx
@@ -206,8 +193,9 @@ class TicketRespondView(discord.ui.View):
         self.ticketUser = ticketUser
         self.messageCollector = messageCollector
         self.subject = subject
-        self.session = session
+        self.bot = bot
         self.timestamp = discord.utils.utcnow()
+        self.session = Session.sessions[(self.user.id, Session.Types.messaging)]
 
     async def start(self):
         initialEmbed = discord.Embed(
@@ -222,6 +210,10 @@ class TicketRespondView(discord.ui.View):
         self.msg = await self.ctx.reply(
             embed=initialEmbed, view=self
         )  # sends the initial message
+
+        await self.session.collectMessage(
+            self.bot, dmOnly=False
+        )  # starts collecting messages
 
     # done button
     @discord.ui.button(label="done", style=discord.ButtonStyle.green, row=0)
@@ -239,32 +231,35 @@ class TicketRespondView(discord.ui.View):
 
         # if no message is sent, session gets canceled
         if not self.session.messages:
-            endEmbed = discord.Embed(
+            cancelEmbed = discord.Embed(
                 title="Ticket Response 🎫",
                 description="You sent no messages, responding session ended.",
                 color=discord.Color.dark_gray(),
                 timestamp=self.timestamp,
             )
-            await self.msg.edit(embed=endEmbed, view=None)
+            await interaction.response.edit_message(embed=cancelEmbed, view=None)
 
             self.stop()
             return
 
+        await interaction.response.defer()
+
+        content = f"{self.ticketUser.mention}, Your Ticket has been responded !"
         desc = (
-            f'{self.ticketUser.mention}, An Admin has sent you a response for [this]({self.messageCollector.jump_url}) Ticket with subject: **"{self.subject}"**.'
+            f'An Admin has sent you a response for [this]({self.messageCollector.jump_url}) Ticket with subject: **"{self.subject}"**.'
             if self.messageCollector
-            else f'{self.ticketUser.mention}, An Admin has sent you a response for your Ticket with subject: **"{self.subject}"**.'
+            else f'An Admin has sent you a response for your Ticket with subject: **"{self.subject}"**.'
         )
-        sendingEmbed = discord.Embed(
-            title="Ticket Response !🎫",
+        recieverNotifEmbed = discord.Embed(
+            title="Ticket Response ! 🎫",
             description=desc,
             color=discord.Color.blurple(),
             timestamp=self.timestamp,
         )
         msg = (
-            await self.messageCollector.reply(embed=sendingEmbed)
+            await self.messageCollector.reply(content=content, embed=recieverNotifEmbed)
             if self.messageCollector
-            else await self.ticketUser.send(embed=sendingEmbed)
+            else await self.ticketUser.send(embed=recieverNotifEmbed)
         )  # sends the initial message to the ticket user
 
         # replys the collected messages to the initial message
@@ -298,7 +293,7 @@ class TicketRespondView(discord.ui.View):
             color=discord.Color.green(),
             timestamp=self.timestamp,
         )
-        await self.msg.edit(embed=notifyEmbed, view=None)
+        await interaction.edit_original_response(embed=notifyEmbed, view=None)
 
         self.stop()
 
@@ -317,13 +312,13 @@ class TicketRespondView(discord.ui.View):
         self.session.close()  # ends the session
 
         # sends the cancel message to the user
-        endEmbed = discord.Embed(
+        cancelEmbed = discord.Embed(
             title="Ticket Response 🎫",
             description="You canceled the session.",
             color=discord.Color.dark_gray(),
             timestamp=self.timestamp,
         )
-        await self.msg.edit(embed=endEmbed, view=None)
+        await interaction.response.edit_message(embed=cancelEmbed, view=None)
 
         self.stop()
 
@@ -336,14 +331,14 @@ class TicketRespondView(discord.ui.View):
         self.session.close()  # ends the session upon timeout
 
         # sends the timeout message
-        toEmbed = discord.Embed(
+        timeoutEmbed = discord.Embed(
             title="Ticket Response 🎫",
             description=f"⏰ Ticket Response session timeout.",
             color=discord.Color.dark_gray(),
             timestamp=self.timestamp,
         )
         try:
-            await self.msg.edit(embed=toEmbed, view=self)
+            await self.msg.edit(embed=timeoutEmbed, view=self)
         except discord.NotFound:
             pass
 
@@ -360,16 +355,15 @@ class TicketRespondView(discord.ui.View):
         logger.exception(
             f"❌ something went wrong with tickethandle interaction - button: {getattr(item, 'label', 'unknown')}"
         )
-        try:
+        (
             await interaction.response.send_message(
                 "something went wrong with **tickethandle**.", ephemeral=True
             )
-        except discord.InteractionResponded:
-            await interaction.followup.send(
+            if not interaction.response.is_done()
+            else await interaction.followup.send(
                 "something went wrong with **tickethandle**.", ephemeral=True
             )
-        except Exception:
-            pass
+        )
 
         self.stop()  # stops the interaction upon error
 

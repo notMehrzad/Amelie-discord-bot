@@ -13,7 +13,9 @@ class Ban(commands.Cog):
 
     Help = HelpData(
         category="Moderation",
+        dmOnly=False,
         serverOnly=True,
+        subcommands=None,
         permissions=["`Ban Members`"],
         help=None,
         brief="Bans a member from the server.",
@@ -21,14 +23,7 @@ class Ban(commands.Cog):
         aliases=["b"],
     )
 
-    @commands.command(
-        name="ban",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="ban", **Help.to_kwargs)
     async def ban(
         self,
         ctx: commands.Context[commands.Bot],

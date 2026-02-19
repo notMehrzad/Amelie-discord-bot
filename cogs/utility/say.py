@@ -13,6 +13,10 @@ class Say(commands.Cog):
 
     Help = HelpData(
         category="Utility",
+        dmOnly=False,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=(
             "Says the given message in the desired channel."
             "But first, it checks if the user(and Amélie herself) have the propper permission to say or send something in the target channel."
@@ -23,14 +27,7 @@ class Say(commands.Cog):
         aliases=["echo"],
     )
 
-    @commands.command(
-        name="say",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="say", **Help.to_kwargs)
     async def say(
         self,
         ctx: commands.Context[commands.Bot],

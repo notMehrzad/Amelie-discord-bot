@@ -59,24 +59,21 @@ class Rps(commands.Cog):
 
     Help = HelpData(
         category="Games",
+        dmOnly=False,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=(
             "A game between two people. Both players play one of three options: Rock, Paper or Scissors."
-            "\n A Rock beats Scissors, a Paper beats Rock, a Scissors beats Paper."
-            "\nYou can only play with Amélie herself if you run this game in her dm."
+            "\n\nA Rock beats Scissors, a Paper beats Rock, a Scissors beats Paper."
+            "\n\nYou can only play with Amélie herself if you run this game in her dm."
         ),
         brief="Traditional *Rock, Paper, Scissors* game.",
         usage="<target[*optional*]>",
         aliases=["rockpaperscissors"],
     )
 
-    @commands.command(
-        name="rps",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="rps", **Help.to_kwargs)
     async def rps(
         self,
         ctx: commands.Context[commands.Bot],

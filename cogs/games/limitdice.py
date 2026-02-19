@@ -24,6 +24,10 @@ class LimitDice(commands.Cog):
 
     Help = HelpData(
         category="Games",
+        dmOnly=False,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=(
             "A game between two players; All about luck and will."
             "\nBoth players take turns rolling their die. and they can't see each other's hand."
@@ -42,14 +46,7 @@ class LimitDice(commands.Cog):
         aliases=["lm"],
     )
 
-    @commands.command(
-        name="limitdice",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="limitdice", **Help.to_kwargs)
     async def limitdice(
         self,
         ctx: commands.Context[commands.Bot],
@@ -269,7 +266,7 @@ class LimitDiceVeiw(discord.ui.View):
 
                 await self.endMatch()  # ends the match
 
-    # defines roll button
+    # roll button
     @discord.ui.button(label="roll", style=discord.ButtonStyle.green, row=0)
     async def roll(
         self,
@@ -344,7 +341,7 @@ class LimitDiceVeiw(discord.ui.View):
             if self.match == 1:
                 await interaction.followup.send(
                     f"{self.user.mention}, It's your turn now !"
-                )  # notifys the user that the target accepted the game
+                )  # notifies the user that the target accepted the game
 
             userRollEmbed = discord.Embed(
                 title="Limit Dice 🎲",
@@ -399,6 +396,10 @@ class LimitDiceVeiw(discord.ui.View):
                 rollStatus, ephemeral=True
             )  # sends the roll result to the user
 
+            self.proceed.disabled = self.stopbtn.disabled = (
+                False  # enables decision buttons, decision phase begins
+            )
+
             if self.botPlay:
                 desc = (
                     "Amazing. The decision phase begins now."
@@ -419,13 +420,11 @@ class LimitDiceVeiw(discord.ui.View):
                 timestamp=self.timestamp,
             )
             if self.slash:
-                await self.interaction.edit_original_response(embed=targetDecideEmbed)
+                await self.interaction.edit_original_response(
+                    embed=targetDecideEmbed, view=self
+                )
             else:
-                await self.msg.edit(embed=targetDecideEmbed)
-
-            self.proceed.disabled = self.stopbtn.disabled = (
-                False  # enables decision buttons, decision phase begins
-            )
+                await self.msg.edit(embed=targetDecideEmbed, view=self)
 
             self.state = (
                 "target_decide"  # ends user's roll turn, target's decide turn begins
@@ -483,7 +482,7 @@ class LimitDiceVeiw(discord.ui.View):
 
     # defines proceed button
     @discord.ui.button(
-        label="proceed", style=discord.ButtonStyle.blurple, row=1, disabled=True
+        label="proceed", style=discord.ButtonStyle.blurple, row=0, disabled=True
     )
     async def proceed(
         self,
@@ -531,10 +530,7 @@ class LimitDiceVeiw(discord.ui.View):
                 color=self.embedColor,
                 timestamp=self.timestamp,
             )
-            if self.slash:
-                await self.interaction.edit_original_response(embed=userDecideEmbed)
-            else:
-                await self.msg.edit(embed=userDecideEmbed)
+            await interaction.response.edit_message(embed=userDecideEmbed)
 
             self.state = (
                 "user_decide"  # ends target's decide turn, user's decide turn begins
@@ -549,6 +545,8 @@ class LimitDiceVeiw(discord.ui.View):
             # if target stopped, user last roll phase begins
             if "stop" in self.playersScore["targetRecord"]:
                 if not self.playersScore["userBusted"]:
+                    self.roll.disabled = False  # enables roll button for the last time
+
                     userProceedEmbed = discord.Embed(
                         title="Limit Dice 🎲",
                         description=(
@@ -559,24 +557,21 @@ class LimitDiceVeiw(discord.ui.View):
                         color=self.embedColor,
                         timestamp=self.timestamp,
                     )
-                    if self.slash:
-                        await self.interaction.edit_original_response(
-                            embed=userProceedEmbed
-                        )
-                    else:
-                        await self.msg.edit(embed=userProceedEmbed)
+                    await interaction.response.edit_message(
+                        embed=userProceedEmbed, view=self
+                    )
 
                 # if user is busted, match ends
                 else:
                     return await self.endMatch()
-
-                self.roll.disabled = False  # enables roll button for the last time
 
                 self.state = "user_last_roll"  # ends user's decide turn, user's last roll turn begins
 
             # if target proceeded, another match begins
             else:
                 self.match += 1  # increase the match number
+
+                self.roll.disabled = False  # enables roll button for a new match
 
                 bothProceedEmbed = discord.Embed(
                     title="Limit Dice 🎲",
@@ -591,14 +586,9 @@ class LimitDiceVeiw(discord.ui.View):
                     color=self.embedColor,
                     timestamp=self.timestamp,
                 )
-                if self.slash:
-                    await self.interaction.edit_original_response(
-                        embed=bothProceedEmbed
-                    )
-                else:
-                    await self.msg.edit(embed=bothProceedEmbed)
-
-                self.roll.disabled = False  # enables roll button for a new match
+                await interaction.response.edit_message(
+                    embed=bothProceedEmbed, view=self
+                )
 
                 self.state = "target_roll"  # ends user's decide turn, another match with target's roll turn begins
                 if self.botPlay:
@@ -606,7 +596,7 @@ class LimitDiceVeiw(discord.ui.View):
 
     # defines stand button
     @discord.ui.button(
-        label="stop", style=discord.ButtonStyle.gray, row=2, disabled=True
+        label="stop", style=discord.ButtonStyle.gray, row=0, disabled=True
     )
     async def stopbtn(
         self,
@@ -656,10 +646,7 @@ class LimitDiceVeiw(discord.ui.View):
                 color=self.embedColor,
                 timestamp=self.timestamp,
             )
-            if self.slash:
-                await self.interaction.edit_original_response(embed=targetStopEmbed)
-            else:
-                await self.msg.edit(embed=targetStopEmbed)
+            await interaction.response.edit_message(embed=targetStopEmbed)
 
             self.state = (
                 "user_decide"  # ends target's decide turn, user's decide turn begins
@@ -679,6 +666,8 @@ class LimitDiceVeiw(discord.ui.View):
 
             # if target proceeded, target last roll phase begins
             else:
+                self.roll.disabled = False  # enables roll button for the last time
+
                 if not self.playersScore["targetBusted"]:
                     userStopEmbed = discord.Embed(
                         title="Limit Dice 🎲",
@@ -690,18 +679,13 @@ class LimitDiceVeiw(discord.ui.View):
                         color=self.embedColor,
                         timestamp=self.timestamp,
                     )
-                    if self.slash:
-                        await self.interaction.edit_original_response(
-                            embed=userStopEmbed
-                        )
-                    else:
-                        await self.msg.edit(embed=userStopEmbed)
+                    await interaction.response.edit_message(
+                        embed=userStopEmbed, view=self
+                    )
 
                 # if target is busted, match ends
                 else:
                     return await self.endMatch()
-
-                self.roll.disabled = False  # enables roll button for the last time
 
                 self.state = "target_last_roll"  # ends user's decide turn, target's last roll turn begins
                 if self.botPlay:
@@ -717,6 +701,9 @@ class LimitDiceVeiw(discord.ui.View):
         # user wins
         else:
             winner = self.user
+
+        if not winner:
+            self.roll.disabled = False  # enables roll button
 
         if bothBusted:
             bothBustedStr = (
@@ -777,9 +764,11 @@ class LimitDiceVeiw(discord.ui.View):
             timestamp=self.timestamp,
         )
         if self.slash:
-            await self.interaction.edit_original_response(embed=resultEmbed)
+            await self.interaction.edit_original_response(
+                embed=resultEmbed, view=self if not winner else None
+            )
         else:
-            await self.msg.edit(embed=resultEmbed)
+            await self.msg.edit(embed=resultEmbed, view=self if not winner else None)
 
         # if draw, rematch
         if not winner:
@@ -787,8 +776,6 @@ class LimitDiceVeiw(discord.ui.View):
             self.playersScore["target"] = self.playersScore["user"] = 0
             self.playersScore["targetRecord"] = self.playersScore["userRecord"] = []
             self.playersScore["targetBusted"] = self.playersScore["userBusted"] = None
-
-            self.roll.disabled = False  # enables roll button
 
             self.state = "target_roll"  # a new match begins with target's roll turn
             if self.botPlay:

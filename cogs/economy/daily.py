@@ -30,20 +30,17 @@ class Daily(commands.Cog):
 
     Help = HelpData(
         category="Economy",
+        dmOnly=False,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=None,
         brief="Claims the Daily Reward for the user.",
         usage=None,
         aliases=["d"],
     )
 
-    @commands.command(
-        name="daily",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="daily", **Help.to_kwargs)
     async def daily(self, ctx: commands.Context[commands.Bot]):
         now = discord.utils.utcnow()
 

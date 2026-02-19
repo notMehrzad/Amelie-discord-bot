@@ -32,7 +32,9 @@ class Timeout(commands.Cog):
 
     Help = HelpData(
         category="Moderation",
+        dmOnly=False,
         serverOnly=True,
+        subcommands=None,
         permissions=["`Timeout Members`"],
         help=None,
         brief="Time outs a member from the server.",
@@ -40,14 +42,7 @@ class Timeout(commands.Cog):
         aliases=["to"],
     )
 
-    @commands.command(
-        name="timeout",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="timeout", **Help.to_kwargs)
     async def timeout(
         self,
         ctx: commands.Context[commands.Bot],

@@ -13,21 +13,17 @@ class Whisper(commands.Cog):
 
     Help = HelpData(
         category="Utility",
+        dmOnly=False,
         serverOnly=True,
+        subcommands=None,
+        permissions=None,
         help="Whispers a message to a member. use this command to talk with a member privately inside a server.",
         brief="Whispers something to a member.",
         usage="<target> <message>",
         aliases=["wh"],
     )
 
-    @commands.command(
-        name="whisper",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="whisper", **Help.to_kwargs)
     async def whisper(
         self,
         ctx: commands.Context[commands.Bot],
@@ -173,7 +169,7 @@ class WhisperView(discord.ui.View):
         interaction: discord.Interaction,
         button: discord.ui.Button[discord.ui.View],
     ):
-        if interaction.user.id not in [self.target.id, self.user.id]:
+        if interaction.user.id not in (self.target.id, self.user.id):
             return await interaction.response.send_message(
                 "You can't read others whisper.", ephemeral=True
             )

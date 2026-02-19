@@ -14,7 +14,9 @@ class WarnClear(commands.Cog):
 
     Help = HelpData(
         category="Moderation",
+        dmOnly=False,
         serverOnly=True,
+        subcommands=None,
         permissions=["`Kick, Approve and Reject Members`"],
         help=None,
         brief="Clears warnings of a member from the server.",
@@ -22,14 +24,7 @@ class WarnClear(commands.Cog):
         aliases=["wc", "warnremove", "wr"],
     )
 
-    @commands.command(
-        name="warnclear",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="warnclear", **Help.to_kwargs)
     async def warnclear(
         self,
         ctx: commands.Context[commands.Bot],

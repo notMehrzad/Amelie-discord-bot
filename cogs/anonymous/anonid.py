@@ -38,24 +38,20 @@ class AnonId(commands.Cog):
     Help = HelpData(
         category="Anonymous",
         dmOnly=True,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=(
-            "Shows the public anonymous ID for the user."
-            "\nIf user had no ID before, creates one for it."
-            "\nUser can share this public ID anywhere and people can start sending anonymous messages with it (try `/help anonsend` for more information)."
+            "Shows the public Anonymous ID for the user."
+            "\n\nIf user had no ID before, creates one for them."
+            "\n\nUser can share this public ID anywhere and people can start sending anonymous messages to them with it. (try `/help anonsend` for more information)"
         ),
-        brief="Shows the anonymous ID for the user.",
+        brief="Shows the public Anonymous ID for the user.",
         usage=None,
         aliases=["anonymousid"],
     )
 
-    @commands.command(
-        name="anonid",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="anonid", **Help.to_kwargs)
     async def anonid(self, ctx: commands.Context[commands.Bot]):
         # if user runs the command in a server
         if ctx.guild:

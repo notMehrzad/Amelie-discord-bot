@@ -188,23 +188,20 @@ class Embed(commands.Cog):
 
     Help = HelpData(
         category="Utility",
+        dmOnly=False,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=(
             "This command can sends or edits an embed in the channel."
             "\nYou can specify Embed attributes like `key: (value)` (title: (hi) for instance). Supports all kind of Embed attributes."
         ),
         brief="Sends an Embed in the channel.",
         usage="<embed argument 1> <embed argument 2> <embed argument ..>",
-        aliases=[],
+        aliases=None,
     )
 
-    @commands.command(
-        name="embed",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        extras=Help.extras,
-    )
+    @commands.command(name="embed", **Help.to_kwargs)
     async def embed(
         self, ctx: commands.Context[commands.Bot], *, args: str | None = None
     ):

@@ -17,7 +17,10 @@ class ModWarnDelete(commands.Cog):
 
     Help = HelpData(
         category="Dev",
+        dmOnly=False,
+        serverOnly=False,
         subcommands=["all", "server", "user"],
+        permissions=None,
         help=(
             "This command helps moderating the warns table in database."
             "\nIt has three subcommand (all, server, user):"
@@ -27,18 +30,10 @@ class ModWarnDelete(commands.Cog):
         ),
         brief="A developer command to moderate warns table from database.",
         usage="<subcommand> <id>",
-        aliases=[],
+        aliases=None,
     )
 
-    @commands.command(
-        name="modwarndelete",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        hidden=True,
-        extras=Help.extras,
-    )
+    @commands.command(name="modwarndelete", hidden=True, **Help.to_kwargs)
     async def modwarndelete(
         self,
         ctx: commands.Context[commands.Bot],

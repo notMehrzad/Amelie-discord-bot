@@ -15,21 +15,17 @@ class CommandSync(commands.Cog):
 
     Help = HelpData(
         category="Dev",
+        dmOnly=False,
+        serverOnly=False,
+        subcommands=None,
+        permissions=None,
         help=None,
-        brief="A command for syncing bot command tree.",
+        brief="Syncs and updates slash commands.",
         usage=None,
         aliases=["csync"],
     )
 
-    @commands.command(
-        name="commandsync",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        hidden=True,
-        extras=Help.extras,
-    )
+    @commands.command(name="commandsync", hidden=True, **Help.to_kwargs)
     async def commandsync(self, ctx: commands.Context[commands.Bot]):
         inGuild = True if ctx.guild else False
 

@@ -15,26 +15,21 @@ class StartUp(commands.Cog):
 
     Help = HelpData(
         category="Dev",
+        dmOnly=False,
+        serverOnly=False,
         subcommands=["reload", "list"],
+        permissions=None,
         help=(
-            "A cog handling command made for developers of the bot."
-            '\nif "reload" subcommand is used, it takes an optional parameter <cog_name> for reloading that specific cog. if not specified, all cogs will be reloaded instead.'
-            '\nif "list" subcommand is used, it prints the cog list into the bots console.'
+            "A Cog handling command made for developers of the bot."
+            "\n\n-`reload`: This subcommand is used when trying to reload a cog without disconnecting and connecting bot again. (aliases: `r`)"
+            "\n\n-`list`: Prints every each available cog's name in the console."
         ),
-        brief="A cog moderation command made for developers of the bot.",
+        brief="Cog moderation command.",
         usage="<subcommand> <cog_name[*optional*]>",
-        aliases=[],
+        aliases=None,
     )
 
-    @commands.command(
-        name="cog",
-        help=Help.help,
-        brief=Help.brief,
-        usage=Help.usage,
-        aliases=Help.aliases,
-        hidden=True,
-        extras=Help.extras,
-    )
+    @commands.command(name="cog", hidden=True, **Help.to_kwargs)
     async def cog(
         self,
         ctx: commands.Context[commands.Bot],
