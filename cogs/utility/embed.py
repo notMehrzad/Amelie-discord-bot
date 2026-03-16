@@ -187,7 +187,7 @@ class Embed(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category="Utility",
+        category=HelpData.Category.Utility,
         dmOnly=False,
         serverOnly=False,
         subcommands=None,

@@ -19,9 +19,7 @@ class Terminal:
         elif cmd[0] == "cog":
             return await self.cog(cmd)
         elif cmd[0] in ("shutdown", "sd"):
-            await self.bot.close()
-            print("\n--------------")
-            print(f"The Bot has been shut down. ⏹️")
+            raise KeyboardInterrupt
         else:
             print("\n--------------")
             print(f"{cmd[0]} is not a valid terminal command.")

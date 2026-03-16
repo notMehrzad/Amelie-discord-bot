@@ -148,6 +148,16 @@ class Database:
                 created_date DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """,
+            # inventory table
+            """
+            CREATE TABLE IF NOT EXISTS inventory (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                item_name str NOT NULL,
+                quantity int NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES user(user_id)
+            );
+            """,
             # tickets table
             """
             CREATE TABLE IF NOT EXISTS tickets (
@@ -158,6 +168,13 @@ class Database:
                 state TEXT NOT NULL DEFAULT "open",
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 closed_at DATETIME
+            );
+            """,
+            # lottery table
+            """
+            CREATE TABLE IF NOT EXISTS lottery (
+                user_id INTEGER PRIMARY KEY NOT NULL,
+                signed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             );
             """,
         ]

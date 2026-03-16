@@ -14,7 +14,7 @@ class StartUp(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category="Dev",
+        category=HelpData.Category.Dev,
         dmOnly=False,
         serverOnly=False,
         subcommands=["reload", "list"],
@@ -27,6 +27,7 @@ class StartUp(commands.Cog):
         brief="Cog moderation command.",
         usage="<subcommand> <cog_name[*optional*]>",
         aliases=None,
+        hidden=True,
     )
 
     @commands.command(name="cog", hidden=True, **Help.to_kwargs)

@@ -2,49 +2,40 @@ import discord
 from discord.ext import commands, tasks
 import json
 import asyncio
-import os
+import pkgutil
+import cogs
 import terminal
 from itertools import cycle
 from database import db
 from logHandler import loggerSetup
 
-intents = discord.Intents.all()
 bot = commands.Bot(
-    command_prefix=".", intents=intents, case_insensitive=True, help_command=None
-)  # defines bot object
+    command_prefix=".",
+    intents=discord.Intents.all(),
+    case_insensitive=True,
+    help_command=None,
+)  # defines the bot instance
 
 
 # cogloader function
-async def cogsload():
+async def cogLoader():
     succeed: list[str] = []
     failed: list[str] = []
-    for root, _, files in os.walk("./cogs"):
-        for file in files:
-            # must be .py
-            if not file.endswith(".py"):
-                continue
+    for modulInfo in pkgutil.walk_packages(cogs.__path__, cogs.__name__ + "."):
+        # if it's a directory
+        if modulInfo.ispkg:
+            continue
 
-            # skips package initializers
-            if file == "__init__.py":
-                continue
+        try:
+            await bot.load_extension(modulInfo.name)  # loads the cog
+            succeed.append(modulInfo.name.split(".")[-1])
+        except Exception:
+            logger.exception(f"❌ {modulInfo.name.split(".")[-1]} couldn't be loaded: ")
+            failed.append(modulInfo.name.split(".")[-1])
 
-            # Builds cog path
-            # ./cogs/moderation/kick.py  →  cogs.moderation.kick
-            rel_path = os.path.join(root, file)
-            module = rel_path.replace("\\", "/")[:-3]
-            if module.startswith("./"):
-                module = module[2:]
-            module = module.replace("/", ".")
-
-            try:
-                await bot.load_extension(module)  # loads cog
-                succeed.append(module.split(".")[-1])
-            except Exception:
-                logger.exception(f"❌ Failed to load {module}: ")
-                failed.append(module.split(".")[-1])
     if failed:
-        print(f"{failed} cogs failed to load ❌")
-    print(f"{succeed} cogs loaded ☑️")
+        print(f"{failed} cogs failed to get loaded ❌")
+    print(f"{succeed} cogs have been loaded ☑️")
 
 
 async def terminal_listener():
@@ -104,11 +95,16 @@ async def main():
     print("💾 Database works fine.")
 
     async with bot:
-        await cogsload()  # loads the cogs
+        await cogLoader()  # loads the cogs
         try:
             await bot.start(config["TOKEN"])  # starts the bot
         except Exception:
             logger.exception(f"❌ Failed to start the bot: ")
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n--------------")
+        print(f"The Bot has been shut down. ⏹️")

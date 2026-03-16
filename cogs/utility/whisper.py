@@ -12,7 +12,7 @@ class Whisper(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category="Utility",
+        category=HelpData.Category.Utility,
         dmOnly=False,
         serverOnly=True,
         subcommands=None,

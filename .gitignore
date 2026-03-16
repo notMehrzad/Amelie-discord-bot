@@ -5,3 +5,6 @@ __pycache__/
 stuff/
 bot_database.db
 log.log
+telegramRouters/
+telegramMain.py
+services/

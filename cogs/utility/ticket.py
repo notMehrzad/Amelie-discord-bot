@@ -20,7 +20,7 @@ class Ticket(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category="Utility",
+        category=HelpData.Category.Utility,
         dmOnly=True,
         serverOnly=False,
         subcommands=None,

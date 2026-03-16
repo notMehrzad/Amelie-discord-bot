@@ -29,7 +29,7 @@ class Daily(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category="Economy",
+        category=HelpData.Category.Economy,
         dmOnly=False,
         serverOnly=False,
         subcommands=None,

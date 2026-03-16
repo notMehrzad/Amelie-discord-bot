@@ -36,7 +36,7 @@ class AnonId(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category="Anonymous",
+        category=HelpData.Category.Anonymous,
         dmOnly=True,
         serverOnly=False,
         subcommands=None,

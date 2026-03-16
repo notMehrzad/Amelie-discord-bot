@@ -13,7 +13,7 @@ class CoinFlip(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category="Games",
+        category=HelpData.Category.Games,
         dmOnly=False,
         serverOnly=False,
         subcommands=None,

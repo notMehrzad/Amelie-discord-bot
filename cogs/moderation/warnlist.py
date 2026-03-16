@@ -13,7 +13,7 @@ class WarnList(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category="Moderation",
+        category=HelpData.Category.Moderation,
         dmOnly=False,
         serverOnly=True,
         subcommands=None,

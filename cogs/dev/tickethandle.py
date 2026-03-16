@@ -16,7 +16,7 @@ class TicketHandle(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category="Dev",
+        category=HelpData.Category.Dev,
         dmOnly=False,
         serverOnly=False,
         subcommands=["respond", "close"],

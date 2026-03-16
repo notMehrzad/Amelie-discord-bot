@@ -16,7 +16,7 @@ class ModWarnDelete(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category="Dev",
+        category=HelpData.Category.Dev,
         dmOnly=False,
         serverOnly=False,
         subcommands=["all", "server", "user"],

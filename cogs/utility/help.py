@@ -1,7 +1,8 @@
 import discord
+import json
 from discord.ext import commands
 from discord import app_commands
-import json
+from enum import Enum
 from typing import Any, TypedDict
 from logHandler import loggerSetup
 
@@ -9,17 +10,22 @@ logger = loggerSetup(__name__)
 
 
 class HelpData:
-    class kwargsType(TypedDict):
-        help: str | None
-        brief: str
-        usage: str | None
-        aliases: list[str]
-        extras: dict[Any, Any]
+    class Category(Enum):
+        Anonymous = "anonymous"
+        Dev = "dev"
+        Economy = "economy"
+        Games = "games"
+        Moderation = "moderation"
+        Utility = "utility"
+        etc = "etc."
+
+        def __str__(self):
+            return self.name
 
     def __init__(
         self,
         *,
-        category: str | None,
+        category: Category | None,
         dmOnly: bool,
         serverOnly: bool,
         subcommands: list[str] | None,
@@ -28,6 +34,7 @@ class HelpData:
         brief: str,
         usage: str | None,
         aliases: list[str] | None,
+        hidden: bool = False,
     ):
         self.category = category
         self.dmOnly = dmOnly
@@ -38,6 +45,7 @@ class HelpData:
         self.brief = brief
         self.usage = usage
         self.aliases = aliases or []
+        self.hidden = hidden
 
     @property
     def extras(self) -> dict[Any, Any]:
@@ -48,6 +56,13 @@ class HelpData:
             "subcommands": self.subcommands,
             "permissions": self.permissions,
         }
+
+    class kwargsType(TypedDict):
+        help: str | None
+        brief: str
+        usage: str | None
+        aliases: list[str]
+        extras: dict[Any, Any]
 
     @property
     def to_kwargs(self) -> kwargsType:
@@ -69,7 +84,7 @@ class Help(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category="Utility",
+        category=HelpData.Category.Utility,
         dmOnly=False,
         serverOnly=False,
         subcommands=None,
