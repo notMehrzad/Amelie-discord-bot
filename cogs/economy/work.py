@@ -8,6 +8,8 @@ from cogs.economy.daily import tdFormatter
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
+WORK = 60
+
 logger = loggerSetup(__name__)
 
 

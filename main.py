@@ -1,24 +1,39 @@
-import discord
-from discord.ext import commands, tasks
-import json
+#!usr/bin/env python3
+"""The main file of Amelie that needs to be run directly.
+It's the entry point for other modules.
+"""
+
 import asyncio
+import json
 import pkgutil
-import cogs
 import terminal
 from itertools import cycle
-from database import db
+
+import discord
+from discord.ext import commands, tasks
+
+import cogs
+from core.bank import ACCOUNT_TABLE, TRANSACTION_TABLE
+from core.database import tableInitialize
 from logHandler import loggerSetup
 
-bot = commands.Bot(
+BOT = commands.Bot(
     command_prefix=".",
     intents=discord.Intents.all(),
     case_insensitive=True,
     help_command=None,
-)  # defines the bot instance
+)  # bot's instance
+
+# reads the stored token from config.json
+with open("config.json") as file:
+    CONFIG = json.load(file)
+
+logger = loggerSetup(__name__)
 
 
-# cogloader function
-async def cogLoader():
+async def _cogLoader():
+    """Loads all the cogs from the cog directory."""
+
     succeed: list[str] = []
     failed: list[str] = []
     for modulInfo in pkgutil.walk_packages(cogs.__path__, cogs.__name__ + "."):
@@ -27,37 +42,39 @@ async def cogLoader():
             continue
 
         try:
-            await bot.load_extension(modulInfo.name)  # loads the cog
+            await BOT.load_extension(modulInfo.name)  # loads the cog
             succeed.append(modulInfo.name.split(".")[-1])
         except Exception:
             logger.exception(f"❌ {modulInfo.name.split(".")[-1]} couldn't be loaded: ")
             failed.append(modulInfo.name.split(".")[-1])
 
     if failed:
-        print(f"{failed} cogs failed to get loaded ❌")
-    print(f"{succeed} cogs have been loaded ☑️")
+        logger.error(f"{failed} cogs failed to get loaded ❌")
+    logger.info(f"{succeed} cogs have been loaded ☑️")
 
 
-async def terminal_listener():
+async def _terminal_listener():
+    """Starts listening to terminal commands."""
+
     loop = asyncio.get_running_loop()
-    term = terminal.Terminal(bot)
+    term = terminal.Terminal(BOT)
     while True:
         cmd = await loop.run_in_executor(None, input, ">> ")
         await term.command(cmd)
 
 
-@bot.event
+@BOT.event
 async def on_ready():
-    print(
-        "--------------" f"\nWe have logged in as {bot.user} ✅"
+    logger.info(
+        "--------------" f"\nWe have logged in as {BOT.user} ✅"
     )  # prints a message when bot is ready
-    bot.loop.create_task(
-        terminal_listener()
+    BOT.loop.create_task(
+        _terminal_listener()
     )  # runs the terminal listener for in-line commands
-    botStatusChange.start()  # starts changing bot statuses
+    _botStatusChange.start()  # starts changing bot statuses
 
 
-# different possible bot status
+# Amelie's different status
 bot_status = cycle(
     [
         discord.Activity(
@@ -77,34 +94,27 @@ bot_status = cycle(
 
 # changes bot status message every 2 minutes
 @tasks.loop(minutes=2)
-async def botStatusChange():
-    await bot.change_presence(activity=next(bot_status))
+async def _botStatusChange():
+    await BOT.change_presence(activity=next(bot_status))
 
 
-# reads the stored token from config.json
-with open("config.json") as file:
-    config = json.load(file)
+async def _main():
+    """The entry point."""
 
+    # initializes the tables if needed
+    await tableInitialize(ACCOUNT_TABLE, TRANSACTION_TABLE)
+    logger.info("💾 Database works fine.")
 
-async def main():
-    # sets up the initial logger
-    global logger
-    logger = loggerSetup(__name__)
-
-    await db.tableInitialize()  # initializes the tables if needed
-    print("💾 Database works fine.")
-
-    async with bot:
-        await cogLoader()  # loads the cogs
+    async with BOT:
+        await _cogLoader()  # loads the cogs
         try:
-            await bot.start(config["TOKEN"])  # starts the bot
+            await BOT.start(CONFIG["TOKEN"])  # starts the bot
         except Exception:
-            logger.exception(f"❌ Failed to start the bot: ")
+            logger.critical(f"❌ Failed to start the bot:", exc_info=True)
 
 
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        asyncio.run(_main())
     except KeyboardInterrupt:
-        print("\n--------------")
-        print(f"The Bot has been shut down. ⏹️")
+        logger.info("\n--------------" f"\nThe Bot has been shut down. ⏹️")

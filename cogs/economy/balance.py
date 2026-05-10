@@ -1,8 +1,11 @@
+"""The `balance` command. It can be run via user to see their current balance."""
+
 import discord
-from discord.ext import commands
 from discord import app_commands
-from database import db, eco
-from cogs.utility.help import HelpData
+from discord.ext import commands
+
+from core.help import *
+from core.bank import get_account, create_account
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
@@ -13,7 +16,7 @@ class Balance(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category=HelpData.Category.Economy,
+        category=CommandCategory.Economy,
         dmOnly=False,
         serverOnly=False,
         subcommands=None,
@@ -24,35 +27,18 @@ class Balance(commands.Cog):
         aliases=["bal"],
     )
 
-    @commands.command(name="balance", **Help.to_kwargs)
+    @commands.command(name="balance", **Help.kwargs)
     async def balance(self, ctx: commands.Context[commands.Bot]):
-        # checks if the user has an account already
-        row = await db.fetchone(
-            """
-            SELECT balance FROM user
-            WHERE user_id = ?;
-            """,
-            (ctx.author.id,),
-        )
-        now = discord.utils.utcnow()
+        account = await get_account(ctx.author.id)  # trys to fetches user's account
         # if user has no account, creates one
-        if not row:
-            await db.execute(
-                """
-                INSERT INTO user (user_id, balance, created_date)
-                VALUES (?, ?, ?);
-                """,
-                (ctx.author.id, 0, now),
-            )
-            balance = 0
-        else:
-            balance = row["balance"]
+        if not account:
+            account = await create_account(user_id=ctx.author.id)
 
         # sends the result
         resultEmbed = discord.Embed(
-            title=f"{ctx.author.display_name}'s Balance",
-            description=f"*{balance} {eco.currency_postfix}*",
-            timestamp=now,
+            title=f"{ctx.author.mention}'s Balance",
+            description=f"*{account.balance_str}*",
+            timestamp=discord.utils.utcnow(),
         )
         await ctx.reply(embed=resultEmbed)
 
@@ -71,33 +57,18 @@ class Balance(commands.Cog):
     async def slashBalance(
         self, interaction: discord.Interaction, hidden: bool = False
     ):
-        # checks if the user has an account already
-        row = await db.fetchone(
-            """
-            SELECT balance FROM user
-            WHERE user_id = ?;
-            """,
-            (interaction.user.id,),
-        )
-        now = discord.utils.utcnow()
+        account = await get_account(
+            interaction.user.id
+        )  # trys to fetches user's account
         # if user has no account, creates one
-        if not row:
-            await db.execute(
-                """
-                INSERT INTO user (user_id, balance, created_date)
-                VALUES (?, ?, ?);
-                """,
-                (interaction.user.id, 0, now),
-            )
-            balance = 0
-        else:
-            balance = row["balance"]
+        if not account:
+            account = await create_account(user_id=interaction.user.id)
 
         # sends the result
         resultEmbed = discord.Embed(
-            title=f"{interaction.user.display_name}'s Balance",
-            description=f"*{balance} {eco.currency_postfix}*",
-            timestamp=now,
+            title=f"{interaction.user.mention}'s Balance",
+            description=f"*{account.balance_str}*",
+            timestamp=discord.utils.utcnow(),
         )
         await interaction.response.send_message(embed=resultEmbed, ephemeral=hidden)
 

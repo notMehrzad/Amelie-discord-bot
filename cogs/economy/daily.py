@@ -6,6 +6,8 @@ from datetime import timedelta, datetime
 from cogs.utility.help import HelpData
 from logHandler import loggerSetup
 
+DAILY = 500
+
 logger = loggerSetup(__name__)
 
 

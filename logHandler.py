@@ -1,5 +1,8 @@
 import logging
+
 from colorama import Fore, Style, init
+
+__all__ = ["loggerSetup"]
 
 init(autoreset=True)  # ensures colors reset automatically
 
@@ -8,8 +11,8 @@ class ColorFormatter(logging.Formatter):
     COLORS = {
         logging.INFO: Fore.BLUE,
         logging.WARNING: Fore.YELLOW,
-        logging.ERROR: Fore.RED,
-        logging.CRITICAL: Fore.MAGENTA + Style.BRIGHT,
+        logging.ERROR: Fore.LIGHTRED_EX,
+        logging.CRITICAL: Fore.RED,
     }
 
     def format(self, record: logging.LogRecord):
@@ -18,19 +21,14 @@ class ColorFormatter(logging.Formatter):
         return color + message + Style.RESET_ALL
 
 
-def loggerSetup(loggerName: str):
-    """
-    Creates and configures a logger with separate file and console handlers.
+def loggerSetup(loggerName: str) -> logging.Logger:
+    """Creates and configures a logger with separate file and console handlers.
 
-    Parameters
-    ----------
-    loggerName : str
-        The name of the logger, typically __name__ from the caller.
+    Args:
+        loggerName (str): The name of the logger, typically __name__ from the caller.
 
-    Returns
-    -------
-    logging.Logger
-        A configured logger instance ready for use.
+    Returns:
+        Logger: A configured logger instance ready for use.
     """
 
     logger = logging.getLogger(loggerName)

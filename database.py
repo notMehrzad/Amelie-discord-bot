@@ -38,26 +38,6 @@ class Session:
             self.messages.append(msg)
 
 
-# economy constant data
-class EconomyData:
-    currency_name = "Cookie"
-    currency_icon = "<:1lvl:1027191671328354304>"
-
-    @property
-    def currency_postfix(self):
-        return self.currency_icon + " " + self.currency_name + "s"
-
-    daily = 500
-
-    work = 60
-
-    # shop
-    # Spices: dict[str, str | float] = {"name": "Spices", "price": 200}
-
-
-eco = EconomyData()  # economy instance to import
-
-
 class Database:
     db_path = "bot_database.db"
 
@@ -138,14 +118,25 @@ class Database:
                 UNIQUE(reciever_id, contact_anon_id, session_id)
             );
             """,
-            # user table
+            # bank accounts table
             """
-            CREATE TABLE IF NOT EXISTS user (
+            CREATE TABLE IF NOT EXISTS bank_accounts (
                 user_id INTEGER PRIMARY KEY NOT NULL,
                 balance INTEGER NOT NULL,
-                last_daily_date DATETIME,
-                last_work_date DATETIME,
-                created_date DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at INTEGER NOT NULL,
+                last_daily_date INTEGER,
+                last_work_date INTEGER
+            );
+            """,
+            # bank transactions table
+            """
+            CREATE TABLE IF NOT EXISTS bank_transactions (
+                transaction_id TEXT PRIMARY KEY NOT NULL,
+                type TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                amount INTEGER NOT NULL,
+                date INTEGER NOT NULL,
+                reciever_id INTEGER
             );
             """,
             # inventory table
@@ -174,7 +165,7 @@ class Database:
             """
             CREATE TABLE IF NOT EXISTS lottery (
                 user_id INTEGER PRIMARY KEY NOT NULL,
-                signed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                signed_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """,
         ]

@@ -1,82 +1,18 @@
-import discord
 import json
-from discord.ext import commands
+from typing import Any
+
+import discord
 from discord import app_commands
-from enum import Enum
-from typing import Any, TypedDict
+from discord.ext import commands
+
+from core.help import *
 from logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 
-
-class HelpData:
-    class Category(Enum):
-        Anonymous = "anonymous"
-        Dev = "dev"
-        Economy = "economy"
-        Games = "games"
-        Moderation = "moderation"
-        Utility = "utility"
-        etc = "etc."
-
-        def __str__(self):
-            return self.name
-
-    def __init__(
-        self,
-        *,
-        category: Category | None,
-        dmOnly: bool,
-        serverOnly: bool,
-        subcommands: list[str] | None,
-        permissions: list[str] | None,
-        help: str | None,
-        brief: str,
-        usage: str | None,
-        aliases: list[str] | None,
-        hidden: bool = False,
-    ):
-        self.category = category
-        self.dmOnly = dmOnly
-        self.serverOnly = serverOnly
-        self.subcommands = subcommands
-        self.permissions = permissions
-        self.help = help
-        self.brief = brief
-        self.usage = usage
-        self.aliases = aliases or []
-        self.hidden = hidden
-
-    @property
-    def extras(self) -> dict[Any, Any]:
-        return {
-            "category": self.category,
-            "dm-only": self.dmOnly,
-            "server-only": self.serverOnly,
-            "subcommands": self.subcommands,
-            "permissions": self.permissions,
-        }
-
-    class kwargsType(TypedDict):
-        help: str | None
-        brief: str
-        usage: str | None
-        aliases: list[str]
-        extras: dict[Any, Any]
-
-    @property
-    def to_kwargs(self) -> kwargsType:
-        return {
-            "help": self.help,
-            "brief": self.brief,
-            "usage": self.usage,
-            "aliases": self.aliases,
-            "extras": self.extras,
-        }
-
-
+# reads the stored token from config.json
 with open("config.json") as file:
-    config = json.load(file)
+    CONFIG = json.load(file)
 
 
 class Help(commands.Cog):
@@ -84,7 +20,7 @@ class Help(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category=HelpData.Category.Utility,
+        category=CommandCategory.Utility,
         dmOnly=False,
         serverOnly=False,
         subcommands=None,
@@ -99,7 +35,7 @@ class Help(commands.Cog):
         aliases=["h"],
     )
 
-    @commands.command(name="help", **Help.to_kwargs)
+    @commands.command(name="help", **Help.kwargs)
     async def help(
         self, ctx: commands.Context[commands.Bot], command: str | None = None
     ):
@@ -116,7 +52,7 @@ class Help(commands.Cog):
                 )
 
             # if command is ephemeral, checks if the user is an admin or not
-            if cmd.hidden and str(ctx.author.id) not in config["ADMINS"]:
+            if cmd.hidden and str(ctx.author.id) not in CONFIG["ADMINS"]:
                 return await ctx.reply(f"Help menu for this command is not avaiable.")
 
             cmdEmbed = discord.Embed(
@@ -161,7 +97,7 @@ class Help(commands.Cog):
             if ctx.guild:
                 showDev = False
             else:
-                showDev = False if str(ctx.author.id) not in config["ADMINS"] else True
+                showDev = False if str(ctx.author.id) not in CONFIG["ADMINS"] else True
 
             categorized: dict[str, list[commands.Command[Any, Any, Any]]] = (
                 {}
@@ -251,7 +187,7 @@ class Help(commands.Cog):
 
             # if command is ephemeral, checks if the user is an admin or not
             if cmd.hidden:
-                if str(interaction.user.id) in config["ADMINS"]:
+                if str(interaction.user.id) in CONFIG["ADMINS"]:
                     if interaction.guild and not ephemeral:
                         return await interaction.response.send_message(
                             f"You can't get help of a `Developer` command publicly in a server. (Try again in my DM or use `ephemeral` option.)",
@@ -308,7 +244,7 @@ class Help(commands.Cog):
                     showDev = False
             else:
                 showDev = (
-                    False if str(interaction.user.id) not in config["ADMINS"] else True
+                    False if str(interaction.user.id) not in CONFIG["ADMINS"] else True
                 )
 
             categorized: dict[str, list[commands.Command[Any, Any, Any]]] = (
