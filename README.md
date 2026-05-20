@@ -1,60 +1,32 @@
+[![English](https://img.shields.io/badge/English-🇺🇸-blue)](README.md)
+[![فارسی](https://img.shields.io/badge/فارسی-🇮🇷-green)](README.fa.md)
+
+---
+
 # 🤖 Amélie
 
-A multipurpose Discord bot built using [discord.py](https://discordpy.readthedocs.io/).  
-Includes moderation, messaging, economy and automation features.
+A multipurpose Discord bot.
+
+[About Amélie](#about-amélie) | [License](#️-license)
 
 ---
 
-## 🛠️ Installation
+## About Amélie
 
-1. **Clone the repository**
+Amélie serves different purposes.
 
-   ```bash
-   git clone https://github.com/notMehrzad/Amelie-discord-bot.git
-   cd Amelie-discord-bot
-   ```
+Includes moderation, messaging, economy and etc.
 
-2. **Install dependencies**
+Amélie is currently in active development by [me](https://github.com/notMehrzad).
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+Features are still being built and tested so bugs and incomplete functionality are expected.
 
-3. **Create a `config.jason` file**
+Because of this, **every contribution will be incredibly helpful!**
 
-   ```json
-   {
-     "TOKEN": "Bot-Token",
-     "ADMINS": ["Admins-Id"]
-   }
-   ```
-
-4. **Run the Bot**
-
-   ```bash
-   python main.py
-   ```
+**See [Contributing](CONTRIBUTING.md) for more information.**
 
 ---
 
-## 🧑‍💻 Contributing
+## ©️ License
 
-Pull requests are welcome!
-If you’d like to suggest a new command or report a bug, please open an [issue](https://github.com/notMehrzad/Amelie-discord-bot/issues).
-
----
-
-### ©️ License
-
-Copyright © 2025 Mehrzad
-All rights reserved.
-
-This project is private.  
-No part of this code, documentation, or functionality may be used, copied, modified, or distributed  
-without explicit written permission from the author.
-
----
-
-### 💬 Credits
-
-Created and maintained by [Mehrzad](https://github.com/notMehrzad)
+Licensed under the MIT License - see the [License](LICENSE) for details.
