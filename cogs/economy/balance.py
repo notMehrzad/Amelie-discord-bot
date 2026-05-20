@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from core.help import *
 from core.bank import get_account, create_account
-from logHandler import loggerSetup
+from core.logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 
@@ -16,7 +16,7 @@ class Balance(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category=CommandCategory.Economy,
+        category=CommandCategory.ECONOMY,
         dmOnly=False,
         serverOnly=False,
         subcommands=None,
@@ -28,7 +28,7 @@ class Balance(commands.Cog):
     )
 
     @commands.command(name="balance", **Help.kwargs)
-    async def balance(self, ctx: commands.Context[commands.Bot]):
+    async def balance(self, ctx: commands.Context[commands.Bot]) -> None:
         account = await get_account(ctx.author.id)  # trys to fetches user's account
         # if user has no account, creates one
         if not account:

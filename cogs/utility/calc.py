@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import sympy as sp
 from cogs.utility.help import HelpData
-from logHandler import loggerSetup
+from core.logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 

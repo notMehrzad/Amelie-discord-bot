@@ -1,10 +1,13 @@
+"""The `buy` command. It allows the users to but different items from the itemshop."""
+
 import discord
-from discord.ext import commands
 from discord import app_commands
-from database import db
+from discord.ext import commands
+
+from core.database import execute, fetchone
 from cogs.economy.itemshop import items
-from cogs.utility.help import HelpData
-from logHandler import loggerSetup
+from core.help import *
+from core.logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 
@@ -14,7 +17,7 @@ class Buy(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category=HelpData.Category.Economy,
+        category=CommandCategory.ECONOMY,
         dmOnly=False,
         serverOnly=False,
         subcommands=None,
@@ -25,7 +28,7 @@ class Buy(commands.Cog):
         aliases=None,
     )
 
-    @commands.command(name="buy", **Help.to_kwargs)
+    @commands.command(name="buy", **Help.kwargs)
     async def buy(
         self,
         ctx: commands.Context[commands.Bot],
@@ -33,7 +36,7 @@ class Buy(commands.Cog):
         quantity: int | str = 1,
     ):
         # trys to fetch user's balance
-        row = await db.fetchone(
+        row = await fetchone(
             """
             SELECT balance FROM user
             WHERE user_id = ?;
@@ -69,7 +72,7 @@ class Buy(commands.Cog):
             )
 
         # updates user's balance
-        await db.execute(
+        await execute(
             """
             UPDATE user
             SET balance = ?
@@ -78,7 +81,7 @@ class Buy(commands.Cog):
             (row["balance"] - (match.price * quantity), ctx.author.id),
         )
 
-        row = await db.fetchone(
+        row = await fetchone(
             """
             SELECT quantity FROM inventory
             WHERE user_id = ? AND item_name = ?;
@@ -87,7 +90,7 @@ class Buy(commands.Cog):
         )
         # if user already has the item in the inventory, updates quantity
         if row:
-            await db.execute(
+            await execute(
                 """
                 UPDATE inventory
                 SET quantity = ?
@@ -98,7 +101,7 @@ class Buy(commands.Cog):
 
         # adds the item to user's inventory otherwise
         else:
-            await db.execute(
+            await execute(
                 """
                 INSERT INTO inventory (user_id, item_name, quantity)
                 VALUES (?, ?, ?);
@@ -124,7 +127,7 @@ class Buy(commands.Cog):
         self, interaction: discord.Interaction, item: str, quantity: int = 1
     ):
         # trys to fetch user's balance
-        row = await db.fetchone(
+        row = await fetchone(
             """
             SELECT balance FROM user
             WHERE user_id = ?;
@@ -162,7 +165,7 @@ class Buy(commands.Cog):
             )
 
         # updates user's balance
-        await db.execute(
+        await execute(
             """
             UPDATE user
             SET balance = ?
@@ -171,7 +174,7 @@ class Buy(commands.Cog):
             (row["balance"] - (match.price * quantity), interaction.user.id),
         )
 
-        row = await db.fetchone(
+        row = await fetchone(
             """
             SELECT quantity FROM inventory
             WHERE user_id = ? AND item_name = ?;
@@ -180,7 +183,7 @@ class Buy(commands.Cog):
         )
         # if user already has the item in the inventory, updates quantity
         if row:
-            await db.execute(
+            await execute(
                 """
                 UPDATE inventory
                 SET quantity = ?
@@ -191,7 +194,7 @@ class Buy(commands.Cog):
 
         # adds the item to user's inventory otherwise
         else:
-            await db.execute(
+            await execute(
                 """
                 INSERT INTO inventory (user_id, item_name, quantity)
                 VALUES (?, ?, ?);

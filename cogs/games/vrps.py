@@ -6,7 +6,7 @@ import asyncio
 from datetime import datetime
 from cogs.games.rps import Choice, choices, rpsResult
 from cogs.utility.help import HelpData
-from logHandler import loggerSetup
+from core.logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 

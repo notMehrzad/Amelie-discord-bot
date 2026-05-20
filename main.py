@@ -6,16 +6,15 @@ It's the entry point for other modules.
 import asyncio
 import json
 import pkgutil
-import terminal
+import core.terminal as terminal
 from itertools import cycle
 
 import discord
 from discord.ext import commands, tasks
 
 import cogs
-from core.bank import ACCOUNT_TABLE, TRANSACTION_TABLE
-from core.database import tableInitialize
-from logHandler import loggerSetup
+from core.database import initialize_tables
+from core.logHandler import loggerSetup
 
 BOT = commands.Bot(
     command_prefix=".",
@@ -98,12 +97,15 @@ async def _botStatusChange():
     await BOT.change_presence(activity=next(bot_status))
 
 
-async def _main():
+async def main() -> None:
     """The entry point."""
 
     # initializes the tables if needed
-    await tableInitialize(ACCOUNT_TABLE, TRANSACTION_TABLE)
-    logger.info("💾 Database works fine.")
+    try:
+        await initialize_tables()
+        logger.info("💾 Database tables initialization complete.")
+    except:
+        raise
 
     async with BOT:
         await _cogLoader()  # loads the cogs
@@ -115,6 +117,6 @@ async def _main():
 
 if __name__ == "__main__":
     try:
-        asyncio.run(_main())
+        asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("\n--------------" f"\nThe Bot has been shut down. ⏹️")

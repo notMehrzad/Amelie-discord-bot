@@ -4,7 +4,7 @@ from discord import app_commands
 from database import db
 from cogs.anonymous.anonsend import privateIdLength
 from cogs.utility.help import HelpData
-from logHandler import loggerSetup
+from core.logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 

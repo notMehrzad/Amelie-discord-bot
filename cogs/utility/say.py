@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from cogs.utility.help import HelpData
-from logHandler import loggerSetup
+from core.logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 

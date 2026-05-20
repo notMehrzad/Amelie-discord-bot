@@ -5,7 +5,7 @@ from database import db, Session
 import random
 import asyncio
 from cogs.utility.help import HelpData
-from logHandler import loggerSetup
+from core.logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 

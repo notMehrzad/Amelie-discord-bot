@@ -5,7 +5,7 @@ from datetime import timedelta, timezone
 import dateparser
 import re
 from cogs.utility.help import HelpData
-from logHandler import loggerSetup
+from core.logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 

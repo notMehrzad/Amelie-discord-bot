@@ -4,7 +4,7 @@ from discord import app_commands
 import random
 import re
 from cogs.utility.help import HelpData
-from logHandler import loggerSetup
+from core.logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 

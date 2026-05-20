@@ -7,7 +7,7 @@ old-fashion hand written helps.
 from enum import Enum
 from typing import Any, TypedDict
 
-from logHandler import loggerSetup
+from core.logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 __all__ = ["CommandCategory", "HelpData"]
@@ -16,13 +16,13 @@ __all__ = ["CommandCategory", "HelpData"]
 class CommandCategory(Enum):
     """The class for different command categories."""
 
-    Anonymous = "Anonymous"
-    Dev = "Dev"
-    Economy = "Economy"
-    Games = "Games"
-    Moderation = "Moderation"
-    Utility = "Utility"
-    Misc = "Misc"
+    ANONYMOUSE = "Anonymous"
+    DEV = "Dev"
+    ECONOMY = "Economy"
+    GAMES = "Games"
+    MODERATION = "Moderation"
+    UTILITY = "Utility"
+    MISC = "Misc"
 
     def __str__(self) -> str:
         return self.value

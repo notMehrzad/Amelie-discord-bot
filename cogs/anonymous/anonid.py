@@ -5,7 +5,7 @@ from database import db
 import secrets
 import string
 from cogs.utility.help import HelpData
-from logHandler import loggerSetup
+from core.logHandler import loggerSetup
 
 logger = loggerSetup(__name__)
 

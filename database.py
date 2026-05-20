@@ -118,27 +118,6 @@ class Database:
                 UNIQUE(reciever_id, contact_anon_id, session_id)
             );
             """,
-            # bank accounts table
-            """
-            CREATE TABLE IF NOT EXISTS bank_accounts (
-                user_id INTEGER PRIMARY KEY NOT NULL,
-                balance INTEGER NOT NULL,
-                created_at INTEGER NOT NULL,
-                last_daily_date INTEGER,
-                last_work_date INTEGER
-            );
-            """,
-            # bank transactions table
-            """
-            CREATE TABLE IF NOT EXISTS bank_transactions (
-                transaction_id TEXT PRIMARY KEY NOT NULL,
-                type TEXT NOT NULL,
-                user_id INTEGER NOT NULL,
-                amount INTEGER NOT NULL,
-                date INTEGER NOT NULL,
-                reciever_id INTEGER
-            );
-            """,
             # inventory table
             """
             CREATE TABLE IF NOT EXISTS inventory (

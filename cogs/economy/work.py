@@ -1,14 +1,20 @@
-import random
-import discord
-from discord.ext import commands
-from discord import app_commands
-from database import db, eco
-from datetime import timedelta, datetime
-from cogs.economy.daily import tdFormatter
-from cogs.utility.help import HelpData
-from logHandler import loggerSetup
+"""The `work` command. It is used to work and claim rewards."""
 
-WORK = 60
+import random
+from datetime import timedelta
+
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+from core.bank import Account, get_account
+from core.database import execute
+from core.help import *
+from core.logHandler import loggerSetup
+from core.utils import timedelta_formater
+
+WORK_AMOUNT = 60
+WORK_COOLDOWN = 90  # minutes
 
 logger = loggerSetup(__name__)
 
@@ -88,7 +94,7 @@ class Work(commands.Cog):
         self.bot = bot
 
     Help = HelpData(
-        category=HelpData.Category.Economy,
+        category=CommandCategory.ECONOMY,
         dmOnly=False,
         serverOnly=False,
         subcommands=None,
@@ -99,36 +105,29 @@ class Work(commands.Cog):
         aliases=None,
     )
 
-    @commands.command(name="work", **Help.to_kwargs)
+    @commands.command(name="work", **Help.kwargs)
     async def work(self, ctx: commands.Context[commands.Bot]):
-        # checks the balance and the last work date of the user
-        row = await db.fetchone(
-            """
-            SELECT balance, last_work_date FROM user
-            WHERE user_id = ?;
-            """,
-            (ctx.author.id,),
-        )
-        # if user has no economy account
-        if not row:
+        # trys to fetch the user's account
+        account = await get_account(ctx.author.id)
+
+        # if user has no account
+        if not account:
             return await ctx.reply(
-                "You have no account to work for.\nTry `/daily` to get your first daily and account and try again."
+                "You have no account to work for.\nTry `/daily` to get your first daily reward and initiate your account and try again."
             )
 
         now = discord.utils.utcnow()
 
-        workDate: datetime | None = (
-            datetime.fromisoformat(row["last_work_date"])
-            if isinstance(row["last_work_date"], str)
-            else row["last_work_date"]
-        )
         # if user trys to work within the limited time
-        if workDate and workDate + timedelta(minutes=90) > now:
+        if (
+            account.last_work_date
+            and account.last_work_date + timedelta(minutes=WORK_COOLDOWN) > now
+        ):
             return await ctx.reply(
-                f"You must rest `{tdFormatter(workDate + timedelta(minutes=90) - now)}` to be able to `work` again."
+                f"You must rest for `{timedelta_formater(account.last_work_date + timedelta(minutes=WORK_COOLDOWN) - now)}` to be able to `work` again."
             )
 
-        view = WorkView(ctx, userBalance=row["balance"])
+        view = WorkView(ctx, account=account)
         await view.start()
 
     @work.error
@@ -139,36 +138,29 @@ class Work(commands.Cog):
     # work slash command
     @app_commands.command(name="work", description=Help.brief, extras=Help.extras)
     async def slashWork(self, interaction: discord.Interaction):
-        # checks the balance and the last work date of the user
-        row = await db.fetchone(
-            """
-            SELECT balance, last_work_date FROM user
-            WHERE user_id = ?;
-            """,
-            (interaction.user.id,),
-        )
-        # if user has no economy account
-        if not row:
+        # trys to fetch the user's account
+        account = await get_account(interaction.user.id)
+
+        # if user has no account
+        if not account:
             return await interaction.response.send_message(
-                "You have no account to work for.\nTry `/daily` to get your first daily and account and try again.",
+                "You have no account to work for.\nTry `/daily` to get your first daily reward and initiate your account and try again.",
                 ephemeral=True,
             )
 
         now = discord.utils.utcnow()
 
-        workDate: datetime | None = (
-            datetime.fromisoformat(row["last_work_date"])
-            if isinstance(row["last_work_date"], str)
-            else row["last_work_date"]
-        )
         # if user trys to work within the limited time
-        if workDate and workDate + timedelta(minutes=90) > now:
+        if (
+            account.last_work_date
+            and account.last_work_date + timedelta(minutes=WORK_COOLDOWN) > now
+        ):
             return await interaction.response.send_message(
-                f"You must rest `{tdFormatter(workDate + timedelta(minutes=90) - now)}` to be able to `work` again.",
+                f"You must rest for `{timedelta_formater(account.last_work_date + timedelta(minutes=WORK_COOLDOWN) - now)}` to be able to `work` again.",
                 ephemeral=True,
             )
 
-        view = WorkView(interaction, userBalance=row["balance"])
+        view = WorkView(interaction, account=account)
         await view.start()
 
     @slashWork.error
@@ -189,7 +181,7 @@ class WorkView(discord.ui.View):
         self,
         ctx: commands.Context[commands.Bot] | discord.Interaction,
         *,
-        userBalance: int,
+        account: Account,
     ):
         super().__init__(timeout=90)
         if isinstance(ctx, discord.Interaction):
@@ -199,7 +191,7 @@ class WorkView(discord.ui.View):
             self.slash = False
             self.ctx = ctx
         self.user = self.interaction.user if self.slash else self.ctx.author
-        self.userBalance = userBalance
+        self.userAcc = account
         self.timestamp = discord.utils.utcnow()
         self.sudo = Sudoku()
 
@@ -291,14 +283,17 @@ class WorkView(discord.ui.View):
 
             self.sudo.setRighty(value)  # sets the right X answer
 
-            # updates the user balance
-            await db.execute(
+            # deposits the work reward
+            await self.userAcc.deposit(WORK_AMOUNT, reason="Work reward.")
+
+            # updates the last work date
+            await execute(
                 """
-                UPDATE user
-                SET balance = ?, last_work_date = ?
+                UPDATE bank_account
+                SET last_work_date = ?
                 WHERE user_id = ?;
                 """,
-                (self.userBalance + eco.work, self.timestamp, self.user.id),
+                (int(self.timestamp.timestamp()), self.user.id),
             )
 
             # sends the result
@@ -306,8 +301,8 @@ class WorkView(discord.ui.View):
                 title="Work ⛏️",
                 description=(
                     "Good Job !"
-                    f"\nYou earned **{eco.work}** for working so hard."
-                    f"You must rest **{tdFormatter(timedelta(minutes=90))}** to fully recover and be able to work again."
+                    f"\nYou earned **{WORK_AMOUNT}** for working so hard."
+                    f"You must rest **{timedelta_formater(timedelta(minutes=WORK_COOLDOWN))}** to fully recover and be able to work again."
                 ),
                 color=discord.Color.blurple(),
                 timestamp=self.timestamp,
