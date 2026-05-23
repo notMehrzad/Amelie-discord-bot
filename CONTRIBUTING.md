@@ -39,7 +39,7 @@ Whether it's code, bug reports, feature ideas, documentation improvements, or ju
 
 To avoid wasting your time (and mine):
 
-1. **Always check open [issues](https://github.com/notMehrzad/Amelie-discord-bot/issues) first. Someone might already be working on the thing you have in mind.**
+1. **Always check [open issues](https://github.com/notMehrzad/Amelie-discord-bot/issues) first. Someone might already be working on the thing you have in mind.**
 
 2. **It is recommended to [open an issue](https://github.com/notMehrzad/Amelie-discord-bot/issues/new) first and wait to get confirmation that your contribution is wanted. This avoids working on something that might not suit Amélie and could be rejected.**
 
@@ -81,22 +81,22 @@ When you submit and open an issue, I try to review within a few days.
 
 ## 3.1 Setting Up The Repository
 
-1. **Fork this repository**
+1. **Fork this repository.**
 
-2. **Clone your fork**
+2. **Clone your fork.**
 
    ```bash
    git clone https://github.com/YOUR-USERNAME/Amelie-discord-bot.git
    cd Amelie-discord-bot
    ```
 
-3. **Add original repo as upstream**
+3. **Add original repo as upstream.**
 
    ```bash
    git remote add upstream https://github.com/notMehrzad/Amelie-discord-bot.git
    ```
 
-4. **Create your feature branch**
+4. **Create your feature branch.**
 
    ```bash
    git checkout -b feature/your-feature-name
@@ -113,13 +113,13 @@ python -m venv .venv
 
 ## 3.3 Installing Dependencies
 
-1. **Install dependencies from `requirements.txt`**
+1. **Install dependencies from `requirements.txt`.**
 
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Create a `config.json` file**
+2. **Create a `config.json` file.**
 
    ```json
    {
@@ -201,7 +201,7 @@ Commit message format:
 
 **Common reasons for PR rejection could be:**
 
-- **You didn't follow the issue-first process and someone already submitted the same PR.**
+- **You didn't follow the issue-first process and someone already submitted the same PR**
 
 - **Your code doesn't pass tests**
 

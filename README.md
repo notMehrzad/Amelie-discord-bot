@@ -7,26 +7,26 @@
 
 A multipurpose Discord bot.
 
-[About Amélie](#about-amélie) | [License](#️-license)
+[About Amélie](#about-amélie) | [License](#license)
 
 ---
 
 ## About Amélie
 
-Amélie serves different purposes.
+Amélie serves a variety of purposes.
 
-Includes moderation, messaging, economy and etc.
+It includes features such as moderation, messaging, economy, and more.
 
 Amélie is currently in active development by [me](https://github.com/notMehrzad).
 
-Features are still being built and tested so bugs and incomplete functionality are expected.
+Features are still being built and tested so bugs and incomplete functionality are to be expected
 
-Because of this, **every contribution will be incredibly helpful!**
+Because of this, **every contribution is incredibly helpful!**
 
-**See [Contributing](CONTRIBUTING.md) for more information.**
+**See [CONTRIBUTING](CONTRIBUTING.md) for more information.**
 
 ---
 
-## ©️ License
+## License
 
-Licensed under the MIT License - see the [License](LICENSE) for details.
+Licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

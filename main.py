@@ -1,5 +1,5 @@
 #!usr/bin/env python3
-"""The main file of Amelie that needs to be run directly.
+"""The main file of Amélie that needs to be run directly.
 It's the entry point for other modules.
 """
 
