@@ -1,10 +1,23 @@
+#virtual environment
+venv/
+env/
 .venv/
-config.json
+.env/
+
+#python cache
 __pycache__/
+*.pyc
+
+#IDE
 .vscode/
-stuff/
+.idea/
+
+config.json
+
 bot_database.db
 log.log
-telegramRouters/
+
+stuff/
+
 telegramMain.py
-services/
+telegramRouters/

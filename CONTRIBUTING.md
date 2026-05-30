@@ -7,20 +7,20 @@
 
 - [1. How Can You Help](#1-how-can-you-help)
 - [2. Before You Start](#2-before-you-start)
-  - [2.1 The Process of Adding New Commands / Features](#21-the-process-of-adding-new-commands--features)
-  - [2.2 What Happens When You Open An Issue?](#22-what-happens-when-you-open-an-issue)
+    - [2.1 The Process of Adding New Commands / Features](#21-the-process-of-adding-new-commands--features)
+    - [2.2 What Happens When You Open An Issue?](#22-what-happens-when-you-open-an-issue)
 - [3. Getting Started](#3-getting-started)
-  - [3.1 Setting Up The Repository](#31-setting-up-the-repository)
-  - [3.2 Setting Up your Virtual Environment](#32-setting-up-your-virtual-environment)
-  - [3.3 Installing Dependencies](#33-installing-dependencies)
-  - [3.4 Stay Up To Date](#34-stay-up-to-date)
+    - [3.1 Setting Up The Repository](#31-setting-up-the-repository)
+    - [3.2 Setting Up your Virtual Environment](#32-setting-up-your-virtual-environment)
+    - [3.3 Installing Dependencies](#33-installing-dependencies)
+    - [3.4 Stay Up To Date](#34-stay-up-to-date)
 - [4. Start Coding](#4-start-coding)
-  - [4.1 Test Your Changes](#41-test-your-changes)
-  - [4.2 Check Before Committing](#42-check-before-committing)
-  - [4.3 Committing](#43-committing)
+    - [4.1 Test Your Changes](#41-test-your-changes)
+    - [4.2 Check Before Committing](#42-check-before-committing)
+    - [4.3 Committing](#43-committing)
 - [5. Push To Your Fork And Open A Pull Request](#5-push-to-your-fork-and-open-a-pull-request)
-  - [5.1 What Happens After You Submit a PR?](#51-what-happens-after-you-submit-a-pr)
-  - [5.2 If Your PR Is Rejected](#52-if-your-pr-is-rejected)
+    - [5.1 What Happens After You Submit a PR?](#51-what-happens-after-you-submit-a-pr)
+    - [5.2 If Your PR Is Rejected](#52-if-your-pr-is-rejected)
 - [6. Getting Help](#6-getting-help)
 
 ---
@@ -29,7 +29,8 @@
 
 Even a small bug report can help me a lot.
 
-Whether it's code, bug reports, feature ideas, documentation improvements, or just feedback. **Anything helps move this project forward.**
+Whether it's code, bug reports, feature ideas, documentation improvements, or just feedback. **Anything helps move this
+project forward.**
 
 **So any contribution, of any kind, is more than welcome.**
 
@@ -39,22 +40,26 @@ Whether it's code, bug reports, feature ideas, documentation improvements, or ju
 
 To avoid wasting your time (and mine):
 
-1. **Always check [open issues](https://github.com/notMehrzad/Amelie-discord-bot/issues) first. Someone might already be working on the thing you have in mind.**
+1. **Always check [open issues](https://github.com/notMehrzad/Amelie-discord-bot/issues) first. Someone might already be
+   working on the thing you have in mind.**
 
-2. **It is recommended to [open an issue](https://github.com/notMehrzad/Amelie-discord-bot/issues/new) first and wait to get confirmation that your contribution is wanted. This avoids working on something that might not suit Amélie and could be rejected.**
+2. **It is recommended to [open an issue](https://github.com/notMehrzad/Amelie-discord-bot/issues/new) first and wait to
+   get confirmation that your contribution is wanted. This avoids working on something that might not suit Amélie and
+   could be rejected.**
 
-   > Exception: Small fixes like typos, formatting, or minor documentation improvements **do not require** an issue first. Just open a direct PR for those.
+   > Exception: Small fixes like typos, formatting, or minor documentation improvements **do not require** an issue
+   > first. Just open a direct PR for those.
 
 ## 2.1 The Process of Adding New Commands / Features
 
-1. **[Open an issue](https://github.com/notMehrzad/Amelie-discord-bot/issues/new) with label `feature-request`.**
+1. **[Open an issue](https://github.com/notMehrzad/Amelie-discord-bot/issues/new) with label `enhancement`.**
 
 2. **Describe it perfectly.** explain:
-   - What the main idea of the command/feature is
-   - What the command/feature should do
-   - What the expected output should be
-   - Why it would be useful
-   - Example usage
+    - What the main idea of the command/feature is
+    - What the command/feature should do
+    - What the expected output should be
+    - Why it would be useful
+    - Example usage
 
 3. **Wait for review. I will check if it suits Amélie and will be useful to many.
    And only then, you (or someone else) can work on it eventually!**
@@ -63,7 +68,8 @@ To avoid wasting your time (and mine):
 
 When you submit and open an issue, I try to review within a few days.
 
-**If the issue subject is fine, suitable for Amélie and can be useful, the issue stays open and you (or someone else) can work on it.**
+**If the issue subject is fine, suitable for Amélie and can be useful, the issue stays open and you (or someone else)
+can work on it.**
 
 **If the issue subject is rejected by any reason, I will close the issue.**
 
@@ -104,7 +110,8 @@ When you submit and open an issue, I try to review within a few days.
 
 ## 3.2 Setting Up your Virtual Environment
 
-**It is recommended to create a virtual environment to keep your codes isolated and other installed packages in your system will be unaffected this way.**
+**It is recommended to create a virtual environment to keep your codes isolated and other installed packages in your
+system will be unaffected this way.**
 
 ```bash
 python -m venv .venv
@@ -128,20 +135,24 @@ python -m venv .venv
    }
    ```
 
-   - Replace `BOT_TOKEN` with your testing-bot token.
-   - Replace `ADMINS_ID` with your Discord account ID.
+    - Replace `BOT_TOKEN` with your testing-bot token.
+    - Replace `ADMINS_ID` with your Discord account ID.
 
 ## 3.4 Stay Up To Date
 
-**Try to pull from [upstream](https://github.com/notMehrzad/Amelie-discord-bot/tree/main) (main branch on the main repository) occasionally to receive the latest updates. Also, if you noticed that the `requirements.txt` has changed, that means some dependencies may have been added, removed or changed. You will need to modify your installed packages accordingly.**
+**Try to pull from [upstream](https://github.com/notMehrzad/Amelie-discord-bot/tree/main) (main branch on the main
+repository) occasionally to receive the latest updates. Also, if you noticed that the `requirements.txt` has changed,
+that means some dependencies may have been added, removed or changed. You will need to modify your installed packages
+accordingly.**
 
 ---
 
 # 4. Start Coding
 
-**We currently use [Black Formatter](https://github.com/psf/black) as our formatter, as it will automatically detect whether any part of your code needs to be reformatted or not.**
+**We currently use [Black Formatter](https://github.com/psf/black) as our formatter, as it will automatically detect
+whether any part of your code needs to be reformatted or not.**
 
-**Type hints and documenting while coding is extremly encouraged.**
+**Type hints and documenting while coding is extremely encouraged.**
 
 **So start coding and make sure your code follows our coding style and format.**
 
@@ -215,4 +226,5 @@ Stuck somewhere? Have a question?
 
 **Open a `question` issue.**
 
-> **Before asking:** Check existing [issues](https://github.com/notMehrzad/Amelie-discord-bot/issues) and this document first. Your question might already be answered.
+> **Before asking:** Check existing [issues](https://github.com/notMehrzad/Amelie-discord-bot/issues) and this document
+> first. Your question might already be answered.
