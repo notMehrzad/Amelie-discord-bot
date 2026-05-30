@@ -4,12 +4,10 @@ title: "[Bug]: "
 labels: ["bug", "triage"]
 type: bug
 body:
-
   - type: markdown
     attributes:
       value: |
         ## Thanks for taking the time to fill out this bug report as completely as possible!
-
   - type: textarea
     id: what-happened
     attributes:
@@ -18,7 +16,6 @@ body:
       placeholder: What happened?
     validations:
       required: true
-
   - type: textarea
     id: steps
     attributes:
@@ -29,7 +26,6 @@ body:
         3. Observe ...
     validations:
       required: true
-
   - type: textarea
     id: expected
     attributes:
@@ -38,7 +34,6 @@ body:
       placeholder: What should have happened?
     validations:
       required: false
-
   - type: textarea
     id: logs
     attributes:
@@ -50,7 +45,6 @@ body:
         ...
     validations:
       required: false
-
   - type: upload
     id: screenshots
     attributes:
@@ -58,7 +52,6 @@ body:
       description: If applicable, add screenshots to help explain your problem.
     validations:
       required: false
-
   - type: input
     id: environment
     attributes:
@@ -67,7 +60,6 @@ body:
       placeholder: Python 3.13 on Windows XP
     validations:
       required: false
-
   - type: checkboxes
     id: terms
     attributes:
@@ -80,7 +72,6 @@ body:
           required: true
         - label: I want to work on this issue
           required: false
-
   - type: textarea
     id: additional
     attributes:

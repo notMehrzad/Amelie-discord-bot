@@ -7,20 +7,20 @@
 
 - [1. How Can You Help](#1-how-can-you-help)
 - [2. Before You Start](#2-before-you-start)
-    - [2.1 The Process of Adding New Commands / Features](#21-the-process-of-adding-new-commands--features)
-    - [2.2 What Happens When You Open An Issue?](#22-what-happens-when-you-open-an-issue)
+  - [2.1 The Process of Adding New Commands / Features](#21-the-process-of-adding-new-commands--features)
+  - [2.2 What Happens When You Open An Issue?](#22-what-happens-when-you-open-an-issue)
 - [3. Getting Started](#3-getting-started)
-    - [3.1 Setting Up The Repository](#31-setting-up-the-repository)
-    - [3.2 Setting Up your Virtual Environment](#32-setting-up-your-virtual-environment)
-    - [3.3 Installing Dependencies](#33-installing-dependencies)
-    - [3.4 Stay Up To Date](#34-stay-up-to-date)
+  - [3.1 Setting Up The Repository](#31-setting-up-the-repository)
+  - [3.2 Setting Up your Virtual Environment](#32-setting-up-your-virtual-environment)
+  - [3.3 Installing Dependencies](#33-installing-dependencies)
+  - [3.4 Stay Up To Date](#34-stay-up-to-date)
 - [4. Start Coding](#4-start-coding)
-    - [4.1 Test Your Changes](#41-test-your-changes)
-    - [4.2 Check Before Committing](#42-check-before-committing)
-    - [4.3 Committing](#43-committing)
+  - [4.1 Test Your Changes](#41-test-your-changes)
+  - [4.2 Check Before Committing](#42-check-before-committing)
+  - [4.3 Committing](#43-committing)
 - [5. Push To Your Fork And Open A Pull Request](#5-push-to-your-fork-and-open-a-pull-request)
-    - [5.1 What Happens After You Submit a PR?](#51-what-happens-after-you-submit-a-pr)
-    - [5.2 If Your PR Is Rejected](#52-if-your-pr-is-rejected)
+  - [5.1 What Happens After You Submit a PR?](#51-what-happens-after-you-submit-a-pr)
+  - [5.2 If Your PR Is Rejected](#52-if-your-pr-is-rejected)
 - [6. Getting Help](#6-getting-help)
 
 ---
@@ -55,11 +55,11 @@ To avoid wasting your time (and mine):
 1. **[Open an issue](https://github.com/notMehrzad/Amelie-discord-bot/issues/new) with label `enhancement`.**
 
 2. **Describe it perfectly.** explain:
-    - What the main idea of the command/feature is
-    - What the command/feature should do
-    - What the expected output should be
-    - Why it would be useful
-    - Example usage
+   - What the main idea of the command/feature is
+   - What the command/feature should do
+   - What the expected output should be
+   - Why it would be useful
+   - Example usage
 
 3. **Wait for review. I will check if it suits Amélie and will be useful to many.
    And only then, you (or someone else) can work on it eventually!**
@@ -135,8 +135,8 @@ python -m venv .venv
    }
    ```
 
-    - Replace `BOT_TOKEN` with your testing-bot token.
-    - Replace `ADMINS_ID` with your Discord account ID.
+   - Replace `BOT_TOKEN` with your testing-bot token.
+   - Replace `ADMINS_ID` with your Discord account ID.
 
 ## 3.4 Stay Up To Date
 
