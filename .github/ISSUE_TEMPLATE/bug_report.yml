@@ -34,7 +34,7 @@ body:
     id: expected
     attributes:
       label: Expected Behavior
-      description: Explain what behavior did you expect?
+      description: Describe the behavior you expected.
       placeholder: What should have happened?
     validations:
       required: false
