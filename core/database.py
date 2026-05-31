@@ -4,18 +4,30 @@ changes and closing connection automatically with just simple functions.
 Custom functions can be made and used like _run(CustomFunction).
 """
 
+from collections.abc import Awaitable, Callable, Iterable
 from enum import Enum
-from typing import Any, Awaitable, Callable, TypeVar
+from typing import Any, TypeVar, final
 
 import aiosqlite
 import discord
 from discord.ext import commands
 
-from core.dbconstants import *
-from core.logHandler import loggerSetup
+from core.dbconstants import (
+    AccountTable,
+    AnonContactTable,
+    AnonSessionTable,
+    AnonUserTable,
+    CheckTable,
+    InventoryTable,
+    LotteryTable,
+    TicketTable,
+    TransactionTable,
+    WarnTable,
+)
+from core.log_handler import logger_setup
 
 DATABASE_PATH = "bot_database.db"
-TABLES = (
+TABLES: tuple[str, ...] = (
     f"""
     CREATE TABLE IF NOT EXISTS {AccountTable.TABLE_NAME} (
         {AccountTable.COL_USER_ID} INTEGER PRIMARY KEY NOT NULL,
@@ -23,6 +35,38 @@ TABLES = (
         {AccountTable.COL_CREATED_AT} INTEGER NOT NULL,
         {AccountTable.COL_LAST_DAILY_DATE} INTEGER,
         {AccountTable.COL_LAST_WORK_DATE} INTEGER
+    );
+    """,
+    f"""
+    CREATE TABLE IF NOT EXISTS {AnonContactTable.TABLE_NAME} (
+        {AnonContactTable.COL_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+        {AnonContactTable.COL_USER_ID} INTEGER NOT NULL,
+        {AnonContactTable.COL_CONTACT_ID} INTEGER NOT NULL,
+        {AnonContactTable.COL_CONTACT_ANON_ID} TEXT NOT NULL,
+        {AnonContactTable.COL_BLOCKED} INTEGER DEFAULT 0,
+        FOREIGN KEY ({AnonContactTable.COL_USER_ID}) REFERENCES {AnonUserTable.TABLE_NAME}({AnonUserTable.COL_USER_ID}),
+        UNIQUE({AnonContactTable.COL_USER_ID}, {AnonContactTable.COL_CONTACT_ID}),
+        UNIQUE({AnonContactTable.COL_USER_ID}, {AnonContactTable.COL_CONTACT_ANON_ID})
+    );
+    """,
+    f"""
+    CREATE TABLE IF NOT EXISTS {AnonSessionTable.TABLE_NAME} (
+        {AnonSessionTable.COL_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+        {AnonSessionTable.COL_SESSION_ID} INTEGER NOT NULL,
+        {AnonSessionTable.COL_RECEIVER_ID} INTEGER NOT NULL,
+        {AnonSessionTable.COL_CONTACT_ANON_ID} TEXT NOT NULL,
+        {AnonSessionTable.COL_CONTACT_MESSAGE_COLLECTOR_ID} INTEGER NOT NULL,
+        {AnonSessionTable.COL_SESSION_DATE} DATETIME DEFAULT CURRENT_TIMESTAMP,
+        {AnonSessionTable.COL_RESPONDED} INTEGER DEFAULT 0,
+        FOREIGN KEY ({AnonSessionTable.COL_RECEIVER_ID}) REFERENCES {AnonUserTable.TABLE_NAME}({AnonUserTable.COL_USER_ID}),
+        UNIQUE({AnonSessionTable.COL_RECEIVER_ID}, {AnonSessionTable.COL_CONTACT_ANON_ID}, {AnonSessionTable.COL_SESSION_ID})
+    );
+    """,
+    f"""
+    CREATE TABLE IF NOT EXISTS {AnonUserTable.TABLE_NAME} (
+        {AnonUserTable.COL_USER_ID} INTEGER PRIMARY KEY NOT NULL,
+        {AnonUserTable.COL_PUBLIC_ID} TEXT NOT NULL,
+        {AnonUserTable.COL_CREATED_AT} DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """,
     f"""
@@ -37,6 +81,31 @@ TABLES = (
     );
     """,
     f"""
+    CREATE TABLE IF NOT EXISTS {InventoryTable.TABLE_NAME} (
+        {InventoryTable.COL_USER_ID} INTEGER NOT NULL,
+        {InventoryTable.COL_ITEM_NAME} TEXT NOT NULL,
+        {InventoryTable.COL_QUANTITY} INTEGER NOT NULL,
+        PRIMARY KEY ({InventoryTable.COL_USER_ID}, {InventoryTable.COL_ITEM_NAME})
+    );
+    """,
+    f"""
+    CREATE TABLE IF NOT EXISTS {LotteryTable.TABLE_NAME} (
+        {LotteryTable.COL_USER_ID} INTEGER PRIMARY KEY NOT NULL,
+        {LotteryTable.COL_SIGNED_AT} DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """,
+    f"""
+    CREATE TABLE IF NOT EXISTS {TicketTable.TABLE_NAME} (
+        {TicketTable.COL_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+        {TicketTable.COL_USER_ID} INTEGER NOT NULL,
+        {TicketTable.COL_MESSAGE_COLLECTOR_ID} INTEGER NOT NULL,
+        {TicketTable.COL_SUBJECT} TEXT NOT NULL,
+        {TicketTable.COL_STATE} TEXT NOT NULL DEFAULT "open",
+        {TicketTable.COL_CREATED_AT} DATETIME DEFAULT CURRENT_TIMESTAMP,
+        {TicketTable.COL_CLOSED_AT} DATETIME
+    );
+    """,
+    f"""
     CREATE TABLE IF NOT EXISTS {TransactionTable.TABLE_NAME} (
         {TransactionTable.COL_ID} TEXT PRIMARY KEY NOT NULL,
         {TransactionTable.COL_TYPE} TEXT NOT NULL,
@@ -47,40 +116,53 @@ TABLES = (
         {TransactionTable.COL_REASON} TEXT
     );
     """,
+    f"""
+    CREATE TABLE IF NOT EXISTS {WarnTable.TABLE_NAME} (
+        {WarnTable.COL_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+        {WarnTable.COL_SERVER_ID} INTEGER NOT NULL,
+        {WarnTable.COL_USER_WARN_ID} INTEGER NOT NULL,
+        {WarnTable.COL_MOD_ID} INTEGER NOT NULL,
+        {WarnTable.COL_USER_ID} INTEGER NOT NULL,
+        {WarnTable.COL_REASON} TEXT,
+        {WarnTable.COL_TIMESTAMP} DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """,
 )
 
 T = TypeVar("T")
-logger = loggerSetup(__name__)
+logger = logger_setup(__name__)
 __all__ = ["execute", "fetchone", "fetchall", "initialize_tables"]
 
 
+@final
 class Session:
-    sessions: dict[tuple[int, "Types"], "Session"] = {}
-
     class Types(Enum):
         GAMBLING = "GAMBLING"
         MESSAGING = "MESSAGING"
 
-    def __init__(self, userId: int, type: Types):
-        self.userId = userId
-        self.type = type
+    sessions: dict[tuple[int, Types], "Session"] = {}
+
+    def __init__(self, user_id: int, session_type: Types) -> None:
+        self.userId = user_id
+        self.type = session_type
+        self.messages = None
         Session.sessions[(self.userId, self.type)] = self
 
-    def close(self):
+    def close(self) -> None:
         try:
-            Session.sessions.pop((self.userId, self.type))
+            _ = Session.sessions.pop((self.userId, self.type))
         except KeyError:
             pass
 
-    async def collectMessage(self, bot: commands.Bot, *, dmOnly: bool):
-        def __check(msg: discord.Message):
+    async def collect_message(self, bot: commands.Bot, *, dm_only: bool) -> None:
+        def __check(msg: discord.Message) -> bool:
             return (
                 (msg.author.id == self.userId and not msg.guild)
-                if dmOnly
+                if dm_only
                 else msg.author.id == self.userId
             )
 
-        self.messages: list[discord.Message] = []
+        self.messages: list[discord.Message] | None = []
         while (self.userId, self.type) in Session.sessions:
             msg = await bot.wait_for("message", check=__check)
             self.messages.append(msg)
@@ -93,17 +175,17 @@ async def _run(func: Callable[..., Awaitable[T]]) -> T:
         func (Callable[..., Awaitable[T]]): The function to be run.
 
     Returns:
-        T: Varries from function it runs to another.
+        T: Varies from function it runs to another.
     """
 
     async with aiosqlite.connect(DATABASE_PATH) as conn:  # connects to the database
-        await conn.execute("PRAGMA foreign_keys = ON")
-        await conn.execute("PRAGMA journal_mode = WAL")
+        _ = await conn.execute("PRAGMA foreign_keys = ON")
+        _ = await conn.execute("PRAGMA journal_mode = WAL")
 
         return await func(conn)  # runs the command
 
 
-async def execute(query: str, params: tuple[Any, ...] | None = None) -> None:
+async def execute(query: str, params: Iterable[Any] | None = None) -> None:
     """This function is a helper, used to execute a query in aiosqlite.
 
     Args:
@@ -113,7 +195,7 @@ async def execute(query: str, params: tuple[Any, ...] | None = None) -> None:
 
     async def _execute(conn: aiosqlite.Connection) -> None:
         try:
-            await conn.execute(query, params)
+            _ = await conn.execute(query, params)
             await conn.commit()
         except:
             await conn.rollback()
@@ -123,7 +205,7 @@ async def execute(query: str, params: tuple[Any, ...] | None = None) -> None:
 
 
 async def fetchone(
-    query: str, params: tuple[Any, ...] | None = None
+    query: str, params: Iterable[Any] | None = None
 ) -> dict[str, Any] | None:
     """This function is a helper, used to fetch a row from given parameters.
 
@@ -149,12 +231,12 @@ async def fetchone(
 
 
 async def fetchall(
-    query: str, params: tuple[Any, ...] | None = None
+    query: str, params: Iterable[Any] | None = None
 ) -> list[dict[str, Any]] | None:
     """This function is a helper, used to fetch all possible rows with given parameters.
 
     Args:
-        query (str): The query to be fethced.
+        query (str): The query to be fetched.
         params (tuple[Any, ...] | None, optional): The parameters to be passed. Defaults to None.
 
     Returns:
@@ -181,7 +263,7 @@ async def initialize_tables() -> None:
         try:
             # executes every table query
             for table in TABLES:
-                await conn.execute(table)
+                _ = await conn.execute(table)
             await conn.commit()  # commits all
         except:
             await conn.rollback()
