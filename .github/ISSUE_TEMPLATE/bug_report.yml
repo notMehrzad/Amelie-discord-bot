@@ -2,11 +2,14 @@ name: Bug Report
 description: File a bug report.
 title: "[Bug]: "
 labels: ["bug", "triage"]
+assignees: []
+
 body:
   - type: markdown
     attributes:
       value: |
-        ## Thanks for taking the time to fill out this bug report as completely as possible!
+        Thanks for taking the time to fill out this bug report as completely as possible!
+
   - type: textarea
     id: what-happened
     attributes:
@@ -15,8 +18,9 @@ body:
       placeholder: What happened?
     validations:
       required: true
+
   - type: textarea
-    id: steps
+    id: reproduction
     attributes:
       label: Steps to Reproduce
       placeholder: |
@@ -25,6 +29,7 @@ body:
         3. Observe ...
     validations:
       required: true
+
   - type: textarea
     id: expected
     attributes:
@@ -32,7 +37,8 @@ body:
       description: Describe the behavior you expected.
       placeholder: What should have happened?
     validations:
-      required: false
+      required: true
+
   - type: textarea
     id: logs
     attributes:
@@ -44,38 +50,33 @@ body:
         ...
     validations:
       required: false
-  - type: upload
-    id: screenshots
-    attributes:
-      label: Upload screenshots
-      description: If applicable, add screenshots to help explain your problem.
-    validations:
-      required: false
+
   - type: input
     id: environment
     attributes:
       label: Environment
       description: Python version, operating system, and bot version (if known).
-      placeholder: Python 3.13 on Windows XP
+      placeholder: e.g. Python 3.13 on bananaOS
     validations:
       required: false
-  - type: checkboxes
-    id: terms
-    attributes:
-      label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/notMehrzad/Amelie-discord-bot/blob/main/CODE_OF_CONDUCT.md).
-      options:
-        - label: I agree to follow this project's Code of Conduct
-          required: true
-        - label: I have searched the existing issues and confirmed this is not a duplicate
-          required: true
-        - label: I want to work on this issue
-          required: false
+
   - type: textarea
     id: additional
     attributes:
       label: Additional Context
       description: Add any additional context, screenshots, or information that may be helpful.
-      placeholder: I love qhormeh sabzi ...
+      placeholder: e.g. I love qhormeh sabzi.
     validations:
       required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/notMehrzad/Amelie-discord-bot/blob/main/CODE_OF_CONDUCT.md).
+          required: true
+        - label: I have searched the existing issues and confirmed this is not a duplicate.
+          required: true
+        - label: I am willing to help fix this bug.
+          required: false
