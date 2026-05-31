@@ -1,11 +1,13 @@
 import discord
-from discord.ext import commands
 from discord import app_commands
-from database import db
-from cogs.utility.help import HelpData
-from core.logHandler import loggerSetup
+from discord.ext import commands
 
-logger = loggerSetup(__name__)
+from cogs.utility.help import HelpData
+from core.database import execute, fetchall, fetchone
+from core.dbconstants import WarnTable
+from core.log_handler import logger_setup
+
+logger = logger_setup(__name__)
 
 
 class WarnClear(commands.Cog):
@@ -14,7 +16,7 @@ class WarnClear(commands.Cog):
 
     Help = HelpData(
         category=HelpData.Category.Moderation,
-        dmOnly=False,
+        dm_only=False,
         serverOnly=True,
         subcommands=None,
         permissions=["`Kick, Approve and Reject Members`"],
@@ -114,10 +116,10 @@ class WarnClear(commands.Cog):
         # clears the warn with given id
         if warnId and isinstance(warnId, int):
             # trys to find if target user has the warn with given id or not
-            row = await db.fetchone(
-                """
-                SELECT * FROM warns
-                WHERE server_id = ? AND user_id = ? AND user_warn_id = ?;
+            row = await fetchone(
+                f"""
+                SELECT * FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ? AND {WarnTable.COL_USER_WARN_ID} = ?;
                 """,
                 (ctx.guild.id, target.id, warnId),
             )
@@ -128,10 +130,10 @@ class WarnClear(commands.Cog):
                 )
 
             # deletes the warn with given id
-            await db.execute(
-                """
-                DELETE FROM warns
-                WHERE server_id = ? AND user_id = ? AND user_warn_id = ?;
+            await execute(
+                f"""
+                DELETE FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ? AND {WarnTable.COL_USER_WARN_ID} = ?;
                 """,
                 (ctx.guild.id, target.id, warnId),
             )
@@ -144,10 +146,10 @@ class WarnClear(commands.Cog):
         # clears all warns of the target
         else:
             # trys to find if target user has any warn or not
-            row = await db.fetchall(
-                """
-                SELECT * FROM warns
-                WHERE server_id = ? AND user_id = ?;
+            row = await fetchall(
+                f"""
+                SELECT * FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ?;
                 """,
                 (ctx.guild.id, target.id),
             )
@@ -156,10 +158,10 @@ class WarnClear(commands.Cog):
                 return await ctx.reply(f"{target.display_name} has no warning.")
 
             # deletes all warns
-            await db.execute(
-                """
-                DELETE FROM warns
-                WHERE server_id = ? AND user_id = ?;
+            await execute(
+                f"""
+                DELETE FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ?;
                 """,
                 (ctx.guild.id, target.id),
             )
@@ -258,10 +260,10 @@ class WarnClear(commands.Cog):
         # clears the warn with given id
         if warn_id:
             # trys to find if target user has the warn with given id or not
-            row = await db.fetchone(
-                """
-                SELECT * FROM warns
-                WHERE server_id = ? AND user_id = ? AND user_warn_id = ?;
+            row = await fetchone(
+                f"""
+                SELECT * FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ? AND {WarnTable.COL_USER_WARN_ID} = ?;
                 """,
                 (interaction.guild.id, user.id, warn_id),
             )
@@ -272,10 +274,10 @@ class WarnClear(commands.Cog):
                 )
 
             # deletes the warn with given id
-            await db.execute(
-                """
-                DELETE FROM warns
-                WHERE server_id = ? AND user_id = ? AND user_warn_id = ?;
+            await execute(
+                f"""
+                DELETE FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ? AND {WarnTable.COL_USER_WARN_ID} = ?;
                 """,
                 (interaction.guild.id, user.id, warn_id),
             )
@@ -288,10 +290,10 @@ class WarnClear(commands.Cog):
         # clears all warns of the target
         else:
             # trys to find if target user has any warn or not
-            row = await db.fetchone(
-                """
-                SELECT * FROM warns
-                WHERE server_id = ? AND user_id = ?;
+            row = await fetchone(
+                f"""
+                SELECT * FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ?;
                 """,
                 (interaction.guild.id, user.id),
             )
@@ -302,10 +304,10 @@ class WarnClear(commands.Cog):
                 )
 
             # deletes all warns
-            await db.execute(
-                """
-                DELETE FROM warns
-                WHERE server_id = ? AND user_id = ?;
+            await execute(
+                f"""
+                DELETE FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ?;
                 """,
                 (interaction.guild.id, user.id),
             )

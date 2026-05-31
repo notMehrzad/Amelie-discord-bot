@@ -1,12 +1,14 @@
 import discord
-from discord.ext import commands
 from discord import app_commands
-from database import db
+from discord.ext import commands
+
 from cogs.anonymous.anonsend import privateIdLength
 from cogs.utility.help import HelpData
-from core.logHandler import loggerSetup
+from core.database import execute, fetchone
+from core.dbconstants import AnonContactTable
+from core.log_handler import logger_setup
 
-logger = loggerSetup(__name__)
+logger = logger_setup(__name__)
 
 
 class AnonBlock(commands.Cog):
@@ -15,13 +17,13 @@ class AnonBlock(commands.Cog):
 
     Help = HelpData(
         category=HelpData.Category.Anonymous,
-        dmOnly=True,
+        dm_only=True,
         serverOnly=False,
         subcommands=None,
         permissions=None,
         help=(
             "Blocks an Anonymous sender."
-            "\n\nThis action detemines that the Anonymous sender will be able to either message the user again or not."
+            "\n\nThis action determines that the Anonymous sender will be able to either message the user again or not."
             "\n\nIf user blocks an Anonymous sender, the Anonymous sender will get an error if they try to start a session with that user again."
         ),
         brief="Blocks or unblocks an Anonymous sender.",
@@ -41,9 +43,10 @@ class AnonBlock(commands.Cog):
             return await ctx.reply("This command can only be used in Amélie's dm.")
 
         # checks if the user has a public id
-        row = await db.fetchone(
+        row = await fetchone(
             """
-            SELECT public_id FROM anoneusers
+            SELECT public_id
+            FROM anoneusers
             WHERE user_id = ?;
             """,
             (ctx.author.id,),
@@ -64,10 +67,12 @@ class AnonBlock(commands.Cog):
             return await ctx.reply("Enter a valid private ID.")
 
         # checks if the user with given private id exists in user contact
-        row = await db.fetchone(
+        row = await fetchone(
             """
-            SELECT blocked from anonusercontact
-            WHERE user_id = ? AND contact_anon_id = ?;
+            SELECT blocked
+            from anonusercontact
+            WHERE user_id = ?
+              AND contact_anon_id = ?;
             """,
             (ctx.author.id, private_id),
         )
@@ -95,18 +100,19 @@ class AnonBlock(commands.Cog):
             return await ctx.reply("This anonymous user is Unblocked already.")
 
         # blocks or unblocks the target user
-        await db.execute(
-            """
-            UPDATE anonusercontact
-            SET blocked = ?
-            WHERE user_id = ? AND contact_anon_id = ?;
+        await execute(
+            f"""
+            UPDATE {AnonContactTable.TABLE_NAME}
+            SET {AnonContactTable.COL_BLOCKED} = ?
+            WHERE {AnonContactTable.COL_USER_ID} = ?
+            AND {AnonContactTable.COL_CONTACT_ANON_ID} = ?;
             """,
             (0 if unblock else 1, ctx.author.id, private_id),
         )
 
         # sends the result
         resultEmbed = discord.Embed(
-            description=f"Anonymous sender with private ID: {private_id} has been {"*Blocked*" if not unblock else "*Unblocked*"}.",
+            description=f"Anonymous sender with private ID: {private_id} has been {'*Blocked*' if not unblock else '*Unblocked*'}.",
             color=discord.Color.blurple(),
             timestamp=discord.utils.utcnow(),
         )
@@ -130,9 +136,10 @@ class AnonBlock(commands.Cog):
         self, interaction: discord.Interaction, private_id: str, unblock: bool = False
     ):
         # checks if the user has a public id
-        row = await db.fetchone(
+        row = await fetchone(
             """
-            SELECT public_id FROM anoneusers
+            SELECT public_id
+            FROM anoneusers
             WHERE user_id = ?;
             """,
             (interaction.user.id,),
@@ -150,10 +157,12 @@ class AnonBlock(commands.Cog):
             )
 
         # checks if the user with given private id exists in user contact
-        row = await db.fetchone(
+        row = await fetchone(
             """
-            SELECT blocked from anonusercontact
-            WHERE user_id = ? AND contact_anon_id = ?;
+            SELECT blocked
+            from anonusercontact
+            WHERE user_id = ?
+              AND contact_anon_id = ?;
             """,
             (interaction.user.id, private_id),
         )
@@ -175,18 +184,19 @@ class AnonBlock(commands.Cog):
             )
 
         # blocks or unblocks the target user
-        await db.execute(
-            """
-            UPDATE anonusercontact
-            SET blocked = ?
-            WHERE user_id = ? AND contact_anon_id = ?;
+        await execute(
+            f"""
+            UPDATE {AnonContactTable.TABLE_NAME}
+            SET {AnonContactTable.COL_BLOCKED} = ?
+            WHERE {AnonContactTable.COL_USER_ID} = ?
+            AND {AnonContactTable.COL_CONTACT_ANON_ID} = ?;
             """,
             (0 if unblock else 1, interaction.user.id, private_id),
         )
 
         # sends the result
         resultEmbed = discord.Embed(
-            description=f"Anonymous sender with private ID: {private_id} has been {"*Blocked*" if not unblock else "*Unblocked*"}.",
+            description=f"Anonymous sender with private ID: {private_id} has been {'*Blocked*' if not unblock else '*Unblocked*'}.",
             color=discord.Color.blurple(),
             timestamp=discord.utils.utcnow(),
         )

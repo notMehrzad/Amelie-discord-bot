@@ -1,11 +1,14 @@
+import json
+
 import discord
 from discord.ext import commands
-import json
-from database import db, Session
-from cogs.utility.help import HelpData
-from core.logHandler import loggerSetup
 
-logger = loggerSetup(__name__)
+from cogs.utility.help import HelpData
+from core.database import Session, execute, fetchone
+from core.dbconstants import TicketTable
+from core.log_handler import logger_setup
+
+logger = logger_setup(__name__)
 
 with open("config.json") as file:
     config = json.load(file)
@@ -17,7 +20,7 @@ class TicketHandle(commands.Cog):
 
     Help = HelpData(
         category=HelpData.Category.Dev,
-        dmOnly=False,
+        dm_only=False,
         serverOnly=False,
         subcommands=["respond", "close"],
         permissions=None,
@@ -80,10 +83,10 @@ class TicketHandle(commands.Cog):
             return
 
         # fetches the ticket data
-        row = await db.fetchone(
-            """
-            SELECT * FROM tickets
-            WHERE ticket_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT * FROM {TicketTable.TABLE_NAME}
+            WHERE {TicketTable.COL_ID} = ?;
             """,
             (ticketId,),
         )
@@ -108,10 +111,10 @@ class TicketHandle(commands.Cog):
                 await msg.delete(delay=5)
 
             # deletes the ticket
-            await db.execute(
-                """
-                DELETE FROM tickets
-                WHERE ticket_id = ?;
+            await execute(
+                f"""
+                DELETE FROM {TicketTable.TABLE_NAME}
+                WHERE {TicketTable.COL_ID} = ?;
                 """,
                 (ticketId,),
             )
@@ -144,11 +147,11 @@ class TicketHandle(commands.Cog):
         # close subcommand
         elif cmd == "close":
             # updates the ticket state
-            await db.execute(
-                """
-                UPDATE tickets
-                set state = ?, closed_at = ?
-                WHERE ticket_id = ?;
+            await execute(
+                f"""
+                UPDATE {TicketTable.TABLE_NAME}
+                set {TicketTable.COL_STATE} = ?, {TicketTable.COL_CLOSED_AT} = ?
+                WHERE {TicketTable.COL_ID} = ?;
                 """,
                 ("closed", discord.utils.utcnow(), ticketId),
             )
@@ -277,11 +280,11 @@ class TicketRespondView(discord.ui.View):
             await msg.reply(content=content, files=files, embeds=m.embeds)
 
         # updates the state of the ticket
-        await db.execute(
-            """
-            UPDATE tickets
-            SET state = ?, closed_at = ?
-            WHERE ticket_id = ?;
+        await execute(
+            f"""
+            UPDATE {TicketTable.TABLE_NAME}
+            SET {TicketTable.COL_STATE} = ?, {TicketTable.COL_CLOSED_AT} = ?
+            WHERE {TicketTable.COL_ID} = ?;
             """,
             ("closed", self.timestamp, self.ticketId),
         )

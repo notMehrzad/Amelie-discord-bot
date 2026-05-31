@@ -2,6 +2,7 @@
 
 import random
 from datetime import timedelta
+from typing import final
 
 import discord
 from discord import app_commands
@@ -9,25 +10,27 @@ from discord.ext import commands
 
 from core.bank import Account, get_account
 from core.database import execute
-from core.help import *
-from core.logHandler import loggerSetup
+from core.dbconstants import AccountTable
+from core.help import HelpData
+from core.log_handler import logger_setup
 from core.utils import timedelta_formater
 
 WORK_AMOUNT = 60
 WORK_COOLDOWN = 90  # minutes
 
-logger = loggerSetup(__name__)
+logger = logger_setup(__name__)
 
 
+@final
 class Sudoku:
     """
     The class that represents a sudoku puzzle.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.sudo = self.sudoGenerator()
 
-    def sudoGenerator(self):
+    def sudoGenerator(self) -> list[list[int]]:
         sudo: list[list[int]] = []
 
         sudo.append([])
@@ -61,27 +64,27 @@ class Sudoku:
 
         return sudo
 
-    def setLefty(self, n: int):
+    def setLefty(self, n: int) -> None:
         if n == self.lefty:
             self.sudo[self.leftyIndex[0]][self.leftyIndex[1]] = self.lefty
         else:
             raise ValueError("Incorrect lefty value.")
 
-    def setRighty(self, n: int):
+    def setRighty(self, n: int) -> None:
         if n == self.righty:
             self.sudo[self.rightyIndex[0]][self.rightyIndex[1]] = self.righty
         else:
             raise ValueError("Incorrect righty value.")
 
-    def __str__(self):
+    def __str__(self) -> str:
         sudoStr: list[str] = []
         for i in self.sudo:
             sudoStr.append(
                 " ".join(
                     (
-                        f"{i[j] if i[j] else "X"}"
+                        f"{i[j] if i[j] else 'X'}"
                         if j != 3
-                        else f"| {i[j] if i[j] else "X"}"
+                        else f"| {i[j] if i[j] else 'X'}"
                     )
                     for j in range(6)
                 )
@@ -90,12 +93,12 @@ class Sudoku:
 
 
 class Work(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
     Help = HelpData(
-        category=CommandCategory.ECONOMY,
-        dmOnly=False,
+        category=HelpData.CommandCategory.ECONOMY,
+        dm_only=False,
         serverOnly=False,
         subcommands=None,
         permissions=None,
@@ -106,7 +109,7 @@ class Work(commands.Cog):
     )
 
     @commands.command(name="work", **Help.kwargs)
-    async def work(self, ctx: commands.Context[commands.Bot]):
+    async def work(self, ctx: commands.Context[commands.Bot]) -> discord.Message | None:
         # trys to fetch the user's account
         account = await get_account(ctx.author.id)
 
@@ -131,13 +134,17 @@ class Work(commands.Cog):
         await view.start()
 
     @work.error
-    async def work_error(self, ctx: commands.Context[commands.Bot], error: Exception):
-        logger.exception(f"❌ something went wrong with work command:")
+    async def work_error(
+        self, ctx: commands.Context[commands.Bot], error: Exception
+    ) -> None:
+        logger.exception("❌ something went wrong with work command:")
         await ctx.reply("something went wrong with **work**.")
 
     # work slash command
     @app_commands.command(name="work", description=Help.brief, extras=Help.extras)
-    async def slashWork(self, interaction: discord.Interaction):
+    async def slashWork(
+        self, interaction: discord.Interaction
+    ) -> discord.InteractionCallbackResponse[discord.Client] | None:
         # trys to fetch the user's account
         account = await get_account(interaction.user.id)
 
@@ -164,8 +171,10 @@ class Work(commands.Cog):
         await view.start()
 
     @slashWork.error
-    async def slashWork_error(self, interaction: discord.Interaction, error: Exception):
-        logger.exception(f"❌ something went wrong with /work command:")
+    async def slashWork_error(
+        self, interaction: discord.Interaction, error: Exception
+    ) -> None:
+        logger.exception("❌ something went wrong with /work command:")
         try:
             await interaction.response.send_message(
                 "something went wrong with **work**.", ephemeral=True
@@ -182,7 +191,7 @@ class WorkView(discord.ui.View):
         ctx: commands.Context[commands.Bot] | discord.Interaction,
         *,
         account: Account,
-    ):
+    ) -> None:
         super().__init__(timeout=90)
         if isinstance(ctx, discord.Interaction):
             self.slash = True
@@ -216,13 +225,11 @@ class WorkView(discord.ui.View):
             button.callback = self.leftyBtnsCallback(i)
             self.add_item(button)
 
-    async def start(self):
+    async def start(self) -> None:
         # sends the initial message
         sudokuEmbed = discord.Embed(
             title="Work ⛏️",
-            description=(
-                "Solve this Sudoku puzzle to earn your fee." f"\n\n{self.sudo}"
-            ),
+            description=(f"Solve this Sudoku puzzle to earn your fee.\n\n{self.sudo}"),
             color=discord.Color.blurple(),
         )
         if self.slash:
@@ -231,7 +238,9 @@ class WorkView(discord.ui.View):
             self.msg = await self.ctx.reply(embed=sudokuEmbed, view=self)
 
     def leftyBtnsCallback(self, value: int):
-        async def callback(interaction: discord.Interaction):
+        async def callback(
+            interaction: discord.Interaction,
+        ) -> discord.InteractionCallbackResponse[discord.Client] | None:
             # checks that only the user can interact with the buttons
             if interaction.user.id != self.user.id:
                 return await interaction.response.send_message(
@@ -259,7 +268,7 @@ class WorkView(discord.ui.View):
             sudokuEmbed = discord.Embed(
                 title="Work ⛏️",
                 description=(
-                    "Solve this Sudoku puzzle to earn your fee." f"\n\n{self.sudo}"
+                    f"Solve this Sudoku puzzle to earn your fee.\n\n{self.sudo}"
                 ),
                 color=discord.Color.blurple(),
             )
@@ -268,7 +277,9 @@ class WorkView(discord.ui.View):
         return callback
 
     def rightyBtnsCallback(self, value: int):
-        async def callback(interaction: discord.Interaction):
+        async def callback(
+            interaction: discord.Interaction,
+        ) -> discord.InteractionCallbackResponse[discord.Client] | None:
             # checks that only the user can interact with the buttons
             if interaction.user.id != self.user.id:
                 return await interaction.response.send_message(
@@ -288,10 +299,10 @@ class WorkView(discord.ui.View):
 
             # updates the last work date
             await execute(
-                """
-                UPDATE bank_account
-                SET last_work_date = ?
-                WHERE user_id = ?;
+                f"""
+                UPDATE {AccountTable.TABLE_NAME}
+                SET {AccountTable.COL_LAST_WORK_DATE} = ?
+                WHERE {AccountTable.COL_USER_ID} = ?;
                 """,
                 (int(self.timestamp.timestamp()), self.user.id),
             )
@@ -313,7 +324,7 @@ class WorkView(discord.ui.View):
 
         return callback
 
-    async def on_timeout(self):
+    async def on_timeout(self) -> None:
         # disables buttons on timeout
         for btn in self.children:
             if isinstance(btn, discord.ui.Button):
@@ -344,7 +355,7 @@ class WorkView(discord.ui.View):
         interaction: discord.Interaction,
         error: Exception,
         item: discord.ui.Item[discord.ui.View],
-    ):
+    ) -> None:
         logger.exception(
             f"❌ something went wrong with work interaction - button: {getattr(item, 'label', 'unknown')}"
         )
@@ -360,5 +371,5 @@ class WorkView(discord.ui.View):
         self.stop()  # stops the view upon error
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Work(bot))
