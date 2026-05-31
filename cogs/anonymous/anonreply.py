@@ -1,12 +1,14 @@
 import discord
-from discord.ext import commands
 from discord import app_commands
-from database import db
+from discord.ext import commands
+
 from cogs.anonymous.anonsend import privateIdLength
 from cogs.utility.help import HelpData
-from core.logHandler import loggerSetup
+from core.log_handler import logger_setup
+from core.database import execute, fetchone
+from core.dbconstants import AnonUserTable, AnonContactTable, AnonSessionTable
 
-logger = loggerSetup(__name__)
+logger = logger_setup(__name__)
 
 
 class AnonReply(commands.Cog):
@@ -15,7 +17,7 @@ class AnonReply(commands.Cog):
 
     Help = HelpData(
         category=HelpData.Category.Anonymous,
-        dmOnly=True,
+        dm_only=True,
         serverOnly=False,
         subcommands=None,
         permissions=None,
@@ -42,10 +44,10 @@ class AnonReply(commands.Cog):
             return await ctx.reply("This command can only be used in Amélie's dm.")
 
         # checks if user has a public id
-        row = await db.fetchone(
-            """
-            SELECT 1 FROM anonusers
-            WHERE user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT 1 FROM {AnonUserTable.TABLE_NAME}
+            WHERE {AnonUserTable.COL_USER_ID} = ?;
             """,
             (ctx.author.id,),
         )
@@ -65,10 +67,10 @@ class AnonReply(commands.Cog):
             return await ctx.reply("Enter a valid private ID.")
 
         # checks if target private id is in user's anon contact
-        row = await db.fetchone(
-            """
-            SELECT contact_id, blocked FROM anonusercontact
-            WHERE user_id = ? AND contact_anon_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {AnonContactTable.COL_CONTACT_ID}, {AnonContactTable.COL_BLOCKED} FROM {AnonContactTable.TABLE_NAME}
+            WHERE {AnonContactTable.COL_USER_ID} = ? AND {AnonContactTable.COL_CONTACT_ANON_ID} = ?;
             """,
             (ctx.author.id, private_id),
         )
@@ -84,16 +86,14 @@ class AnonReply(commands.Cog):
         try:
             contactUser = self.bot.get_user(
                 row["contact_id"]
-            ) or await self.bot.fetch_user(
-                row["contact_id"]
-            )  # fetchs the sender user
+            ) or await self.bot.fetch_user(row["contact_id"])  # fetchs the sender user
 
         # if user doesn't exist anymore, deletes the contact
         except discord.NotFound:
-            await db.execute(
-                """
-                DELETE FROM anonusercontact
-                WHERE user_id = ? AND contact_id = ?;
+            await execute(
+                f"""
+                DELETE FROM {AnonContactTable.TABLE_NAME}
+                WHERE {AnonContactTable.COL_USER_ID} = ? AND {AnonContactTable.COL_CONTACT_ID} = ?;
                 """,
                 (ctx.author.id, row["contact_id"]),
             )
@@ -110,10 +110,10 @@ class AnonReply(commands.Cog):
             return await ctx.reply("Enter a valid session ID.")
 
         # checks if session id with target private id exists in sessions
-        row = await db.fetchone(
-            """
-            SELECT contact_message_collector_id, responded FROM anonsessions
-            WHERE session_id = ? AND reciever_id = ? AND contact_anon_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {AnonSessionTable.COL_CONTACT_MESSAGE_COLLECTOR_ID}, {AnonSessionTable.COL_RESPONDED} FROM {AnonSessionTable.TABLE_NAME}
+            WHERE {AnonSessionTable.COL_SESSION_ID} = ? AND {AnonSessionTable.COL_RECEIVER_ID} = ? AND {AnonSessionTable.COL_CONTACT_ANON_ID} = ?;
             """,
             (session_id, ctx.author.id, private_id),
         )
@@ -159,11 +159,11 @@ class AnonReply(commands.Cog):
             await msg.reply(message)
 
         # updates session status to responded
-        await db.execute(
-            """
-            UPDATE anonsessions
-            SET responded = ?
-            WHERE session_id = ? AND reciever_id = ? AND contact_anon_id = ?;
+        await execute(
+            f"""
+            UPDATE {AnonSessionTable.TABLE_NAME}
+            SET {AnonSessionTable.COL_RESPONDED} = ?
+            WHERE {AnonSessionTable.COL_SESSION_ID} = ? AND {AnonSessionTable.COL_RECEIVER_ID} = ? AND {AnonSessionTable.COL_CONTACT_ANON_ID} = ?;
             """,
             (1, session_id, ctx.author.id, private_id),
         )
@@ -199,10 +199,10 @@ class AnonReply(commands.Cog):
         message: str,
     ):
         # checks if user has a public id
-        row = await db.fetchone(
-            """
-            SELECT 1 FROM anonusers
-            WHERE user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT 1 FROM {AnonUserTable.TABLE_NAME}
+            WHERE {AnonUserTable.COL_USER_ID} = ?;
             """,
             (interaction.user.id,),
         )
@@ -218,10 +218,10 @@ class AnonReply(commands.Cog):
             )
 
         # checks if target private id is in user's anon contact
-        row = await db.fetchone(
-            """
-            SELECT contact_id, blocked FROM anonusercontact
-            WHERE user_id = ? AND contact_anon_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {AnonContactTable.COL_CONTACT_ID}, {AnonContactTable.COL_BLOCKED} FROM {AnonContactTable.TABLE_NAME}
+            WHERE {AnonContactTable.COL_USER_ID} = ? AND {AnonContactTable.COL_CONTACT_ANON_ID} = ?;
             """,
             (interaction.user.id, private_id),
         )
@@ -239,16 +239,14 @@ class AnonReply(commands.Cog):
         try:
             contactUser = self.bot.get_user(
                 row["contact_id"]
-            ) or await self.bot.fetch_user(
-                row["contact_id"]
-            )  # fetchs the sender user
+            ) or await self.bot.fetch_user(row["contact_id"])  # fetchs the sender user
 
         # if user doesn't exist anymore, deletes the contact
         except discord.NotFound:
-            await db.execute(
-                """
-                DELETE FROM anonusercontact
-                WHERE user_id = ? AND contact_id = ?;
+            await execute(
+                f"""
+                DELETE FROM {AnonContactTable.TABLE_NAME}
+                WHERE {AnonContactTable.COL_USER_ID} = ? AND {AnonContactTable.COL_CONTACT_ID} = ?;
                 """,
                 (interaction.user.id, row["contact_id"]),
             )
@@ -258,10 +256,10 @@ class AnonReply(commands.Cog):
             )
 
         # checks if session id with target private id exists in sessions
-        row = await db.fetchone(
-            """
-            SELECT contact_message_collector_id, responded FROM anonsessions
-            WHERE session_id = ? AND reciever_id = ? AND contact_anon_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {AnonSessionTable.COL_CONTACT_MESSAGE_COLLECTOR_ID}, {AnonSessionTable.COL_RESPONDED} FROM {AnonSessionTable.TABLE_NAME}
+            WHERE {AnonSessionTable.COL_SESSION_ID} = ? AND {AnonSessionTable.COL_RECEIVER_ID} = ? AND {AnonSessionTable.COL_CONTACT_ANON_ID} = ?;
             """,
             (session_id, interaction.user.id, private_id),
         )
@@ -305,11 +303,11 @@ class AnonReply(commands.Cog):
             await msg.reply(message)
 
         # updates session status to responded
-        await db.execute(
-            """
-            UPDATE anonsessions
-            SET responded = ?
-            WHERE session_id = ? AND reciever_id = ? AND contact_anon_id = ?;
+        await execute(
+            f"""
+            UPDATE {AnonSessionTable.TABLE_NAME}
+            SET {AnonSessionTable.COL_RESPONDED} = ?
+            WHERE {AnonSessionTable.COL_SESSION_ID} = ? AND {AnonSessionTable.COL_RECEIVER_ID} = ? AND {AnonSessionTable.COL_CONTACT_ANON_ID} = ?;
             """,
             (1, session_id, interaction.user.id, private_id),
         )

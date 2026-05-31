@@ -1,11 +1,14 @@
+import json
+
 import discord
 from discord.ext import commands
-import json
-from database import db
-from cogs.utility.help import HelpData
-from core.logHandler import loggerSetup
 
-logger = loggerSetup(__name__)
+from cogs.utility.help import HelpData
+from core.database import execute
+from core.dbconstants import WarnTable
+from core.log_handler import logger_setup
+
+logger = logger_setup(__name__)
 
 with open("config.json") as file:
     config = json.load(file)
@@ -17,7 +20,7 @@ class ModWarnDelete(commands.Cog):
 
     Help = HelpData(
         category=HelpData.Category.Dev,
-        dmOnly=False,
+        dm_only=False,
         serverOnly=False,
         subcommands=["all", "server", "user"],
         permissions=None,
@@ -49,7 +52,8 @@ class ModWarnDelete(commands.Cog):
         # if user doesn't enter a subcommand
         if not cmd:
             await ctx.reply(
-                "You must enter a subcommand for this command.", delete_after=5
+                "You must enter a subcommand for this command.",
+                delete_after=5,
             )
             await ctx.message.delete(delay=5)
             return
@@ -58,8 +62,10 @@ class ModWarnDelete(commands.Cog):
 
         # deletes all warns table data
         if cmd == "all":
-            await db.execute("DELETE FROM warns;")
-            await db.execute("DELETE FROM sqlite_sequence WHERE name='warns';")
+            await execute(f"DELETE FROM {WarnTable.TABLE_NAME};")
+            await execute(
+                f"DELETE FROM sqlite_sequence WHERE name='{WarnTable.TABLE_NAME}';",
+            )
 
             await ctx.reply("All warnings have been cleared.", delete_after=5)
             await ctx.message.delete(delay=5)
@@ -90,10 +96,10 @@ class ModWarnDelete(commands.Cog):
                 await ctx.message.delete(delay=5)
                 return
 
-            await db.execute(
-                """
-                DELETE FROM warns
-                WHERE server_id = ?
+            await execute(
+                f"""
+                DELETE FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ?
                 """,
                 (server.id,),
             )
@@ -129,10 +135,10 @@ class ModWarnDelete(commands.Cog):
                 await ctx.message.delete(delay=5)
                 return
 
-            await db.execute(
-                """
-                DELETE FROM warns
-                WHERE user_id = ?
+            await execute(
+                f"""
+                DELETE FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ?
                 """,
                 (target.id,),
             )

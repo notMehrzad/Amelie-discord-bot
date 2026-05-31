@@ -1,11 +1,13 @@
 import discord
-from discord.ext import commands
 from discord import app_commands
-from database import db
-from cogs.utility.help import HelpData
-from core.logHandler import loggerSetup
+from discord.ext import commands
 
-logger = loggerSetup(__name__)
+from cogs.utility.help import HelpData
+from core.database import execute, fetchall
+from core.dbconstants import WarnTable
+from core.log_handler import logger_setup
+
+logger = logger_setup(__name__)
 
 
 class WarnList(commands.Cog):
@@ -14,7 +16,7 @@ class WarnList(commands.Cog):
 
     Help = HelpData(
         category=HelpData.Category.Moderation,
-        dmOnly=False,
+        dm_only=False,
         serverOnly=True,
         subcommands=None,
         permissions=["`Kick, Approve and Reject Members`"],
@@ -74,11 +76,11 @@ class WarnList(commands.Cog):
                 return await ctx.reply("Bots have no warning for you to see.")
 
             # searchs database with given arguments
-            row = await db.fetchall(
-                """
-                SELECT * FROM warns
-                WHERE server_id = ? AND user_id = ?
-                ORDER BY timestamp;
+            row = await fetchall(
+                f"""
+                SELECT * FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ?
+                ORDER BY {WarnTable.COL_TIMESTAMP};
                 """,
                 (ctx.guild.id, target.id),
             )
@@ -101,7 +103,7 @@ class WarnList(commands.Cog):
                     moderatorName = (
                         moderatorUser.mention if moderatorUser else "*unknown*"
                     )
-                    desc = f"{number}. Warn ID: {warn['user_warn_id']} | Reason: {warn['reason'] if warn['reason'] else "*no reason provided*"} | Moderator: {moderatorName} | Date: {warn['timestamp']}"
+                    desc = f"{number}. Warn ID: {warn['user_warn_id']} | Reason: {warn['reason'] if warn['reason'] else '*no reason provided*'} | Moderator: {moderatorName} | Date: {warn['timestamp']}"
                     warns.append(desc)
 
             resultEmbed = discord.Embed(
@@ -116,11 +118,11 @@ class WarnList(commands.Cog):
         # shows all warn list
         else:
             # searchs database with given arguments
-            row = await db.fetchall(
-                """
-                SELECT * FROM warns
-                WHERE server_id = ?
-                ORDER BY timestamp;
+            row = await fetchall(
+                f"""
+                SELECT * FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ?
+                ORDER BY {WarnTable.COL_TIMESTAMP};
                 """,
                 (ctx.guild.id,),
             )
@@ -135,10 +137,10 @@ class WarnList(commands.Cog):
                         ) or await self.bot.fetch_user(warn["user_id"])
                     except discord.NotFound:
                         # if fetched target user doesn't exist, deletes the warning
-                        await db.execute(
-                            """
-                            DELETE FROM warns
-                            WHERE warn_id = ?;
+                        await execute(
+                            f"""
+                            DELETE FROM {WarnTable.TABLE_NAME}
+                            WHERE {WarnTable.COL_ID} = ?;
                             """,
                             (warn["warn_id"],),
                         )
@@ -159,7 +161,7 @@ class WarnList(commands.Cog):
                     moderatorName = (
                         moderatorUser.mention if moderatorUser else "*unknown*"
                     )
-                    desc = f"{number}. Warn ID: {warn['user_warn_id']} | User: {target.display_name} | Reason: {warn['reason'] if warn['reason'] else "*no reason provided*"} | Moderator: {moderatorName} | Date: {warn['timestamp']}"
+                    desc = f"{number}. Warn ID: {warn['user_warn_id']} | User: {target.display_name} | Reason: {warn['reason'] if warn['reason'] else '*no reason provided*'} | Moderator: {moderatorName} | Date: {warn['timestamp']}"
                     warns.append(desc)
 
             resultEmbed = discord.Embed(
@@ -231,11 +233,11 @@ class WarnList(commands.Cog):
                 )
 
             # searchs database with given arguments
-            row = await db.fetchall(
-                """
-                SELECT * FROM warns
-                WHERE server_id = ? AND user_id = ?
-                ORDER BY timestamp;
+            row = await fetchall(
+                f"""
+                SELECT * FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ?
+                ORDER BY {WarnTable.COL_TIMESTAMP};
                 """,
                 (interaction.guild.id, user.id),
             )
@@ -258,7 +260,7 @@ class WarnList(commands.Cog):
                     moderatorName = (
                         moderatorUser.mention if moderatorUser else "*unknown*"
                     )
-                    desc = f"{number}. Warn ID: {warn['user_warn_id']} | Reason: {warn['reason'] if warn['reason'] else "*no reason provided*"} | Moderator: {moderatorName} | Date: {warn["timestamp"]}"
+                    desc = f"{number}. Warn ID: {warn['user_warn_id']} | Reason: {warn['reason'] if warn['reason'] else '*no reason provided*'} | Moderator: {moderatorName} | Date: {warn['timestamp']}"
                     warns.append(desc)
 
             resultEmbed = discord.Embed(
@@ -273,11 +275,11 @@ class WarnList(commands.Cog):
         # shows all warn list
         else:
             # searchs database with given arguments
-            row = await db.fetchall(
-                """
-                SELECT * FROM warns
-                WHERE server_id = ?
-                ORDER BY timestamp;
+            row = await fetchall(
+                f"""
+                SELECT * FROM {WarnTable.TABLE_NAME}
+                WHERE {WarnTable.COL_SERVER_ID} = ?
+                ORDER BY {WarnTable.COL_TIMESTAMP};
                 """,
                 (interaction.guild.id,),
             )
@@ -292,10 +294,10 @@ class WarnList(commands.Cog):
                         ) or await self.bot.fetch_user(warn["user_id"])
                     except discord.NotFound:
                         # if fetched target user doesn't exist, deletes the warning
-                        await db.execute(
-                            """
-                            DELETE FROM warns
-                            WHERE warn_id = ?;
+                        await execute(
+                            f"""
+                            DELETE FROM {WarnTable.TABLE_NAME}
+                            WHERE {WarnTable.COL_ID} = ?;
                             """,
                             (warn["warn_id"],),
                         )
@@ -316,7 +318,7 @@ class WarnList(commands.Cog):
                     moderatorName = (
                         moderatorUser.mention if moderatorUser else "*unknown*"
                     )
-                    desc = f"{number}. Warn ID: {warn['user_warn_id']} | User: {target.display_name} | Reason: {warn['reason'] if warn['reason'] else "*no reason provided*"} | Moderator: {moderatorName} | Date: {warn['timestamp']}"
+                    desc = f"{number}. Warn ID: {warn['user_warn_id']} | User: {target.display_name} | Reason: {warn['reason'] if warn['reason'] else '*no reason provided*'} | Moderator: {moderatorName} | Date: {warn['timestamp']}"
                     warns.append(desc)
 
             resultEmbed = discord.Embed(

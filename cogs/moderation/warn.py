@@ -1,11 +1,13 @@
 import discord
-from discord.ext import commands
 from discord import app_commands
-from database import db
-from cogs.utility.help import HelpData
-from core.logHandler import loggerSetup
+from discord.ext import commands
 
-logger = loggerSetup(__name__)
+from cogs.utility.help import HelpData
+from core.database import execute, fetchone
+from core.dbconstants import WarnTable
+from core.log_handler import logger_setup
+
+logger = logger_setup(__name__)
 
 warnLimit = 3  # allowed number of warnings before getting kicked
 
@@ -16,7 +18,7 @@ class Warn(commands.Cog):
 
     Help = HelpData(
         category=HelpData.Category.Moderation,
-        dmOnly=False,
+        dm_only=False,
         serverOnly=True,
         subcommands=None,
         permissions=["`Kick, Approve and Reject Members`"],
@@ -106,21 +108,21 @@ class Warn(commands.Cog):
 
         # warns the target
         # creates the warn ID based on the last warn id
-        row = await db.fetchone(
-            """
-            SELECT COALESCE(MAX(user_warn_id), 0) + 1
-            FROM warns
-            WHERE server_id = ? AND user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT COALESCE(MAX({WarnTable.COL_USER_WARN_ID}), 0) + 1
+            FROM {WarnTable.TABLE_NAME}
+            WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ?;
             """,
             (ctx.guild.id, target.id),
         )
         warnID: int = row[0] if row else 1
 
         # inserts a new warn for given target
-        await db.execute(
-            """
-            INSERT INTO warns (server_id, user_warn_id, mod_id, user_id, reason, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?);
+        await execute(
+            f"""
+            INSERT INTO {WarnTable.TABLE_NAME} ({WarnTable.columns()})
+            VALUES (?, ?, ?, ?, ?, ?, ?);
             """,
             (
                 ctx.guild.id,
@@ -133,10 +135,10 @@ class Warn(commands.Cog):
         )
 
         # counts the number of warns the target has
-        row = await db.fetchone(
-            """
-            SELECT COUNT(*) FROM warns
-            WHERE server_id = ? AND user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT COUNT(*) FROM {WarnTable.TABLE_NAME}
+            WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ?;
             """,
             (ctx.guild.id, target.id),
         )
@@ -246,21 +248,21 @@ class Warn(commands.Cog):
 
         # warns the target
         # creates the warn ID based on the last warn id
-        row = await db.fetchone(
-            """
-            SELECT COALESCE(MAX(user_warn_id), 0) + 1
-            FROM warns
-            WHERE server_id = ? AND user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT COALESCE(MAX({WarnTable.COL_USER_WARN_ID}), 0) + 1
+            FROM {WarnTable.TABLE_NAME}
+            WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ?;
             """,
             (interaction.guild.id, user.id),
         )
         warnID: int = row[0] if row else 1
 
         # inserts a new warn for given target
-        await db.execute(
-            """
-            INSERT INTO warns (server_id, user_warn_id, mod_id, user_id, reason, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?);
+        await execute(
+            f"""
+            INSERT INTO {WarnTable.TABLE_NAME} ({WarnTable.columns()})
+            VALUES (?, ?, ?, ?, ?, ?, ?);
             """,
             (
                 interaction.guild.id,
@@ -273,10 +275,10 @@ class Warn(commands.Cog):
         )
 
         # counts the number of warns the target has
-        row = await db.fetchone(
-            """
-            SELECT COUNT(*) FROM warns
-            WHERE server_id = ? AND user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT COUNT(*) FROM {WarnTable.TABLE_NAME}
+            WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ?;
             """,
             (interaction.guild.id, user.id),
         )
@@ -373,20 +375,20 @@ class Warn(commands.Cog):
                 "نمی توانم عضوی با رول *بالاتر یا برابر* از خودم را گزارش کنم."
             )
 
-        row = await db.fetchone(
-            """
-            SELECT COALESCE(MAX(user_warn_id), 0) + 1
-            FROM warns
-            WHERE server_id = ? AND user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT COALESCE(MAX({WarnTable.COL_USER_WARN_ID}), 0) + 1
+            FROM {WarnTable.TABLE_NAME}
+            WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ?;
             """,
             (msg.guild.id, target.id),
         )
         warnID: int = row[0] if row else 1
 
-        await db.execute(
-            """
-            INSERT INTO warns (server_id, user_warn_id, mod_id, user_id, reason, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?);
+        await execute(
+            f"""
+            INSERT INTO {WarnTable.TABLE_NAME} ({WarnTable.columns()})
+            VALUES (?, ?, ?, ?, ?, ?, ?);
             """,
             (
                 msg.guild.id,
@@ -398,10 +400,10 @@ class Warn(commands.Cog):
             ),
         )
 
-        row = await db.fetchone(
-            """
-            SELECT COUNT(*) FROM warns
-            WHERE server_id = ? AND user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT COUNT(*) FROM {WarnTable.TABLE_NAME}
+            WHERE {WarnTable.COL_SERVER_ID} = ? AND {WarnTable.COL_USER_ID} = ?;
             """,
             (msg.guild.id, target.id),
         )

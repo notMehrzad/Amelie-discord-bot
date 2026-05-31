@@ -1,12 +1,14 @@
 import discord
-from discord.ext import commands
 from discord import app_commands
-from database import db, Session
-from cogs.utility.help import HelpData
-from cogs.anonymous.anonid import idGenerator, publicIdLength
-from core.logHandler import loggerSetup
+from discord.ext import commands
 
-logger = loggerSetup(__name__)
+from cogs.anonymous.anonid import idGenerator, publicIdLength
+from cogs.utility.help import HelpData
+from core.database import Session, execute, fetchone
+from core.dbconstants import AnonContactTable, AnonSessionTable, AnonUserTable
+from core.log_handler import logger_setup
+
+logger = logger_setup(__name__)
 
 privateIdLength = 6  # the length of the private ids
 
@@ -14,10 +16,10 @@ privateIdLength = 6  # the length of the private ids
 async def privateIdGenerator(recieverUserId: int):
     while True:
         privateId = idGenerator(privateIdLength)
-        row = await db.fetchone(
-            """
-            SELECT 1 FROM anonusercontact
-            WHERE user_id = ? AND contact_anon_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT 1 FROM {AnonContactTable.TABLE_NAME}
+            WHERE {AnonContactTable.COL_USER_ID} = ? AND {AnonContactTable.COL_CONTACT_ANON_ID} = ?;
             """,
             (recieverUserId, privateId),
         )
@@ -31,7 +33,7 @@ class AnonSend(commands.Cog):
 
     Help = HelpData(
         category=HelpData.Category.Anonymous,
-        dmOnly=True,
+        dm_only=True,
         serverOnly=False,
         subcommands=None,
         permissions=None,
@@ -71,10 +73,10 @@ class AnonSend(commands.Cog):
             return await ctx.reply("Enter a valid public ID.")
 
         # checks if a user with given public id exists
-        row = await db.fetchone(
-            """
-            SELECT user_id FROM anonusers
-            WHERE public_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {AnonUserTable.COL_USER_ID} FROM {AnonUserTable.TABLE_NAME}
+            WHERE {AnonUserTable.COL_PUBLIC_ID} = ?;
             """,
             (public_id,),
         )
@@ -87,19 +89,19 @@ class AnonSend(commands.Cog):
         )  # fetches the reciever user
 
         # fetches the reciever's anon contacts
-        row = await db.fetchone(
-            """
-            SELECT contact_anon_id, blocked from anonusercontact
-            WHERE user_id = ? AND contact_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {AnonContactTable.COL_CONTACT_ANON_ID}, {AnonContactTable.COL_BLOCKED} from {AnonContactTable.TABLE_NAME}
+            WHERE {AnonContactTable.COL_USER_ID} = ? AND {AnonContactTable.COL_CONTACT_ID} = ?;
             """,
             (recieverUser.id, ctx.author.id),
         )
         # if user is not in the target's anon contacts, creates one
         if not row:
             newId = await privateIdGenerator(recieverUser.id)
-            await db.execute(
-                """
-                INSERT INTO anonusercontact (user_id, contact_id, contact_anon_id)
+            await execute(
+                f"""
+                INSERT INTO {AnonContactTable.TABLE_NAME} ({AnonContactTable.columns()})
                 VALUES (?, ?, ?);
                 """,
                 (recieverUser.id, ctx.author.id, newId),
@@ -155,10 +157,10 @@ class AnonSend(commands.Cog):
             )
 
         # checks if a user with given public id exists
-        row = await db.fetchone(
-            """
-            SELECT user_id FROM anonusers
-            WHERE public_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {AnonUserTable.COL_USER_ID} FROM {AnonUserTable.TABLE_NAME}
+            WHERE {AnonUserTable.COL_PUBLIC_ID} = ?;
             """,
             (public_id,),
         )
@@ -173,19 +175,19 @@ class AnonSend(commands.Cog):
         )  # fetches the reciever user
 
         # fetches the reciever's anon contacts
-        row = await db.fetchone(
-            """
-            SELECT contact_anon_id, blocked from anonusercontact
-            WHERE user_id = ? AND contact_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {AnonContactTable.COL_CONTACT_ANON_ID}, {AnonContactTable.COL_BLOCKED} from {AnonContactTable.TABLE_NAME}
+            WHERE {AnonContactTable.COL_USER_ID} = ? AND {AnonContactTable.COL_CONTACT_ID} = ?;
             """,
             (recieverUser.id, interaction.user.id),
         )
         # if user is not in the target's anon contacts, creates one
         if not row:
             newId = await privateIdGenerator(recieverUser.id)
-            await db.execute(
-                """
-                INSERT INTO anonusercontact (user_id, contact_id, contact_anon_id)
+            await execute(
+                f"""
+                INSERT INTO {AnonContactTable.TABLE_NAME} ({AnonContactTable.columns()})
                 VALUES (?, ?, ?);
                 """,
                 (recieverUser.id, interaction.user.id, newId),
@@ -309,21 +311,21 @@ class AnonView(discord.ui.View):
             return
 
         # creates the session id
-        row = await db.fetchone(
-            """
-            SELECT COALESCE(MAX(session_id), 0) + 1
-            FROM anonsessions
-            WHERE reciever_id = ? AND contact_anon_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT COALESCE(MAX({AnonSessionTable.COL_SESSION_ID}), 0) + 1
+            FROM {AnonSessionTable.TABLE_NAME}
+            WHERE {AnonSessionTable.COL_RECEIVER_ID} = ? AND {AnonSessionTable.COL_CONTACT_ANON_ID} = ?;
             """,
             (self.recieverUser.id, self.private_id),
         )
         sessionId: int = row[0] if row else 1
 
         # stores the session in the database
-        await db.execute(
-            """
-            INSERT INTO anonsessions (session_id, reciever_id, contact_anon_id, contact_message_collector_id, session_date)
-            VALUES (?, ?, ?, ?, ?);
+        await execute(
+            f"""
+            INSERT INTO {AnonSessionTable.TABLE_NAME} ({AnonSessionTable.columns()})
+            VALUES (?, ?, ?, ?, ?, ?, ?);
             """,
             (sessionId, self.recieverUser.id, self.private_id, self.msgId, timestamp),
         )

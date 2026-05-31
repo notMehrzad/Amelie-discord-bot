@@ -5,20 +5,21 @@ from discord import app_commands
 from discord.ext import commands
 
 from core.database import execute, fetchone
-from cogs.economy.itemshop import items
-from core.help import *
-from core.logHandler import loggerSetup
+from core.dbconstants import AccountTable, InventoryTable
+from core.help import HelpData
+from core.itemshop import ITEMS
+from core.log_handler import logger_setup
 
-logger = loggerSetup(__name__)
+logger = logger_setup(__name__)
 
 
 class Buy(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
     Help = HelpData(
-        category=CommandCategory.ECONOMY,
-        dmOnly=False,
+        category=HelpData.CommandCategory.ECONOMY,
+        dm_only=False,
         serverOnly=False,
         subcommands=None,
         permissions=None,
@@ -34,12 +35,12 @@ class Buy(commands.Cog):
         ctx: commands.Context[commands.Bot],
         item: str | None,
         quantity: int | str = 1,
-    ):
+    ) -> discord.Message | None:
         # trys to fetch user's balance
         row = await fetchone(
-            """
-            SELECT balance FROM user
-            WHERE user_id = ?;
+            f"""
+            SELECT balance FROM {AccountTable.TABLE_NAME}
+            WHERE {AccountTable.COL_USER_ID} = ?;
             """,
             (ctx.author.id,),
         )
@@ -55,7 +56,7 @@ class Buy(commands.Cog):
 
         # checks if entered item is available
         match = None
-        for i in items:
+        for i in ITEMS:
             if i.name == item.lower():
                 match = i
         if not match:
@@ -73,28 +74,28 @@ class Buy(commands.Cog):
 
         # updates user's balance
         await execute(
-            """
-            UPDATE user
-            SET balance = ?
-            WHERE user_id = ?;
+            f"""
+            UPDATE {AccountTable.TABLE_NAME}
+            SET {AccountTable.COL_BALANCE} = ?
+            WHERE {AccountTable.COL_USER_ID} = ?;
             """,
             (row["balance"] - (match.price * quantity), ctx.author.id),
         )
 
         row = await fetchone(
-            """
-            SELECT quantity FROM inventory
-            WHERE user_id = ? AND item_name = ?;
+            f"""
+            SELECT {InventoryTable.COL_QUANTITY} FROM {InventoryTable.TABLE_NAME}
+            WHERE {InventoryTable.COL_USER_ID} = ? AND {InventoryTable.COL_ITEM_NAME} = ?;
             """,
             (ctx.author.id, match.name),
         )
         # if user already has the item in the inventory, updates quantity
         if row:
             await execute(
-                """
-                UPDATE inventory
-                SET quantity = ?
-                WHERE user_id = ? AND item_name = ?;
+                f"""
+                UPDATE {InventoryTable.TABLE_NAME}
+                SET {InventoryTable.COL_QUANTITY} = ?
+                WHERE {InventoryTable.COL_USER_ID} = ? AND {InventoryTable.COL_ITEM_NAME} = ?;
                 """,
                 (row["quantity"] + quantity, ctx.author.id, match.name),
             )
@@ -102,8 +103,8 @@ class Buy(commands.Cog):
         # adds the item to user's inventory otherwise
         else:
             await execute(
-                """
-                INSERT INTO inventory (user_id, item_name, quantity)
+                f"""
+                INSERT INTO {InventoryTable.TABLE_NAME} ({InventoryTable.columns()})
                 VALUES (?, ?, ?);
                 """,
                 (ctx.author.id, match.name, quantity),
@@ -114,8 +115,8 @@ class Buy(commands.Cog):
     @buy.error
     async def buy_error(
         self, ctx: commands.Context[commands.Bot], error: commands.CommandError
-    ):
-        logger.exception(f"❌ something went wrong with buy command:")
+    ) -> None:
+        logger.exception("❌ something went wrong with buy command:")
         await ctx.reply("something went wrong with **buy**.")
 
     # buy slash command
@@ -125,12 +126,12 @@ class Buy(commands.Cog):
     )
     async def slashBuy(
         self, interaction: discord.Interaction, item: str, quantity: int = 1
-    ):
+    ) -> discord.InteractionCallbackResponse[discord.Client] | None:
         # trys to fetch user's balance
         row = await fetchone(
-            """
-            SELECT balance FROM user
-            WHERE user_id = ?;
+            f"""
+            SELECT balance FROM {AccountTable.TABLE_NAME}
+            WHERE {AccountTable.COL_USER_ID} = ?;
             """,
             (interaction.user.id,),
         )
@@ -166,28 +167,28 @@ class Buy(commands.Cog):
 
         # updates user's balance
         await execute(
-            """
-            UPDATE user
-            SET balance = ?
-            WHERE user_id = ?;
+            f"""
+            UPDATE {AccountTable.TABLE_NAME}
+            SET {AccountTable.COL_BALANCE} = ?
+            WHERE {AccountTable.COL_USER_ID} = ?;
             """,
             (row["balance"] - (match.price * quantity), interaction.user.id),
         )
 
         row = await fetchone(
-            """
-            SELECT quantity FROM inventory
-            WHERE user_id = ? AND item_name = ?;
+            f"""
+            SELECT {InventoryTable.COL_QUANTITY} FROM {InventoryTable.TABLE_NAME}
+            WHERE {InventoryTable.COL_USER_ID} = ? AND {InventoryTable.COL_ITEM_NAME} = ?;
             """,
             (interaction.user.id, match.name),
         )
         # if user already has the item in the inventory, updates quantity
         if row:
             await execute(
-                """
-                UPDATE inventory
-                SET quantity = ?
-                WHERE user_id = ? AND item_name = ?;
+                f"""
+                UPDATE {InventoryTable.TABLE_NAME}
+                SET {InventoryTable.COL_QUANTITY} = ?
+                WHERE {InventoryTable.COL_USER_ID} = ? AND {InventoryTable.COL_ITEM_NAME} = ?;
                 """,
                 (row["quantity"] + quantity, interaction.user.id, match.name),
             )
@@ -195,8 +196,8 @@ class Buy(commands.Cog):
         # adds the item to user's inventory otherwise
         else:
             await execute(
-                """
-                INSERT INTO inventory (user_id, item_name, quantity)
+                f"""
+                INSERT INTO {InventoryTable.TABLE_NAME} ({InventoryTable.columns()})
                 VALUES (?, ?, ?);
                 """,
                 (interaction.user.id, match.name, quantity),
@@ -207,8 +208,10 @@ class Buy(commands.Cog):
         )
 
     @slashBuy.error
-    async def slashBuy_error(self, interaction: discord.Interaction, error: Exception):
-        logger.exception(f"❌ something went wrong with /buy command:")
+    async def slashBuy_error(
+        self, interaction: discord.Interaction, error: Exception
+    ) -> None:
+        logger.exception("❌ something went wrong with /buy command:")
         try:
             await interaction.response.send_message(
                 "something went wrong with **buy**.", ephemeral=True
@@ -219,5 +222,5 @@ class Buy(commands.Cog):
             )
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Buy(bot))

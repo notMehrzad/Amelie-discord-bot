@@ -1,12 +1,15 @@
-import discord
-from discord.ext import commands
-from discord import app_commands
 import json
-from database import db, Session
-from cogs.utility.help import HelpData
-from core.logHandler import loggerSetup
 
-logger = loggerSetup(__name__)
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+from cogs.utility.help import HelpData
+from core.database import Session, execute
+from core.dbconstants import TicketTable
+from core.log_handler import logger_setup
+
+logger = logger_setup(__name__)
 
 with open("config.json") as file:
     config = json.load(file)
@@ -21,7 +24,7 @@ class Ticket(commands.Cog):
 
     Help = HelpData(
         category=HelpData.Category.Utility,
-        dmOnly=True,
+        dm_only=True,
         serverOnly=False,
         subcommands=None,
         permissions=None,
@@ -206,10 +209,10 @@ class TicketView(discord.ui.View):
             return
 
         # creates a ticket in the database for later response
-        cursor = await db.execute(
-            """
-            INSERT INTO tickets (user_id, message_collector_id, subject, created_at)
-            VALUES (?, ?, ?, ?);
+        cursor = await execute(
+            f"""
+            INSERT INTO {TicketTable.TABLE_NAME} ({TicketTable.columns()})
+            VALUES (?, ?, ?, ?, ?, ?, ?);
             """,
             (self.user.id, self.collectorId, self.subject, timestamp),
         )

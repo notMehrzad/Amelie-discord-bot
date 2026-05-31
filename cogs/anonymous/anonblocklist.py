@@ -1,11 +1,13 @@
 import discord
-from discord.ext import commands
 from discord import app_commands
-from database import db
-from cogs.utility.help import HelpData
-from core.logHandler import loggerSetup
+from discord.ext import commands
 
-logger = loggerSetup(__name__)
+from cogs.utility.help import HelpData
+from core.log_handler import logger_setup
+from core.database import fetchone, fetchall
+from core.dbconstants import AnonUserTable, AnonContactTable
+
+logger = logger_setup(__name__)
 
 
 class AnonBlockList(commands.Cog):
@@ -14,7 +16,7 @@ class AnonBlockList(commands.Cog):
 
     Help = HelpData(
         category=HelpData.Category.Anonymous,
-        dmOnly=True,
+        dm_only=True,
         serverOnly=False,
         subcommands=None,
         permissions=None,
@@ -34,10 +36,10 @@ class AnonBlockList(commands.Cog):
             return await ctx.reply("This command can only be used in Amélie's dm.")
 
         # checks if the user has a public id
-        row = await db.fetchone(
-            """
-            SELECT public_id FROM anonusers
-            WHERE user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {AnonUserTable.COL_PUBLIC_ID} FROM {AnonUserTable.TABLE_NAME}
+            WHERE {AnonUserTable.COL_USER_ID} = ?;
             """,
             (ctx.author.id,),
         )
@@ -47,10 +49,10 @@ class AnonBlockList(commands.Cog):
             )
 
         # fetches all blocked users
-        rows = await db.fetchall(
-            """
-            SELECT contact_anon_id FROM anonusercontact
-            WHERE user_id = ? AND blocked = ?;
+        rows = await fetchall(
+            f"""
+            SELECT {AnonContactTable.COL_CONTACT_ANON_ID} FROM {AnonContactTable.TABLE_NAME}
+            WHERE {AnonContactTable.COL_USER_ID} = ? AND {AnonContactTable.COL_BLOCKED} = ?;
             """,
             (ctx.author.id, 1),
         )
@@ -62,7 +64,7 @@ class AnonBlockList(commands.Cog):
         resultEmbed = discord.Embed(
             title="Anonymous Block List",
             description="\n".join(
-                f"{i}. {row["contact_anon_id"]}" for i, row in enumerate(rows, start=1)
+                f"{i}. {row['contact_anon_id']}" for i, row in enumerate(rows, start=1)
             ),
             color=discord.Color.blurple(),
         )
@@ -82,10 +84,10 @@ class AnonBlockList(commands.Cog):
     @app_commands.dm_only()
     async def slashAnonblocklist(self, interaction: discord.Interaction):
         # checks if the user has a public id
-        row = await db.fetchone(
-            """
-            SELECT public_id FROM anonusers
-            WHERE user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {AnonUserTable.COL_PUBLIC_ID} FROM {AnonUserTable.TABLE_NAME}
+            WHERE {AnonUserTable.COL_USER_ID} = ?;
             """,
             (interaction.user.id,),
         )
@@ -96,10 +98,10 @@ class AnonBlockList(commands.Cog):
             )
 
         # fetches all blocked users
-        rows = await db.fetchall(
-            """
-            SELECT contact_anon_id FROM anonusercontact
-            WHERE user_id = ? AND blocked = ?;
+        rows = await fetchall(
+            f"""
+            SELECT {AnonContactTable.COL_CONTACT_ANON_ID} FROM {AnonContactTable.TABLE_NAME}
+            WHERE {AnonContactTable.COL_USER_ID} = ? AND {AnonContactTable.COL_BLOCKED} = ?;
             """,
             (interaction.user.id, 1),
         )
@@ -113,7 +115,7 @@ class AnonBlockList(commands.Cog):
         resultEmbed = discord.Embed(
             title="Anonymous Block List",
             description="\n".join(
-                f"{i}. {row["contact_anon_id"]}" for i, row in enumerate(rows, start=1)
+                f"{i}. {row['contact_anon_id']}" for i, row in enumerate(rows, start=1)
             ),
             color=discord.Color.blurple(),
         )

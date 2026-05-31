@@ -1,13 +1,16 @@
-import discord
-from discord.ext import commands
-from discord import app_commands
-from database import db
 import secrets
 import string
-from cogs.utility.help import HelpData
-from core.logHandler import loggerSetup
 
-logger = loggerSetup(__name__)
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+from cogs.utility.help import HelpData
+from core.database import execute, fetchone
+from core.dbconstants import AnonUserTable
+from core.log_handler import logger_setup
+
+logger = logger_setup(__name__)
 
 publicIdLength = 12  # the length of the public ids
 
@@ -20,10 +23,10 @@ def idGenerator(length: int):
 async def publicIdGenerator():
     while True:
         publicId = idGenerator(publicIdLength)
-        row = await db.fetchone(
-            """
-            SELECT 1 FROM anonusers
-            WHERE public_id = ?
+        row = await fetchone(
+            f"""
+            SELECT 1 FROM {AnonUserTable.TABLE_NAME}
+            WHERE {AnonUserTable.COL_PUBLIC_ID} = ?
             """,
             (publicId,),
         )
@@ -37,7 +40,7 @@ class AnonId(commands.Cog):
 
     Help = HelpData(
         category=HelpData.Category.Anonymous,
-        dmOnly=True,
+        dm_only=True,
         serverOnly=False,
         subcommands=None,
         permissions=None,
@@ -58,10 +61,10 @@ class AnonId(commands.Cog):
             return await ctx.reply("This command can only be used in Amélie's dm.")
 
         # trys to fetch user's public id
-        row = await db.fetchone(
-            """
-            SELECT public_id FROM anonusers
-            WHERE user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {AnonUserTable.COL_PUBLIC_ID} FROM {AnonUserTable.TABLE_NAME}
+            WHERE {AnonUserTable.COL_USER_ID} = ?;
             """,
             (ctx.author.id,),
         )
@@ -70,9 +73,9 @@ class AnonId(commands.Cog):
             newId = await publicIdGenerator()  # creates an id
 
             # inserts the new created id
-            await db.execute(
-                """
-                INSERT INTO anonusers (user_id, public_id, created_at)
+            await execute(
+                f"""
+                INSERT INTO {AnonUserTable.TABLE_NAME} ({AnonUserTable.columns()})
                 VALUES (?, ?, ?);
                 """,
                 (ctx.author.id, newId, discord.utils.utcnow()),
@@ -84,11 +87,11 @@ class AnonId(commands.Cog):
         elif len(row["public_id"]) != publicIdLength:
             newId = await publicIdGenerator()  # creates another id with updated length
 
-            await db.execute(
-                """
-                UPDATE anonusers
-                SET public_id = ?
-                WHERE user_id = ?;
+            await execute(
+                f"""
+                UPDATE {AnonUserTable.TABLE_NAME}
+                SET {AnonUserTable.COL_PUBLIC_ID} = ?
+                WHERE {AnonUserTable.COL_USER_ID} = ?;
                 """,
                 (newId, ctx.author.id),
             )
@@ -120,10 +123,10 @@ class AnonId(commands.Cog):
     @app_commands.dm_only()
     async def slashAnonid(self, interaction: discord.Interaction):
         # trys to fetch user's public id
-        row = await db.fetchone(
-            """
-            SELECT public_id FROM anonusers
-            WHERE user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {AnonUserTable.COL_PUBLIC_ID} FROM {AnonUserTable.TABLE_NAME}
+            WHERE {AnonUserTable.COL_USER_ID} = ?;
             """,
             (interaction.user.id,),
         )
@@ -132,9 +135,9 @@ class AnonId(commands.Cog):
             newId = await publicIdGenerator()  # creates an id
 
             # inserts the new created id
-            await db.execute(
-                """
-                INSERT INTO anonusers (user_id, public_id, created_at)
+            await execute(
+                f"""
+                INSERT INTO {AnonUserTable.TABLE_NAME} ({AnonUserTable.columns()})
                 VALUES (?, ?, ?);
                 """,
                 (interaction.user.id, newId, discord.utils.utcnow()),
@@ -146,11 +149,11 @@ class AnonId(commands.Cog):
         elif len(row["public_id"]) != publicIdLength:
             newId = await publicIdGenerator()  # creates another id with updated length
 
-            await db.execute(
-                """
-                UPDATE anonusers
-                SET public_id = ?
-                WHERE user_id = ?;
+            await execute(
+                f"""
+                UPDATE {AnonUserTable.TABLE_NAME}
+                SET {AnonUserTable.COL_PUBLIC_ID} = ?
+                WHERE {AnonUserTable.COL_USER_ID} = ?;
                 """,
                 (newId, interaction.user.id),
             )

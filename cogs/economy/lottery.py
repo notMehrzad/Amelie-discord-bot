@@ -1,20 +1,24 @@
-import discord
-from discord.ext import commands
-from discord import app_commands
-from database import db
-from cogs.utility.help import HelpData
-from core.logHandler import loggerSetup
+"""The `lottery` command. allows users to sign up for the lottery."""
 
-logger = loggerSetup(__name__)
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+from core.database import execute, fetchone
+from core.dbconstants import LotteryTable
+from core.help import HelpData
+from core.log_handler import logger_setup
+
+logger = logger_setup(__name__)
 
 
 class Lottery(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
     Help = HelpData(
-        category=HelpData.Category.Economy,
-        dmOnly=False,
+        category=HelpData.CommandCategory.ECONOMY,
+        dm_only=False,
         serverOnly=False,
         subcommands=None,
         permissions=None,
@@ -24,25 +28,27 @@ class Lottery(commands.Cog):
         aliases=None,
     )
 
-    @commands.command(name="lottery", **Help.to_kwargs)
-    async def lottery(self, ctx: commands.Context[commands.Bot]):
+    @commands.command(name="lottery", **Help.kwargs)
+    async def lottery(
+        self, ctx: commands.Context[commands.Bot]
+    ) -> discord.Message | None:
         # checks if user has already signed in for lottery
-        row = await db.fetchone(
-            """
-            SELECT signed_at FROM lottery
-            WHERE user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {LotteryTable.COL_SIGNED_AT} FROM {LotteryTable.TABLE_NAME}
+            WHERE {LotteryTable.COL_USER_ID} = ?;
             """,
             (ctx.author.id,),
         )
         if row:
             return await ctx.reply(
-                f"You have already signed in for Lottery at `{row["signed_at"]}`."
+                f"You have already signed in for Lottery at `{row['signed_at']}`."
             )
 
         # signs the user for the lottery
-        await db.execute(
-            """
-            INSERT INTO lottery (user_id, signed_at)
+        await execute(
+            f"""
+            INSERT INTO {LotteryTable.TABLE_NAME} ({LotteryTable.columns()})
             VALUES (?, ?);
             """,
             (ctx.author.id, discord.utils.utcnow()),
@@ -52,31 +58,33 @@ class Lottery(commands.Cog):
     @lottery.error
     async def lottery_error(
         self, ctx: commands.Context[commands.Bot], error: commands.CommandError
-    ):
-        logger.exception(f"❌ something went wrong with lottery command:")
+    ) -> None:
+        logger.exception("❌ something went wrong with lottery command:")
         await ctx.reply("something went wrong with **lottery**.")
 
     # lottery slash command
     @app_commands.command(name="lottery", description=Help.brief, extras=Help.extras)
-    async def slashLottery(self, interaction: discord.Interaction):
+    async def slashLottery(
+        self, interaction: discord.Interaction
+    ) -> discord.InteractionCallbackResponse[discord.Client] | None:
         # checks if user has already signed in for lottery
-        row = await db.fetchone(
-            """
-            SELECT signed_at FROM lottery
-            WHERE user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {LotteryTable.COL_SIGNED_AT} FROM {LotteryTable.TABLE_NAME}
+            WHERE {LotteryTable.COL_USER_ID} = ?;
             """,
             (interaction.user.id,),
         )
         if row:
             return await interaction.response.send_message(
-                f"You have already signed in for Lottery at `{row["signed_at"]}`.",
+                f"You have already signed in for Lottery at `{row['signed_at']}`.",
                 ephemeral=True,
             )
 
         # signs the user for the lottery
-        await db.execute(
-            """
-            INSERT INTO lottery (user_id, signed_at)
+        await execute(
+            f"""
+            INSERT INTO {LotteryTable.TABLE_NAME} ({LotteryTable.columns()})
             VALUES (?, ?);
             """,
             (interaction.user.id, discord.utils.utcnow()),
@@ -88,8 +96,8 @@ class Lottery(commands.Cog):
     @slashLottery.error
     async def slashLottery_error(
         self, interaction: discord.Interaction, error: Exception
-    ):
-        logger.exception(f"❌ something went wrong with /lottery command:")
+    ) -> None:
+        logger.exception("❌ something went wrong with /lottery command:")
         try:
             await interaction.response.send_message(
                 "something went wrong with **lottery**.", ephemeral=True
@@ -100,5 +108,5 @@ class Lottery(commands.Cog):
             )
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Lottery(bot))

@@ -1,13 +1,16 @@
-import discord
-from discord.ext import commands
-from discord import app_commands
-from database import db, Session
-import random
 import asyncio
-from cogs.utility.help import HelpData
-from core.logHandler import loggerSetup
+import random
 
-logger = loggerSetup(__name__)
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+from cogs.utility.help import HelpData
+from core.database import Session, execute, fetchone
+from core.dbconstants import AccountTable
+from core.log_handler import logger_setup
+
+logger = logger_setup(__name__)
 
 betLimit = (100, 300)
 
@@ -94,7 +97,7 @@ class Blackjack(commands.Cog):
 
     Help = HelpData(
         category=HelpData.Category.Games,
-        dmOnly=False,
+        dm_only=False,
         serverOnly=False,
         subcommands=None,
         permissions=None,
@@ -132,10 +135,10 @@ class Blackjack(commands.Cog):
                 )
 
             # trys to fetch user's balance
-            row = await db.fetchone(
-                """
-                SELECT balance FROM user
-                WHERE user_id = ?;
+            row = await fetchone(
+                f"""
+                SELECT {AccountTable.COL_BALANCE} FROM {AccountTable.TABLE_NAME}
+                WHERE {AccountTable.COL_USER_ID} = ?;
                 """,
                 (ctx.author.id,),
             )
@@ -201,10 +204,10 @@ class Blackjack(commands.Cog):
                 )
 
             # trys to fetch user's balance
-            row = await db.fetchone(
-                """
-                SELECT balance FROM user
-                WHERE user_id = ?;
+            row = await fetchone(
+                f"""
+                SELECT {AccountTable.COL_BALANCE} FROM {AccountTable.TABLE_NAME}
+                WHERE {AccountTable.COL_USER_ID} = ?;
                 """,
                 (interaction.user.id,),
             )
@@ -277,29 +280,29 @@ class blackjackView(discord.ui.View):
 
     async def setBet(self, bet: int, firstBet: bool = False):
         if bet != 0:
-            row = await db.fetchone(
-                """
-                SELECT balance FROM user
-                WHERE user_id = ?;
+            row = await fetchone(
+                f"""
+                SELECT {AccountTable.COL_BALANCE} FROM {AccountTable.TABLE_NAME}
+                WHERE {AccountTable.COL_USER_ID} = ?;
                 """,
                 (self.user.id,),
             )
             if row:
                 if firstBet:
-                    await db.execute(
-                        """
-                        UPDATE user
-                        SET balance = ?
-                        WHERE user_id = ?;
+                    await execute(
+                        f"""
+                        UPDATE {AccountTable.TABLE_NAME}
+                        SET {AccountTable.COL_BALANCE} = ?
+                        WHERE {AccountTable.COL_USER_ID} = ?;
                         """,
                         (row["balance"] - bet, self.user.id),
                     )
                 else:
-                    await db.execute(
-                        """
-                        UPDATE user
-                        SET balance = ?
-                        WHERE user_id = ?;
+                    await execute(
+                        f"""
+                        UPDATE {AccountTable.TABLE_NAME}
+                        SET {AccountTable.COL_BALANCE} = ?
+                        WHERE {AccountTable.COL_USER_ID} = ?;
                         """,
                         (row["balance"] - (bet - self.bet), self.user.id),
                     )
@@ -778,20 +781,20 @@ class blackjackView(discord.ui.View):
 
         if self.outcome != 0:
             # fetches user's balance
-            row = await db.fetchone(
-                """
-                SELECT balance from user
-                WHERE user_id = ?;
+            row = await fetchone(
+                f"""
+                SELECT {AccountTable.COL_BALANCE} FROM {AccountTable.TABLE_NAME}
+                WHERE {AccountTable.COL_USER_ID} = ?;
                 """,
                 (self.user.id,),
             )
             if row:
                 # updates user balance based on the outcome and returns the bet
-                await db.execute(
-                    """
-                    UPDATE user
-                    SET balance = ?
-                    WHERE user_id = ?;
+                await execute(
+                    f"""
+                    UPDATE {AccountTable.TABLE_NAME}
+                    SET {AccountTable.COL_BALANCE} = ?
+                    WHERE {AccountTable.COL_USER_ID} = ?;
                     """,
                     (row["balance"] + self.bet + self.outcome, self.user.id),
                 )
@@ -832,20 +835,20 @@ class blackjackView(discord.ui.View):
         self.session.close()  # ends the session upon error
 
         # fetches user's balance
-        row = await db.fetchone(
-            """
-            SELECT balance FROM user
-            WHERE user_id = ?;
+        row = await fetchone(
+            f"""
+            SELECT {AccountTable.COL_BALANCE} FROM {AccountTable.TABLE_NAME}
+            WHERE {AccountTable.COL_USER_ID} = ?;
             """,
             (self.user.id,),
         )
         if row:
             # returns back the bet
-            await db.execute(
-                """
-                UPDATE user
-                SET balance = ?
-                WHERE user_id = ?;
+            await execute(
+                f"""
+                UPDATE {AccountTable.TABLE_NAME}
+                SET {AccountTable.COL_BALANCE} = ?
+                WHERE {AccountTable.COL_USER_ID} = ?;
                 """,
                 (row["balance"] + self.bet, self.user.id),
             )
