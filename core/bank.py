@@ -1,31 +1,22 @@
-"""This file contains the core structure of the Bank system.
-It contains all the logic such as required classes and related functions to do various operations
-listed below:
-1- Accounts: creating, depositing, withdrawing and etc.
-2- Checks: issuing and depositing.
-3- Transactions: Storing transactions.
+"""Contains the core structure of Bank system.
 
-Also, it should be note that the logic in this module is only and only made for Amelie's developers' workspace ease
-and no real user should be able to work, interact or see any of the operations, messages or raised errors below.
+It contains all the logic such as required classes and related functions to do various
+operations listed below:
+1- Accounts: creating, depositing, withdrawing etc.
+2- Checks: issuing and depositing
+3- Transactions: Storing transactions
+
+Also, it should be noted that the logic in this module is only and only made for
+Amelie's developers' workspace ease and no real user should be able to work, interact or
+see any of the operations, messages or raised errors below.
 """
 
-import uuid
-from datetime import datetime, timezone
-from enum import Enum
+from __future__ import annotations
 
-from core.database import execute, fetchone
-from core.dbconstants import AccountTable, CheckTable, TransactionTable
-from core.logHandler import loggerSetup
-
-# currency information
-CURRENCY_NAME = "Cookie"
-CURRENCY_ICON = "<:1lvl:1027191671328354304>"  # discord emoji
-CURRENCY_STR = CURRENCY_ICON + " " + CURRENCY_NAME + "s"
-
-logger = loggerSetup(__name__)
 __all__ = [
-    "BankErrors",
+    "CURRENCY_STR",
     "Account",
+    "BankError",
     "Check",
     "balance_transfer",
     "create_account",
@@ -35,394 +26,415 @@ __all__ = [
     "issue_check",
 ]
 
+import uuid
+from datetime import datetime, timezone
+from enum import Enum
+from typing import final, override
+
+from core.database import execute, fetchone
+from core.dbconstants import AccountTable, CheckTable, TransactionTable
+from core.log_handler import logger_setup
+
+# currency information
+CURRENCY_NAME = "Cookie"
+CURRENCY_ICON = "<:1lvl:1027191671328354304>"  # discord emoji
+CURRENCY_STR = CURRENCY_ICON + " " + CURRENCY_NAME + "s"
+
+logger = logger_setup(__name__)
+
 
 # exception classes
-class BankErrors(Exception):
-    """The base class for all bank exceptions."""
-
-    pass
+class BankError(Exception):
+    """Common base class for all bank.py exceptions."""
 
 
-class AccountDoesntExist(BankErrors):
-    """When trying to do an operation on an account that doesn't exist."""
+class AccountDoesntExistError(BankError):
+    """Raised when trying to do an operation on an account that doesn't exist."""
 
-    pass
-
-
-class AccountExists(BankErrors):
-    """When trying to create an account for a user who already has one."""
-
-    pass
+    def __init__(self) -> None:
+        super().__init__("This account doesn't exist.")
 
 
-class InsufficientBalance(BankErrors):
-    """When trying to transfer an amount of balance that is insufficient."""
+class AccountExistsError(BankError):
+    """Raised when trying to create an account for a user who already has one."""
 
-    pass
-
-
-class AlreadyDepositedCheck(BankErrors):
-    """When trying to deposit a check that is already deposited."""
-
-    pass
+    def __init__(self) -> None:
+        super().__init__("This user already has an account.")
 
 
-class AlreadyIssuedCheck(BankErrors):
-    """When trying to issue a check that is issued already."""
+class InsufficientBalanceError(BankError):
+    """Raised when trying to transfer an amount of balance that is insufficient."""
 
-    pass
-
-
-class UnnecessaryOperation(BankErrors):
-    """When trying to do an unnecessary operation that doesn't change anything."""
-
-    pass
+    def __init__(self) -> None:
+        super().__init__("The balance amount is insufficient for the operation.")
 
 
-class TransactionTypes(Enum):
-    """The class for possible transaction types."""
+class AlreadyDepositedCheckError(BankError):
+    """Raised when trying to deposit a check that is already deposited."""
 
-    DEPOSIT = "DEPOSIT"
-    WITHDRAW = "WITHDRAW"
-    TRANSFER = "TRANSFER"
-    BALANCESET = "BALANCESET"
-
-    def __str__(self) -> str:
-        return self.value
+    def __init__(self, check: Check) -> None:
+        self.check = check
+        super().__init__("This check has been already deposited.")
 
 
+class AlreadyIssuedCheckError(BankError):
+    """Raised when trying to issue a check that is issued already."""
+
+    def __init__(self, check: Check) -> None:
+        self.check = check
+        super().__init__("This check has been already issued.")
+
+
+class UnnecessaryOperationError(BankError):
+    """Raised when trying to do an unnecessary operation."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "The operation is unnecessary and doesn't change anything in the account.",
+        )
+
+
+@final
 class Account:
-    """The class representing a bank Account."""
+    """Represents a bank Account."""
 
     def __init__(
         self,
         *,
         user_id: int,
-        balance: int = 0,
-        created_at: datetime,
-        last_daily_date: datetime | None = None,
-        last_work_date: datetime | None = None,
+        balance: float = 0,
     ) -> None:
-        """Initiates the instance.
+        """Initialize a bank account.
 
         Args:
-            user_id (int): The ID of the user.
-            created_at (datetime): The account creation date.
-            balance (int, optional): The balance of the account. Defaults to 0.
-            last_daily_date (datetime | None, optional): The date of the last time the user claimed daily reward. Defaults to None.
-            last_work_date (datetime | None, optional): The date of the last time the user has worked. Defaults to None.
+            user_id (int): ID of the user.
+            balance (float, optional): Initial balance of the account. Defaults to 0.
 
         Raises:
-            ValueError: If a negative balance number is given.
+            ValueError: Raise when a negative balance number is given.
+
         """
-
-        # if a negative balance is given
+        # Raise an error if a negative balance is given.
         if balance < 0:
-            raise ValueError("The balance can't be a negative number.")
+            msg = "The balance can't be a negative number."
+            raise ValueError(msg)
 
-        self.user_id = user_id
-        self.balance = balance
-        self.created_at = created_at
-        self.last_daily_date = last_daily_date
-        self.last_work_date = last_work_date
+        self.user_id: int = user_id
+        self.balance: float = balance
+        self.created_at: datetime | None = None
+        self.last_daily_date: datetime | None = None
+        self.last_work_date: datetime | None = None
 
     @property
     def balance_str(self) -> str:
-        """Returns a string made of balance number plus currency name and icon."""
-
+        """Return a string made of balance number plus currency name and icon."""
         return str(self.balance) + " " + CURRENCY_STR
 
-    async def deposit(self, quantity: int, reason: str | None = None) -> Transaction:
-        """Deposits to the account.
+    async def deposit(
+        self,
+        quantity: float,
+        reason: str | None = None,
+    ) -> Transaction:
+        """Deposit to the account.
 
         Args:
-            quantity (int): The quantity to deposit.
-            reason (str | None, optional): The reason of the transaction. Defaults to None.
+            quantity (float): Quantity to deposit.
+            reason (str | None, optional): Reason of the transaction. Defaults to None.
 
         Raises:
-            ValueError: If a negative number is given.
+            ValueError: Raise when a negative number is given.
 
         Returns:
-            Transaction: The transaction.
+            Transaction: Return the transaction.
+
         """
-
-        # if a negative number is given
+        # Raise an error if a negative quantity is given.
         if quantity < 0:
-            raise ValueError("The deposition amount can't be negative.")
+            msg = "Deposition amount can not be negative."
+            raise ValueError(msg)
 
-        # if quantity is 0
+        # Raise an error if quantity is zero.
         if quantity == 0:
-            raise UnnecessaryOperation("The deposition amount can't be 0.")
+            raise UnnecessaryOperationError
 
-        # updates the user's balance
+        # Update the user's balance.
         self.balance += quantity
         await execute(
             f"""
             UPDATE {AccountTable.TABLE_NAME}
             SET {AccountTable.COL_BALANCE} = ?
             WHERE {AccountTable.COL_USER_ID} = ?;
-            """,
+            """,  # noqa: S608
             (self.balance, self.user_id),
         )
 
-        # creates the transaction
+        # Create  and return the transaction.
         return await Transaction(
-            type=TransactionTypes.DEPOSIT,
+            tran_type=Transaction.TYPES.DEPOSIT,
             user_id=self.user_id,
             amount=quantity,
             reason=reason,
-        ).commit()  # returns the transaction
+        ).commit()
 
-    async def withdraw(self, quantity: int, reason: str | None = None) -> Transaction:
-        """Withdraws from the account.
+    async def withdraw(
+        self,
+        quantity: float,
+        reason: str | None = None,
+    ) -> Transaction:
+        """Withdraw from the account.
 
         Args:
-            quantity (int): The quantity to withdraw.
-            reason (str | None, optional): The reason of the transaction. Defaults to None.
+            quantity (float): Quantity to withdraw.
+            reason (str | None, optional): Reason of the transaction. Defaults to None.
 
         Raises:
-            ValueError: If a negative number is given.
-            InsufficientBalance: If the withdraw quantity is higher than current balance.
+            ValueError: Raise when a negative quantity is given.
+            InsufficientBalance: Raise when the withdrawal quantity is higher than
+                current balance.
 
         Returns:
-            Transaction: The transaction.
+            Transaction: Return the transaction.
+
         """
-
-        # if a negative number is given
+        # Raise an error if a negative quantity is given.
         if quantity < 0:
-            raise ValueError("The withdrawal amount can't be negative.")
+            msg = "The withdrawal amount can't be negative."
+            raise ValueError(msg)
 
-        # if quantity is 0
+        # Raise an error if quantity is zero.
         if quantity == 0:
-            raise UnnecessaryOperation("The withdrawal amount can't be 0.")
+            raise UnnecessaryOperationError
 
-        # if withdraw amount is higher than the current balance
+        # Raise if  withdraw amount is higher than the current balance.
         if quantity > self.balance:
-            raise InsufficientBalance(
-                "The withdrawal amount is higher than current balance."
-            )
+            raise InsufficientBalanceError
 
-        # updates the user's balance
+        # Update the user's balance.
         self.balance -= quantity
         await execute(
             f"""
             UPDATE {AccountTable.TABLE_NAME}
             SET {AccountTable.COL_BALANCE} = ?
             WHERE {AccountTable.COL_USER_ID} = ?;
-            """,
+            """,  # noqa: S608
             (self.balance, self.user_id),
         )
 
+        # Create and return the transaction
         return await Transaction(
-            type=TransactionTypes.WITHDRAW,
+            tran_type=Transaction.TYPES.WITHDRAW,
             user_id=self.user_id,
             amount=quantity,
             reason=reason,
-        ).commit()  # returns the transaction
+        ).commit()
 
     async def transfer_money_to(
-        self, receiver_id: int, quantity: int, reason: str | None = None
-    ) -> Transaction | None:
-        """Transfers from an account to another.
+        self,
+        receiver_id: int,
+        quantity: float,
+        reason: str | None = None,
+    ) -> Transaction:
+        """Transfer balance from an account to another.
 
         Args:
-            receiver_id (int): The ID of the receiver.
-            quantity (int): The quantity to transfer.
-            reason (str | None, optional): The reason of the transaction. Defaults to None.
+            receiver_id (int): ID of receiver.
+            quantity (float): Quantity to transfer.
+            reason (str | None, optional): Reason of transaction. Defaults to None.
 
         Raises:
-            ValueError: If the given number is negative.
-            InsufficientBalance: If the given number to be transfered is higher than current balance.
-            AccountDoesntExist: If the receiver's account is not found.
+            ValueError: Raise when quantity is negative.
+            UnnecessaryOperation: Raise when quantity is zero.
+            InsufficientBalance: Raise when quantity is higher than current balance.
+            AccountDoesntExist: Raise when receiver's account is not found.
 
         Returns:
-            Transaction | None: The transaction. `None`, if the quantity is 0.
+            Transaction: Return transaction.
+
         """
-
-        # if a negative number is given
+        # Raise an error if quantity is negative.
         if quantity < 0:
-            raise ValueError("The quantity to transfer can't be negative.")
+            msg = "The quantity to transfer can't be negative."
+            raise ValueError(msg)
 
-        # if quantity is 0
+        # Raise an error if quantity is zero.
         if quantity == 0:
-            raise UnnecessaryOperation("The balance transfering amount can't be 0.")
+            raise UnnecessaryOperationError
 
-        # if given quantity is higher than balance
+        # Raise an error if quantity is higher than current balance.
         if quantity > self.balance:
-            raise InsufficientBalance(
-                "The balance transfering amount is higher than current balance."
-            )
+            raise InsufficientBalanceError
 
-        receiver_account = await get_account(
-            receiver_id
-        )  # tries to fetch the receiver's account
-        # if no account is found
+        # Fetch receiver's account.
+        receiver_account = await get_account(receiver_id)
+
+        # Raise an error if receiver's account couldn't be found.
         if not receiver_account:
-            raise AccountDoesntExist("There is no such account to transfer balance to.")
+            raise AccountDoesntExistError
 
-        # withdraws from sender's account
+        # Withdraw from sender's account.
         self.balance -= quantity
         await execute(
             f"""
             UPDATE {AccountTable.TABLE_NAME}
             SET {AccountTable.COL_BALANCE} = ?
             WHERE {AccountTable.COL_USER_ID} = ?;
-            """,
+            """,  # noqa: S608
             (self.balance, self.user_id),
         )
 
-        # deposits to receiver's account
+        # Deposits to receiver's account.
         receiver_account.balance += quantity
         await execute(
             f"""
             UPDATE {AccountTable.TABLE_NAME}
             SET {AccountTable.COL_BALANCE} = ?
             WHERE {AccountTable.COL_USER_ID} = ?;
-            """,
+            """,  # noqa: S608
             (receiver_account.balance, receiver_account.user_id),
         )
 
+        # Create and return transaction.
         return await Transaction(
-            type=TransactionTypes.TRANSFER,
+            tran_type=Transaction.TYPES.TRANSFER,
             user_id=self.user_id,
             amount=quantity,
             receiver_id=receiver_id,
             reason=reason,
-        ).commit()  # returns the transaction
+        ).commit()
 
     async def set_balance(
-        self, quantity: int, reason: str | None = None
-    ) -> Transaction | None:
-        """Sets the account's balance.
+        self,
+        quantity: float,
+        reason: str | None = None,
+    ) -> Transaction:
+        """Set the account's balance.
 
         Args:
-            quantity (int): The balance number to be set.
-            reason (str | None, optional): The reason of the transaction. Defaults to None.
+            quantity (float): Balance to be set.
+            reason (str | None, optional): Reason of transaction. Defaults to None.
 
         Raises:
-            ValueError: If a negative balance number is given.
+            ValueError: Raise when quantity is negative.
+            UnnecessaryOperation: Raise when quantity is zero.
 
         Returns:
-            Transaction | None: The transaction. `None`, if the new balance is equal to the previous one.
+            Transaction: Return transaction.
+
         """
-
-        # if a negative number is given
+        # Raise an error if quantity is negative.
         if quantity < 0:
-            raise ValueError("The balance number can't be negative.")
+            msg = "The balance number can't be negative."
+            raise ValueError(msg)
 
-        # if the new balance is equal to the previous one
+        # Raise an error if quantity is equal to the current balance.
         if quantity == self.balance:
-            return None
+            raise UnnecessaryOperationError
 
-        # updates the user's balance
+        # Update user's balance.
         self.balance = quantity
         await execute(
             f"""
             UPDATE {AccountTable.TABLE_NAME}
             SET {AccountTable.COL_BALANCE} = ?
             WHERE {AccountTable.COL_USER_ID} = ?;
-            """,
+            """,  # noqa: S608
             (self.balance, self.user_id),
         )
 
+        # Create and return transaction.
         return await Transaction(
-            type=TransactionTypes.BALANCESET,
+            tran_type=Transaction.TYPES.BALANCESET,
             user_id=self.user_id,
             amount=quantity,
             reason=reason,
-        ).commit()  # returns the transaction
+        ).commit()
 
     async def delete(self) -> None:
-        """Deletes the account."""
-
-        # deletes the account
+        """Delete bank account."""
         await execute(
             f"""
             DELETE FROM {AccountTable.TABLE_NAME}
             WHERE {AccountTable.COL_USER_ID} = ?;
-            """,
+            """,  # noqa: S608
             (self.user_id,),
         )
 
 
+@final
 class Check:
-    """The class representing a check."""
+    """Represents a bank check."""
 
     def __init__(
         self,
         *,
-        check_id: str | None = None,
         sender_id: int,
-        amount: int,
+        amount: float,
         receiver_id: int,
         reason: str | None = None,
-        date: datetime | None = None,
-        deposited: bool = False,
     ) -> None:
-        """Initiates the instance.
+        """Initialize a bank check.
 
         Args:
-            sender_id (int): The ID of the sender.
-            amount (int): The amount of the check.
-            receiver_id (int): The ID of the receiver.
-            check_id (str | None, optional): The check ID. It must be left empty if issuing, as it will be generated automatically. Defaults to None.
-            reason (str | None, optional): The reason for issuing the check. Defaults to None.
-            date (datetime | None, optional): The issued date. It must be left empty if issuing, as it will be generated automatically. Defaults to None.
-            deposited (bool, optional): The deposition state. Defaults to False.
+            sender_id (int): ID of sender.
+            amount (float): Amount of check.
+            receiver_id (int): ID of receiver.
+            reason (str | None, optional): Reason for issuing check. Defaults to None.
 
         Raises:
-            ValueError: If a negative amount is given.
+            ValueError: Raise if amount is negative.
+            UnnecessaryOperation: Raise if amount is zero.
+
         """
-
-        # if a negative amount is given
+        # Raise an error if amount is negative.
         if amount < 0:
-            raise ValueError("The amount can't be negative.")
+            msg = "The amount can't be negative."
+            raise ValueError(msg)
 
-        # if quantity is 0
+        # Raise an error if amount is zero.
         if amount == 0:
-            raise UnnecessaryOperation("The check amount can't be 0.")
+            raise UnnecessaryOperationError
 
-        self.check_id = check_id or str(uuid.uuid4())
-        self.sender_id = sender_id
-        self.amount = amount
-        self.receiver_id = receiver_id
-        self.reason = reason
-        self.date = date
-        self.deposited = deposited
+        self.check_id: str | None = str(uuid.uuid4())
+        self.sender_id: int = sender_id
+        self.amount: float = amount
+        self.receiver_id: int = receiver_id
+        self.reason: str | None = reason
+        self.date: datetime | None = None
+        self.deposited: bool = False
 
     async def issue(self) -> Transaction:
-        """Issues a bank check.
+        """Issue bank check.
 
         Raises:
             AlreadyIssuedCheck: If trying to issue an already issued check.
-            AccountDoesntExist: If the sender bank account can not be fetched.
+            AccountDoesntExistError: If the sender bank account can not be fetched.
 
         Returns:
             Transaction: The transaction.
+
         """
+        # Raise an error if check is already issued.
+        if self.date is not None:
+            raise AlreadyIssuedCheckError(self)
 
-        # if the check is already issued
-        if self.date:
-            raise AlreadyIssuedCheck("This check is already issued.")
+        # Fetch sender's account.
+        sender_account = await get_account(self.sender_id)
 
-        sender_account = await get_account(
-            self.sender_id
-        )  # tries to fetch sender's account
-        # if sender has no account
+        # Raise an error if sender's account couldn't be found.
         if not sender_account:
-            raise AccountDoesntExist("The sender has no account to issue a check.")
+            raise AccountDoesntExistError
 
-        self.date = datetime.now(timezone.utc)  # generates the check date
+        self.date = datetime.now(timezone.utc)  # Check issue date
 
-        # withdraws the check amount from the sender's account and returns the transaction
+        # Withdraw check amount from sender's account and save transaction.
         tran = await sender_account.withdraw(self.amount, reason="Check Issuance.")
 
-        # saves the check info in the db
+        # Save check info in DB.
         await execute(
             f"""
             INSERT INTO {CheckTable.TABLE_NAME} ({CheckTable.columns})
             VALUES (?, ?, ?, ?, ?, ?, ?);
-            """,
+            """,  # noqa: S608
             (
                 self.check_id,
                 self.sender_id,
@@ -437,102 +449,121 @@ class Check:
         return tran
 
     async def deposit(self) -> Transaction:
-        """Deposits the check into receiver's account.
+        """Deposit check into receiver's account.
 
         Raises:
-            AlreadyDepositedCheck: If trying to deposit an already deposited check.
-            AccountDoesntExist: If the receiver's bank account can not be fetched.
+            AlreadyDepositedCheckError: Raise when trying to deposit an already
+                deposited check.
+            AccountDoesntExistError: Raise when receiver's bank account can not be
+                fetched.
 
         Returns:
-            Transaction: The transaction.
+            Transaction: Return transaction.
+
         """
-
-        # if the check is already deposited
+        # Raise an error if check is already deposited.
         if self.deposited:
-            raise AlreadyDepositedCheck(
-                "This check is already deposited in the receiver's account."
-            )
+            raise AlreadyDepositedCheckError(self)
 
-        receiver_account = await get_account(
-            self.receiver_id
-        )  # tries to fetch receiver's account
-        # if receiver has no account
+        # Fetch receiver's account.
+        receiver_account = await get_account(self.receiver_id)
+
+        # Raise an error if receiver's account couldn't be found.
         if not receiver_account:
-            raise AccountDoesntExist("The receiver has no account to deposit into.")
+            raise AccountDoesntExistError
 
-        # deposits the check amount to the receiver's account and returns the transaction
+        # Deposit check amount to receiver's account and save transaction.
         tran = await receiver_account.deposit(self.amount, reason="Check Deposition.")
 
-        # updates the state of the check in the db
+        # Update state of check in DB.
         await execute(
             f"""
             UPDATE {CheckTable.TABLE_NAME}
             SET {CheckTable.COL_DEPOSITED} = ?
             WHERE {CheckTable.COL_ID} = ?;
-            """,
+            """,  # noqa: S608
             (1, self.check_id),
         )
 
         return tran
 
 
+@final
 class Transaction:
-    "The class representing a bank transaction."
+    """Represents a bank transaction."""
+
+    class TYPES(Enum):
+        """Represents different transaction types."""
+
+        DEPOSIT = "DEPOSIT"
+        WITHDRAW = "WITHDRAW"
+        TRANSFER = "TRANSFER"
+        BALANCESET = "BALANCESET"
+
+        @override
+        def __str__(self) -> str:
+            return self.value
 
     def __init__(
         self,
         *,
-        type: TransactionTypes,
+        tran_type: TYPES,
         user_id: int,
-        amount: int,
+        amount: float,
         receiver_id: int | None = None,
         reason: str | None = None,
     ) -> None:
-        """Initiates the instance.
+        """Initialize a bank transaction.
 
         Args:
-            type (TransactionTypes): The type of the transaction.
-            user_id (int): The ID of the user.
-            amount (int): The amount of the operation.
-            receiver_id (int | None, optional): The ID of the receiver if the transaction type is to transfer. Defaults to None.
-            reason (str | None, optional): The reason of the transaction. Defaults to None.
+            tran_type (TransactionTypes): Type of transaction.
+            user_id (int): ID of user.
+            amount (float): Amount of operation.
+            receiver_id (int | None, optional): ID of receiver if transaction type is to
+                transfer. Defaults to None.
+            reason (str | None, optional): Reason of transaction. Defaults to None.
 
         Raises:
-            ValueError: If transaction type is to transfer while no receiver ID is given.
-        """
+            ValueError: Raise when transaction type is to transfer but no receiver ID is
+                given.
 
-        # if transaction type is transfer but no receiver ID is given
-        if type.value == TransactionTypes.TRANSFER.value and not receiver_id:
+        """
+        # Raise an error if transaction type is to transfer but no receiver ID is given.
+        if tran_type.value == Transaction.TYPES.TRANSFER.value and receiver_id is None:
+            msg = 'Receiver ID can\'t be empty while transaction type is "Transfer".'
             raise ValueError(
-                'The receiver ID can\'t be empty while the transaction type is "Transfer".'
+                msg,
             )
 
-        # if a negative amount is given
+        # Raise an error if amount is zero.
         if amount < 0:
-            raise ValueError("The amount can't be negative.")
+            msg = "Amount can not be negative."
+            raise ValueError(msg)
 
-        self.transaction_id = str(uuid.uuid4())
-        self.type = type.value
-        self.user_id = user_id
-        self.amount = amount
-        self.receiver_id = receiver_id
-        self.reason = reason
+        self.date: datetime | None = None
+        self.transaction_id: str = str(uuid.uuid4())
+        self.type: str = tran_type.value
+        self.user_id: int = user_id
+        self.amount: float = amount
+        self.receiver_id: int | None = receiver_id
+        self.reason: str | None = reason
 
     async def commit(self) -> Transaction:
-        """Commits the changes and stores the transaction.
+        """Commit changes and store transaction.
+
         This method must be called right after creation.
 
         Returns:
-            Transaction: The created transaction.
-        """
+            Transaction: Return transaction.
 
-        # creates the transaction
-        self.date = datetime.now(timezone.utc)
+        """
+        # Create transaction and save it in DB.
+        self.date = datetime.now(timezone.utc)  # Transaction creation date
         await execute(
             f"""
             INSERT INTO {TransactionTable.TABLE_NAME} ({TransactionTable.columns()})
             VALUES (?, ?, ?, ?, ?, ?, ?);
-            """,
+            """,  # noqa: S608
             (
                 self.transaction_id,
                 self.type,
@@ -543,182 +574,211 @@ class Transaction:
                 self.reason,
             ),
         )
+
         return self
 
 
 async def balance_transfer(
-    *, sender_id: int, receiver_id: int, quantity: int, reason: str | None = None
-) -> Transaction | None:
-    """An alternative way to transfer balance between bank accounts through senders ID.
+    *,
+    sender_id: int,
+    receiver_id: int,
+    quantity: float,
+    reason: str | None = None,
+) -> Transaction:
+    """Transfer balance between bank accounts in an alternative way through sender's ID.
 
     Args:
         sender_id (int): The ID of the sender.
         receiver_id (int): The ID of the receiver.
-        quantity (int): The quantity to transfer.
+        quantity (float): The quantity to transfer.
         reason (str | None, optional): The reason of the transaction. Defaults to None.
 
     Raises:
-        AccountDoesntExist: If the sender has no bank account.
+        UnnecessaryOperation: Raise when quantity is zero.
+        AccountDoesntExistError: Raise when receiver's accound can not be fetched.
 
     Returns:
-        Transaction | None: The transaction. `None`, if the quantity is 0.
+        Transaction: Return transaction.
+
     """
+    # Raise an error if quantity is zero.
+    if quantity == 0:
+        raise UnnecessaryOperationError
 
-    sender_account = await get_account(sender_id)  # tries to fetch the sender's account
-    # if no account is found for the sender
+    # Fetch sender's account.
+    sender_account = await get_account(sender_id)
+
+    # Raise an error if sender's accoung couldn't be found.
     if not sender_account:
-        raise AccountDoesntExist("The sender has no account to transfer anything.")
+        raise AccountDoesntExistError
 
-    return await sender_account.transfer_money_to(
-        receiver_id, quantity, reason
-    )  # transfers the money
+    # Transfer the money and return transaction.
+    return await sender_account.transfer_money_to(receiver_id, quantity, reason)
 
 
-async def create_account(*, user_id: int, balance: int = 0) -> Account:
-    """Creates a bank account for the user.
+async def create_account(*, user_id: int, balance: float = 0) -> Account:
+    """Create a bank account.
 
     Args:
-        user_id (int): The ID of the user.
-        balance (int, optional): The initial balance the user will start with. Defaults to 0.
+        user_id (int): ID of user.
+        balance (float, optional): Initial balance that user will start with. Defaults
+            to 0.
 
     Raises:
-        AccountExists: If trying to create an account for a user who already has one.
-        ValueError: If a negative number is given for balance.
+        AccountExists: Raise when trying to create account for a user who already has
+            one.
+        ValueError: Raise when balance is negative.
 
     Returns:
-        Account: The created account.
+        Account: Return created account.
+
     """
+    # Fetch user's account.
+    account = await get_account(user_id)
 
-    account = await get_account(user_id)  # tries to fetch user's account
-    # if user already has an account
-    if account:
-        raise AccountExists("This user already has an account.")
+    # Raise an erro if user already has an account.
+    if account is not None:
+        raise AccountExistsError
 
-    # if a negative credit is given for balance
+    # Raise an error if balance is negative.
     if balance < 0:
-        raise ValueError("Balance can't be negative.")
+        msg = "Balance can not be negative."
+        raise ValueError(msg)
 
-    now = datetime.now(timezone.utc)  # timestamp
+    now = datetime.now(timezone.utc)  # Account creation date
+    # Save account in DB.
     await execute(
         f"""
         INSERT INTO {AccountTable.TABLE_NAME} ({AccountTable.columns()})
         VALUES (?, ?, ?, ?, ?);
-        """,
+        """,  # noqa: S608
         (user_id, balance, int(now.timestamp()), None, None),
     )
 
-    return Account(
-        user_id=user_id, balance=balance, created_at=now
-    )  # returns the created account instance
+    account = Account(user_id=user_id, balance=balance)
+    account.created_at = now
+
+    return account
 
 
 async def delete_account(user_id: int) -> None:
-    """Deletes a bank account.
+    """Delete a bank account.
 
     Args:
-        user_id (int): The ID of the user.
+        user_id (int): ID of user.
 
     Raises:
-        AccountDoesntExist: If trying to delete the account of a user who hasn't one already.
+        AccountDoesntExistError: Raise when trying to delete account a user who already
+            has none.
+
     """
+    # Fetch user's account.
+    account = await get_account(user_id)
 
-    account = await get_account(user_id)  # tries to fetch the user's account
-    # if user has already no account.
-    if not account:
-        raise AccountDoesntExist("This user has no account to be deleted.")
+    # Raise an error if user has already no account.
+    if account is None:
+        raise AccountDoesntExistError
 
-    await account.delete()  # deletes the account
+    # Delete account
+    await account.delete()
 
 
 async def get_account(user_id: int) -> Account | None:
-    """Fetches a bank account via user's ID.
+    """Fetch a bank account via user's ID.
 
     Args:
-        user_id (int): The ID of the user.
+        user_id (int): ID of user.
 
     Returns:
-        Account | None: The fetched account, if the user with given ID has an account. `None`, otherwise.
-    """
+        Account | None: The fetched account, if the user with given ID has an account.
+            `None`, otherwise.
 
+    """
     # tries to fetch the account
     row = await fetchone(
         f"""
         SELECT * FROM {AccountTable.TABLE_NAME}
         WHERE {AccountTable.COL_USER_ID} = ?;
-        """,
+        """,  # noqa: S608
         (user_id,),
     )
-    if not row:
+    if row is None:
         return None
 
-    return Account(
+    # Create an account instance based on the fetched data.
+    account = Account(
         user_id=row["user_id"],
         balance=row["balance"],
-        created_at=datetime.fromtimestamp(row["created_at"]),
-        last_daily_date=(
-            datetime.fromtimestamp(row["last_daily_date"])
-            if row["last_daily_date"]
-            else None
-        ),
-        last_work_date=(
-            datetime.fromtimestamp(row["last_work_date"])
-            if row["last_work_date"]
-            else None
-        ),
-    )  # creates an account instance based on the fetched data and returns it
+    )
+    account.created_at = datetime.fromtimestamp(row["created_at"], timezone.utc)
+    account.last_daily_date = (
+        datetime.fromtimestamp(row["last_daily_date"], timezone.utc)
+        if row["last_daily_date"]
+        else None
+    )
+    account.last_work_date = (
+        datetime.fromtimestamp(row["last_work_date"], timezone.utc)
+        if row["last_work_date"]
+        else None
+    )
+
+    return account
 
 
 async def get_check(check_id: str) -> Check | None:
-    """Fetches a bank check via it's ID.
+    """Fetch a bank check via its ID.
 
     Args:
         check_id (str): The ID of the check.
 
     Returns:
         Check | None: The fetched check if found. `None`, otherwise.
-    """
 
+    """
     # tries to fetch the check
     row = await fetchone(
         f"""
         SELECT * FROM {CheckTable.TABLE_NAME}
         WHERE {CheckTable.COL_ID} = ?;
-        """,
+        """,  # noqa: S608
         (check_id,),
     )
-    if not row:
+    if row is None:
         return None
 
-    return Check(
-        check_id=row["id"],
+    # Create a check instance based on the fetched data.
+    check = Check(
         sender_id=row["sender_id"],
         amount=row["amount"],
         receiver_id=row["receiver_id"],
         reason=row["reason"],
-        date=datetime.fromtimestamp(row["date"]),
-        deposited=(row["deposited"] == 1),
-    )  # creates a check instance based on the fetched data and returns it
+    )
+    check.check_id = row["id"]
+    check.date = datetime.fromtimestamp(row["date"], timezone.utc)
+    check.deposited = row["deposited"] == 1
+
+    return check
 
 
 async def issue_check(
     *,
     sender_id: int,
-    amount: int,
+    amount: float,
     receiver_id: int,
     reason: str | None = None,
-) -> Transaction | None:
-    """An alternative method to issue a bank check.
+) -> Transaction:
+    """Issue a bank check in an alternative way.
 
     Args:
         sender_id (int): The ID of the sender.
-        amount (int): The amount of the check.
+        amount (float): The amount of the check.
         receiver_id (int): The ID of the receiver.
         reason (str | None, optional): The reason of the check. Defaults to None.
 
     Returns:
         Transaction | None: The transaction. `None` if the amount is 0.
-    """
 
+    """
     return await Check(
         sender_id=sender_id,
         amount=amount,

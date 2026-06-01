@@ -1,16 +1,20 @@
-"""This files contains the logic and structure of the database, aiosqlite, that Amelie uses.
-It simplifies the process of executing or fetching data using a handler that manages creating connection, commiting
-changes and closing connection automatically with just simple functions.
+"""Contains the logic and structure of database(aiosqlite) that Amélie uses.
+
+It simplifies the process of executing or fetching data using a handler that manages
+creating connection, commiting changes and closing connection automatically with just
+simple functions.
 Custom functions can be made and used like _run(CustomFunction).
 """
 
-from collections.abc import Awaitable, Callable, Iterable
+from __future__ import annotations
+
+__all__ = ["execute", "fetchall", "fetchone", "initialize_tables"]
+
+import contextlib
 from enum import Enum
-from typing import Any, TypeVar, final
+from typing import TYPE_CHECKING, Any, TypeVar, final
 
 import aiosqlite
-import discord
-from discord.ext import commands
 
 from core.dbconstants import (
     AccountTable,
@@ -25,6 +29,12 @@ from core.dbconstants import (
     WarnTable,
 )
 from core.log_handler import logger_setup
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable, Iterable
+
+    import discord
+    from discord.ext import commands
 
 DATABASE_PATH = "bot_database.db"
 TABLES: tuple[str, ...] = (
@@ -44,7 +54,8 @@ TABLES: tuple[str, ...] = (
         {AnonContactTable.COL_CONTACT_ID} INTEGER NOT NULL,
         {AnonContactTable.COL_CONTACT_ANON_ID} TEXT NOT NULL,
         {AnonContactTable.COL_BLOCKED} INTEGER DEFAULT 0,
-        FOREIGN KEY ({AnonContactTable.COL_USER_ID}) REFERENCES {AnonUserTable.TABLE_NAME}({AnonUserTable.COL_USER_ID}),
+        FOREIGN KEY ({AnonContactTable.COL_USER_ID}) REFERENCES
+        {AnonUserTable.TABLE_NAME}({AnonUserTable.COL_USER_ID}),
         UNIQUE({AnonContactTable.COL_USER_ID}, {AnonContactTable.COL_CONTACT_ID}),
         UNIQUE({AnonContactTable.COL_USER_ID}, {AnonContactTable.COL_CONTACT_ANON_ID})
     );
@@ -58,8 +69,10 @@ TABLES: tuple[str, ...] = (
         {AnonSessionTable.COL_CONTACT_MESSAGE_COLLECTOR_ID} INTEGER NOT NULL,
         {AnonSessionTable.COL_SESSION_DATE} DATETIME DEFAULT CURRENT_TIMESTAMP,
         {AnonSessionTable.COL_RESPONDED} INTEGER DEFAULT 0,
-        FOREIGN KEY ({AnonSessionTable.COL_RECEIVER_ID}) REFERENCES {AnonUserTable.TABLE_NAME}({AnonUserTable.COL_USER_ID}),
-        UNIQUE({AnonSessionTable.COL_RECEIVER_ID}, {AnonSessionTable.COL_CONTACT_ANON_ID}, {AnonSessionTable.COL_SESSION_ID})
+        FOREIGN KEY ({AnonSessionTable.COL_RECEIVER_ID}) REFERENCES
+        {AnonUserTable.TABLE_NAME}({AnonUserTable.COL_USER_ID}),
+        UNIQUE({AnonSessionTable.COL_RECEIVER_ID},
+        {AnonSessionTable.COL_CONTACT_ANON_ID}, {AnonSessionTable.COL_SESSION_ID})
     );
     """,
     f"""
@@ -131,7 +144,6 @@ TABLES: tuple[str, ...] = (
 
 T = TypeVar("T")
 logger = logger_setup(__name__)
-__all__ = ["execute", "fetchone", "fetchall", "initialize_tables"]
 
 
 @final
@@ -140,7 +152,7 @@ class Session:
         GAMBLING = "GAMBLING"
         MESSAGING = "MESSAGING"
 
-    sessions: dict[tuple[int, Types], "Session"] = {}
+    sessions: dict[tuple[int, Types], Session] = {}  # noqa: RUF012
 
     def __init__(self, user_id: int, session_type: Types) -> None:
         self.userId = user_id
@@ -149,10 +161,8 @@ class Session:
         Session.sessions[(self.userId, self.type)] = self
 
     def close(self) -> None:
-        try:
-            _ = Session.sessions.pop((self.userId, self.type))
-        except KeyError:
-            pass
+        with contextlib.suppress(KeyError):
+            Session.sessions.pop((self.userId, self.type))
 
     async def collect_message(self, bot: commands.Bot, *, dm_only: bool) -> None:
         def __check(msg: discord.Message) -> bool:
@@ -169,33 +179,39 @@ class Session:
 
 
 async def _run(func: Callable[..., Awaitable[T]]) -> T:
-    """Every database function must be called inside this function to be run and executed properly.
+    """Core function to run DB commands.
+
+    Every database function must be called inside this function to be run and executed
+    properly.
 
     Args:
         func (Callable[..., Awaitable[T]]): The function to be run.
 
     Returns:
         T: Varies from function it runs to another.
-    """
 
-    async with aiosqlite.connect(DATABASE_PATH) as conn:  # connects to the database
-        _ = await conn.execute("PRAGMA foreign_keys = ON")
-        _ = await conn.execute("PRAGMA journal_mode = WAL")
+    """
+    # Connect to database.
+    async with aiosqlite.connect(DATABASE_PATH) as conn:
+        await conn.execute("PRAGMA foreign_keys = ON")
+        await conn.execute("PRAGMA journal_mode = WAL")
 
         return await func(conn)  # runs the command
 
 
 async def execute(query: str, params: Iterable[Any] | None = None) -> None:
-    """This function is a helper, used to execute a query in aiosqlite.
+    """Execute a query in aiosqlite.
 
     Args:
         query (str): The query to be executed.
-        params (tuple[Any, ...] | None, optional): The parameters to be passed. Defaults to None.
+        params (tuple[Any, ...] | None, optional): The parameters to be passed. Defaults
+            to None.
+
     """
 
     async def _execute(conn: aiosqlite.Connection) -> None:
         try:
-            _ = await conn.execute(query, params)
+            await conn.execute(query, params)
             await conn.commit()
         except:
             await conn.rollback()
@@ -205,16 +221,19 @@ async def execute(query: str, params: Iterable[Any] | None = None) -> None:
 
 
 async def fetchone(
-    query: str, params: Iterable[Any] | None = None
+    query: str,
+    params: Iterable[Any] | None = None,
 ) -> dict[str, Any] | None:
-    """This function is a helper, used to fetch a row from given parameters.
+    """Fetch a row in aiosqlite.
 
     Args:
         query (str): The query to be fetched.
-        params (tuple[Any, ...] | None, optional): The parameters to be passed. Defaults to None.
+        params (tuple[Any, ...] | None, optional): The parameters to be passed. Defaults
+            to None.
 
     Returns:
         dict[str, Any] | None: The fetched Row if it's found. `None`, otherwise.
+
     """
 
     async def _fetchone(conn: aiosqlite.Connection) -> dict[str, Any] | None:
@@ -231,16 +250,19 @@ async def fetchone(
 
 
 async def fetchall(
-    query: str, params: Iterable[Any] | None = None
+    query: str,
+    params: Iterable[Any] | None = None,
 ) -> list[dict[str, Any]] | None:
-    """This function is a helper, used to fetch all possible rows with given parameters.
+    """Fetch all rows in aiosqlite.
 
     Args:
         query (str): The query to be fetched.
-        params (tuple[Any, ...] | None, optional): The parameters to be passed. Defaults to None.
+        params (tuple[Any, ...] | None, optional): The parameters to be passed. Defaults
+            to None.
 
     Returns:
         list[dict[str, Any]]: A list containing the fetched rows.
+
     """
 
     async def _fetchall(conn: aiosqlite.Connection) -> list[dict[str, Any]] | None:
@@ -257,13 +279,13 @@ async def fetchall(
 
 
 async def initialize_tables() -> None:
-    """This function is used to initiate the new database tables."""
+    """Initialize new database tables."""
 
     async def _initialize_tables(conn: aiosqlite.Connection) -> None:
         try:
             # executes every table query
             for table in TABLES:
-                _ = await conn.execute(table)
+                await conn.execute(table)
             await conn.commit()  # commits all
         except:
             await conn.rollback()

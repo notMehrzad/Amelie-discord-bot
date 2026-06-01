@@ -1,4 +1,4 @@
-"""This file contains database constants. All table names and columns' names are stored here."""
+"""Contains database constants. All table names and columns' names are stored here."""
 
 from typing import final
 
@@ -8,13 +8,14 @@ __all__ = ["AccountTable", "CheckTable", "TransactionTable"]
 class _Table:
     @classmethod
     def columns(cls) -> str:
-        """Returns a string made of columns' names."""
-
+        """Return a string made of columns' names."""
         return ", ".join(v for i, v in vars(cls).items() if i.startswith("COL"))
 
 
 @final
 class AccountTable(_Table):
+    """Bank account database table."""
+
     TABLE_NAME = "bank_accounts"
 
     COL_USER_ID = "user_id"
@@ -26,6 +27,8 @@ class AccountTable(_Table):
 
 @final
 class AnonContactTable(_Table):
+    """Anonymous user contact database table."""
+
     TABLE_NAME = "anon_contacts"
 
     COL_ID = "id"
@@ -37,6 +40,8 @@ class AnonContactTable(_Table):
 
 @final
 class AnonSessionTable(_Table):
+    """Anonymous session database table."""
+
     TABLE_NAME = "anon_sessions"
 
     COL_ID = "id"
@@ -50,6 +55,8 @@ class AnonSessionTable(_Table):
 
 @final
 class AnonUserTable(_Table):
+    """Anonymous user database table."""
+
     TABLE_NAME = "anon_users"
 
     COL_USER_ID = "user_id"
@@ -59,6 +66,8 @@ class AnonUserTable(_Table):
 
 @final
 class CheckTable(_Table):
+    """Bank check database table."""
+
     TABLE_NAME = "bank_checks"
 
     COL_ID = "id"
@@ -72,6 +81,8 @@ class CheckTable(_Table):
 
 @final
 class InventoryTable(_Table):
+    """User inventory database table."""
+
     TABLE_NAME = "inventory"
 
     COL_USER_ID = "user_id"
@@ -81,6 +92,8 @@ class InventoryTable(_Table):
 
 @final
 class LotteryTable(_Table):
+    """Lottery database table."""
+
     TABLE_NAME = "lottery"
 
     COL_USER_ID = "user_id"
@@ -89,6 +102,8 @@ class LotteryTable(_Table):
 
 @final
 class TicketTable(_Table):
+    """Ticket database table."""
+
     TABLE_NAME = "tickets"
 
     COL_ID = "id"
@@ -102,6 +117,8 @@ class TicketTable(_Table):
 
 @final
 class TransactionTable(_Table):
+    """Bank transaction database table."""
+
     TABLE_NAME = "bank_transactions"
 
     COL_ID = "id"
@@ -115,6 +132,8 @@ class TransactionTable(_Table):
 
 @final
 class WarnTable(_Table):
+    """Warn database table."""
+
     TABLE_NAME = "warns"
 
     COL_ID = "id"

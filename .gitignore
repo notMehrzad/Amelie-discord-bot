@@ -1,23 +1,118 @@
-#virtual environment
-venv/
-env/
-.venv/
-.env/
-
-#python cache
+# python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
 
-#IDE
+# packaging
+build/
+dist/
+eggs/
+*.egg
+*.egg-info/
+.eggs/
+wheels/
+sdist/
+develop-eggs/
+lib/
+lib64/
+parts/
+var/
+.installed.cfg
+MANIFEST
+
+# virtual environments
+.env/
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# environment variables
+.env
+.env.*
+!.env.example
+
+# database
+*.db
+*.sqlite
+*.sqlite3
+
+# logs
+logs/
+*.log
+
+# config files
+config.json
+config.yaml
+config.yml
+!config.example.json
+!config.example.yaml
+!config.example.yml
+
+# IDEs
 .vscode/
 .idea/
+*.iml
+*.iws
+*.ipr
+*.swp
+*.swo
+*~
+Session.vim
+*#
+.#*
+*.sublime-project
+*.sublime-workspace
 
-config.json
+# OS
+.DS_Store
+.DS_Store?
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+.directory
 
-bot_database.db
-log.log
+# testing
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+coverage/
+htmlcov/
+.tox/
+.nox/
+nosetests.xml
+*.cover
 
+# type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+
+# misc
+*.bak
+*.tmp
+*.temp
+.cache/
+tmp/
+temp/
+
+# custom
 stuff/
-
-telegramMain.py
 telegramRouters/
+telegramMain.py

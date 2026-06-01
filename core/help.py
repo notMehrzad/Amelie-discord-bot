@@ -1,34 +1,22 @@
-"""This file contains the structure and logic of the command's help.
+"""Contains the structure and logic of the command's help.
 
 It makes it easier to make and generate helps for various commands rather than
-old-fashion hand written helps.
+old-fashion handwritten helps.
 """
 
+from __future__ import annotations
+
+__all__ = ["HelpData"]
+
 from enum import Enum
-from typing import Any, TypedDict
+from typing import Any, TypedDict, final
 
-from core.logHandler import loggerSetup
+from core.log_handler import logger_setup
 
-logger = loggerSetup(__name__)
-__all__ = ["CommandCategory", "HelpData"]
-
-
-class CommandCategory(Enum):
-    """The class for different command categories."""
-
-    ANONYMOUSE = "Anonymous"
-    DEV = "Dev"
-    ECONOMY = "Economy"
-    GAMES = "Games"
-    MODERATION = "Moderation"
-    UTILITY = "Utility"
-    MISC = "Misc"
-
-    def __str__(self) -> str:
-        return self.value
+logger = logger_setup(__name__)
 
 
-class KwargsTyped(TypedDict):
+class _KwargsTyped(TypedDict):
     help: str | None
     brief: str
     usage: str | None
@@ -36,51 +24,63 @@ class KwargsTyped(TypedDict):
     extras: dict[str, Any]
 
 
+@final
 class HelpData:
     """The class representing a command help."""
 
-    def __init__(
+    class CommandCategory(Enum):
+        """The class for different command categories."""
+
+        ANONYMOUSE = "Anonymous"
+        DEV = "Dev"
+        ECONOMY = "Economy"
+        GAMES = "Games"
+        MODERATION = "Moderation"
+        UTILITY = "Utility"
+        MISC = "Misc"
+
+    def __init__(  # noqa: PLR0913
         self,
         *,
         category: CommandCategory,
-        dmOnly: bool,
-        serverOnly: bool,
+        dm_only: bool,
+        server_only: bool,
         subcommands: list[str] | None,
         permissions: list[str] | None,
-        help: str | None,
+        help_: str | None,
         brief: str,
         usage: str | None,
         aliases: list[str] | None,
         hidden: bool = False,
-    ):
-        """Initiates the instance.
+    ) -> None:
+        """Initialize help data.
 
         Args:
             category (CommandCategory): The category of the command.
-            dmOnly (bool): If the command is DM stricted.
-            serverOnly (bool): If the command is guild(server) stricted.
+            dm_only (bool): If the command is DM-restricted.
+            server_only (bool): If the command is guild-restricted.
             subcommands (list[str] | None): The subcommands of the command.
             permissions (list[str] | None): The required permissions to run the command.
-            help (str | None): The long help text for the command.
+            help_ (str | None): The long help text for the command.
             brief (str): The short help text for the command.
             usage (str | None): The usage format of the command.
             aliases (list[str] | None): Aliases of the command.
             hidden (bool, optional): If the command should be hidden. Defaults to False.
-        """
 
+        """
         self.category = category
-        self.dmOnly = dmOnly
-        self.serverOnly = serverOnly
+        self.dmOnly = dm_only
+        self.serverOnly = server_only
         self.subcommands = subcommands
         self.permissions = permissions
-        self.help = help
+        self.help = help_
         self.brief = brief
         self.usage = usage
         self.aliases = aliases or []
         self.hidden = hidden
 
     @property
-    def extras(self) -> dict[str, Any]:
+    def _extras(self) -> dict[str, Any]:
         return {
             "category": self.category,
             "dm-only": self.dmOnly,
@@ -90,17 +90,17 @@ class HelpData:
         }
 
     @property
-    def kwargs(self) -> KwargsTyped:
-        """returns attributes as a dict(keywords) to pass.
+    def kwargs(self) -> _KwargsTyped:
+        """Return attributes as a dict(keywords) to pass.
 
         Returns:
             dict[str, Any]: All the attributes as keywords.
-        """
 
+        """
         return {
             "help": self.help,
             "brief": self.brief,
             "usage": self.usage,
             "aliases": self.aliases,
-            "extras": self.extras,
+            "extras": self._extras,
         }
