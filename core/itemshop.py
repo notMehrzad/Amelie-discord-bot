@@ -100,10 +100,10 @@ def get_items() -> dict[str, list[Item]]:
     for item in _ITEMS:
         categorized_items.setdefault(item.category.value, []).append(item)
     for category in categorized_items:  # noqa: PLC0206
-        categorized_items[category].sort(key=lambda item: item.name)
-    # Return dictionay but with sorted keys.
+        categorized_items[category].sort(key=lambda item_: item_.name)
+    # Return dictionary but with sorted keys.
     return dict(
-        sorted(categorized_items.items(), key=lambda item: item[0].lower()),
+        sorted(categorized_items.items(), key=lambda item_: item_[0].lower()),
     )
 
 
@@ -119,7 +119,7 @@ async def buy(account: Account | int, item: Item, quantity: int) -> None:
         else:
             raise AccountDoesntExistError
 
-    await account.withdraw(
+    _ = await account.withdraw(
         item.price * quantity,
         reason=f"Bought {quantity} {item.name}.",
     )

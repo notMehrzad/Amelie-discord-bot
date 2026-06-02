@@ -7,12 +7,14 @@ It's the entry point for other modules.
 
 from __future__ import annotations
 
+__all__ = []
+
 import asyncio
 import json
 import pkgutil
 from itertools import cycle
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, TypedDict, cast
 
 import discord
 from discord.ext import commands, tasks
@@ -24,14 +26,20 @@ from core.log_handler import logger_setup
 
 BOT = commands.Bot(
     command_prefix=".",
+    help_command=None,
     intents=discord.Intents.all(),
     case_insensitive=True,
-    help_command=None,
-)  # Bot's instance
+)  # Bot instance
 
-# Read the stored token from config.json
+
+class _Config(TypedDict):
+    TOKEN: str
+    ADMINS: list[str]
+
+
+# Read the stored token from config.json file.
 with Path("config.json").open("r") as file:
-    CONFIG = json.load(file)
+    CONFIG: _Config = cast("_Config", json.load(file))
 
 logger = logger_setup(__name__)
 
@@ -41,14 +49,15 @@ async def _cog_loader() -> None:
     succeed: list[str] = []
     failed: list[str] = []
     for module_info in pkgutil.walk_packages(cogs.__path__, cogs.__name__ + "."):
-        # if it's a directory
+        # Skip if it's a directory.
         if module_info.ispkg:
             continue
 
         try:
-            await BOT.load_extension(module_info.name)  # loads the cog
+            # Load the cog.
+            await BOT.load_extension(module_info.name)
             succeed.append(module_info.name.split(".")[-1])
-        except:
+        except Exception:
             logger.exception(
                 "❌ %s couldn't be loaded: ",
                 module_info.name.split(".")[-1],
@@ -76,13 +85,13 @@ async def on_ready() -> None:
     """Print a message when bot is ready."""
     logger.info("--------------\nWe have logged in as %s ✅", BOT.user)
 
-    # runs the terminal listener for in-line commands
-    BOT.loop.create_task(_terminal_listener())
+    # Run terminal listener for in-line commands.
+    _ = BOT.loop.create_task(_terminal_listener())
 
-    bot_status_change.start()
+    _ = bot_status_change.start()
 
 
-# Amelie's different status
+# Store Amélie's different status.
 bot_status = cycle([
     discord.Activity(
         type=discord.ActivityType.playing,
@@ -109,15 +118,16 @@ async def bot_status_change() -> None:
 
 
 async def _main() -> None:
-    # initializes the tables if needed
+    # Initialize DB tables.
     await initialize_tables()
     logger.info("💾 Database tables initialization complete.")
 
     async with BOT:
-        await _cog_loader()  # loads the cogs
+        await _cog_loader()
         try:
-            await BOT.start(CONFIG["TOKEN"])  # starts the bot
-        except:
+            # Start the bot.
+            await BOT.start(CONFIG["TOKEN"])
+        except Exception:
             logger.critical("❌ Failed to start the bot:", exc_info=True)
             raise
 

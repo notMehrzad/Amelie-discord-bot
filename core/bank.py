@@ -16,8 +16,14 @@ from __future__ import annotations
 __all__ = [
     "CURRENCY_STR",
     "Account",
+    "AccountDoesntExistError",
+    "AccountExistsError",
+    "AlreadyDepositedCheckError",
+    "AlreadyIssuedCheckError",
     "BankError",
     "Check",
+    "InsufficientBalanceError",
+    "UnnecessaryOperationError",
     "balance_transfer",
     "create_account",
     "delete_account",
@@ -43,55 +49,81 @@ CURRENCY_STR = CURRENCY_ICON + " " + CURRENCY_NAME + "s"
 logger = logger_setup(__name__)
 
 
-# exception classes
+# Define exception classes.
 class BankError(Exception):
     """Common base class for all bank.py exceptions."""
 
 
+@final
 class AccountDoesntExistError(BankError):
     """Raised when trying to do an operation on an account that doesn't exist."""
 
-    def __init__(self) -> None:
-        super().__init__("This account doesn't exist.")
+    def __init__(self, message: str = "Account doesn't exist.") -> None:
+        """Initialize exception."""
+        super().__init__(message)
 
 
+@final
 class AccountExistsError(BankError):
     """Raised when trying to create an account for a user who already has one."""
 
-    def __init__(self) -> None:
-        super().__init__("This user already has an account.")
+    def __init__(self, message: str = "User already has an account.") -> None:
+        """Initialize exception."""
+        super().__init__(message)
 
 
+@final
 class InsufficientBalanceError(BankError):
     """Raised when trying to transfer an amount of balance that is insufficient."""
 
-    def __init__(self) -> None:
-        super().__init__("The balance amount is insufficient for the operation.")
+    def __init__(
+        self,
+        message: str = "The balance amount is insufficient for the operation.",
+    ) -> None:
+        """Initialize exception."""
+        super().__init__(message)
 
 
+@final
 class AlreadyDepositedCheckError(BankError):
     """Raised when trying to deposit a check that is already deposited."""
 
-    def __init__(self, check: Check) -> None:
-        self.check = check
-        super().__init__("This check has been already deposited.")
+    def __init__(
+        self,
+        check: Check,
+        message: str = "Check has been already deposited.",
+    ) -> None:
+        """Initialize exception."""
+        self.check: Check = check
+        super().__init__(f"{self.check.check_id}: {message}")
 
 
+@final
 class AlreadyIssuedCheckError(BankError):
     """Raised when trying to issue a check that is issued already."""
 
-    def __init__(self, check: Check) -> None:
-        self.check = check
-        super().__init__("This check has been already issued.")
+    def __init__(
+        self,
+        check: Check,
+        message: str = "Check has been already issued.",
+    ) -> None:
+        """Initialize exception."""
+        self.check: Check = check
+        super().__init__(f"{self.check.check_id}: {message}")
 
 
+@final
 class UnnecessaryOperationError(BankError):
     """Raised when trying to do an unnecessary operation."""
 
-    def __init__(self) -> None:
-        super().__init__(
-            "The operation is unnecessary and doesn't change anything in the account.",
-        )
+    def __init__(
+        self,
+        message: str = (
+            "The operation is unnecessary and doesn't change anything in the account."
+        ),
+    ) -> None:
+        """Initialize exception."""
+        super().__init__(message)
 
 
 @final
@@ -268,7 +300,7 @@ class Account:
         receiver_account = await get_account(receiver_id)
 
         # Raise an error if receiver's account couldn't be found.
-        if not receiver_account:
+        if receiver_account is None:
             raise AccountDoesntExistError
 
         # Withdraw from sender's account.
@@ -421,7 +453,7 @@ class Check:
         sender_account = await get_account(self.sender_id)
 
         # Raise an error if sender's account couldn't be found.
-        if not sender_account:
+        if sender_account is None:
             raise AccountDoesntExistError
 
         self.date = datetime.now(timezone.utc)  # Check issue date
@@ -469,7 +501,7 @@ class Check:
         receiver_account = await get_account(self.receiver_id)
 
         # Raise an error if receiver's account couldn't be found.
-        if not receiver_account:
+        if receiver_account is None:
             raise AccountDoesntExistError
 
         # Deposit check amount to receiver's account and save transaction.
@@ -595,7 +627,7 @@ async def balance_transfer(
 
     Raises:
         UnnecessaryOperation: Raise when quantity is zero.
-        AccountDoesntExistError: Raise when receiver's accound can not be fetched.
+        AccountDoesntExistError: Raise when receiver's account can not be fetched.
 
     Returns:
         Transaction: Return transaction.
@@ -608,8 +640,8 @@ async def balance_transfer(
     # Fetch sender's account.
     sender_account = await get_account(sender_id)
 
-    # Raise an error if sender's accoung couldn't be found.
-    if not sender_account:
+    # Raise an error if sender's account couldn't be found.
+    if sender_account is None:
         raise AccountDoesntExistError
 
     # Transfer the money and return transaction.
@@ -636,7 +668,7 @@ async def create_account(*, user_id: int, balance: float = 0) -> Account:
     # Fetch user's account.
     account = await get_account(user_id)
 
-    # Raise an erro if user already has an account.
+    # Raise an error if user already has an account.
     if account is not None:
         raise AccountExistsError
 
@@ -694,7 +726,7 @@ async def get_account(user_id: int) -> Account | None:
             `None`, otherwise.
 
     """
-    # tries to fetch the account
+    # Fetch the account.
     row = await fetchone(
         f"""
         SELECT * FROM {AccountTable.TABLE_NAME}
@@ -735,7 +767,7 @@ async def get_check(check_id: str) -> Check | None:
         Check | None: The fetched check if found. `None`, otherwise.
 
     """
-    # tries to fetch the check
+    # Fetch the check.
     row = await fetchone(
         f"""
         SELECT * FROM {CheckTable.TABLE_NAME}

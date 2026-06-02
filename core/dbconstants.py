@@ -1,8 +1,21 @@
 """Contains database constants. All table names and columns' names are stored here."""
 
-from typing import final
+from __future__ import annotations
 
-__all__ = ["AccountTable", "CheckTable", "TransactionTable"]
+__all__ = [
+    "AccountTable",
+    "AnonContactTable",
+    "AnonSessionTable",
+    "AnonUserTable",
+    "CheckTable",
+    "InventoryTable",
+    "LotteryTable",
+    "TicketTable",
+    "TransactionTable",
+    "WarnTable",
+]
+
+from typing import final
 
 
 class _Table:

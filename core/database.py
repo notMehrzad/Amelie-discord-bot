@@ -32,6 +32,7 @@ from core.log_handler import logger_setup
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable
+    from sqlite3 import Row
 
     import discord
     from discord.ext import commands
@@ -162,14 +163,14 @@ class Session:
 
     def close(self) -> None:
         with contextlib.suppress(KeyError):
-            Session.sessions.pop((self.userId, self.type))
+            _ = Session.sessions.pop((self.userId, self.type))
 
     async def collect_message(self, bot: commands.Bot, *, dm_only: bool) -> None:
-        def __check(msg: discord.Message) -> bool:
+        def __check(msg_: discord.Message) -> bool:
             return (
-                (msg.author.id == self.userId and not msg.guild)
+                (msg_.author.id == self.userId and not msg_.guild)
                 if dm_only
-                else msg.author.id == self.userId
+                else msg_.author.id == self.userId
             )
 
         self.messages: list[discord.Message] | None = []
@@ -185,7 +186,7 @@ async def _run(func: Callable[..., Awaitable[T]]) -> T:
     properly.
 
     Args:
-        func (Callable[..., Awaitable[T]]): The function to be run.
+        func (Callable[..., Awaitable[T]]): Function to be run.
 
     Returns:
         T: Varies from function it runs to another.
@@ -193,27 +194,28 @@ async def _run(func: Callable[..., Awaitable[T]]) -> T:
     """
     # Connect to database.
     async with aiosqlite.connect(DATABASE_PATH) as conn:
-        await conn.execute("PRAGMA foreign_keys = ON")
-        await conn.execute("PRAGMA journal_mode = WAL")
+        _ = await conn.execute("PRAGMA foreign_keys = ON")
+        _ = await conn.execute("PRAGMA journal_mode = WAL")
 
-        return await func(conn)  # runs the command
+        # Run the command.
+        return await func(conn)
 
 
 async def execute(query: str, params: Iterable[Any] | None = None) -> None:
-    """Execute a query in aiosqlite.
+    """Execute a SQL query in aiosqlite.
 
     Args:
-        query (str): The query to be executed.
-        params (tuple[Any, ...] | None, optional): The parameters to be passed. Defaults
+        query (str): Query to execute.
+        params (Iterable[Any] | None, optional): Parameters to pass. Defaults
             to None.
 
     """
 
     async def _execute(conn: aiosqlite.Connection) -> None:
         try:
-            await conn.execute(query, params)
+            _ = await conn.execute(query, params)
             await conn.commit()
-        except:
+        except Exception:
             await conn.rollback()
             raise
 
@@ -223,26 +225,25 @@ async def execute(query: str, params: Iterable[Any] | None = None) -> None:
 async def fetchone(
     query: str,
     params: Iterable[Any] | None = None,
-) -> dict[str, Any] | None:
+) -> Row | None:
     """Fetch a row in aiosqlite.
 
     Args:
-        query (str): The query to be fetched.
-        params (tuple[Any, ...] | None, optional): The parameters to be passed. Defaults
-            to None.
+        query (str): Query to fetch.
+        params (Iterable[Any, ...] | None, optional): Parameters to pass.
+            Defaults to None.
 
     Returns:
-        dict[str, Any] | None: The fetched Row if it's found. `None`, otherwise.
+        Row | None: Return fetched Row if it's found. `None`, otherwise.
 
     """
 
-    async def _fetchone(conn: aiosqlite.Connection) -> dict[str, Any] | None:
+    async def _fetchone(conn: aiosqlite.Connection) -> Row | None:
         try:
             conn.row_factory = aiosqlite.Row
             async with conn.execute(query, params) as cursor:
-                row = await cursor.fetchone()
-                return dict(row) if row else None
-        except:
+                return await cursor.fetchone()
+        except Exception:
             await conn.rollback()
             raise
 
@@ -252,26 +253,26 @@ async def fetchone(
 async def fetchall(
     query: str,
     params: Iterable[Any] | None = None,
-) -> list[dict[str, Any]] | None:
+) -> Iterable[Row] | None:
     """Fetch all rows in aiosqlite.
 
     Args:
-        query (str): The query to be fetched.
-        params (tuple[Any, ...] | None, optional): The parameters to be passed. Defaults
-            to None.
+        query (str): Query to fetch.
+        params (Iterable[Any, ...] | None, optional): Parameters to pass. Defaults to
+            None.
 
     Returns:
-        list[dict[str, Any]]: A list containing the fetched rows.
+        Iterable[Row]: Return An iterable containing the fetched rows.
 
     """
 
-    async def _fetchall(conn: aiosqlite.Connection) -> list[dict[str, Any]] | None:
+    async def _fetchall(conn: aiosqlite.Connection) -> Iterable[Row] | None:
         try:
             conn.row_factory = aiosqlite.Row
             async with conn.execute(query, params) as cursor:
                 rows = await cursor.fetchall()
-                return [dict(row) for row in rows] if rows else None
-        except:
+                return rows or None
+        except Exception:
             await conn.rollback()
             raise
 
@@ -283,11 +284,12 @@ async def initialize_tables() -> None:
 
     async def _initialize_tables(conn: aiosqlite.Connection) -> None:
         try:
-            # executes every table query
+            # Execute every table initialization.
             for table in TABLES:
-                await conn.execute(table)
-            await conn.commit()  # commits all
-        except:
+                _ = await conn.execute(table)
+            # Commit changes.
+            await conn.commit()
+        except Exception:
             await conn.rollback()
             raise
 
